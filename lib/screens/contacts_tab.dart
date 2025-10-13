@@ -141,16 +141,21 @@ class _ContactTile extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: _getTypeColor(contact.type),
-          child: Icon(
-            _getTypeIcon(contact.type),
-            color: Colors.white,
-          ),
+          child: contact.roleEmoji != null
+              ? Text(
+                  contact.roleEmoji!,
+                  style: const TextStyle(fontSize: 24),
+                )
+              : Icon(
+                  _getTypeIcon(contact.type),
+                  color: Colors.white,
+                ),
         ),
         title: Row(
           children: [
             Expanded(
               child: Text(
-                contact.advName,
+                contact.displayName,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -236,7 +241,7 @@ class _ContactTile extends StatelessWidget {
             connectionProvider.requestTelemetry(contact.publicKey);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Requesting telemetry from ${contact.advName}'),
+                content: Text('Requesting telemetry from ${contact.displayName}'),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -249,42 +254,107 @@ class _ContactTile extends StatelessWidget {
   }
 
   void _showContactDetails(BuildContext context, Contact contact) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(contact.advName),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _DetailRow('Type', contact.type.displayName),
-              _DetailRow('Public Key', contact.publicKeyShort),
-              _DetailRow('Last Seen', contact.timeSinceLastSeen),
-              const Divider(),
-              if (contact.displayLocation != null) ...[
-                const Text('Location:', style: TextStyle(fontWeight: FontWeight.bold)),
-                _DetailRow('Latitude', contact.displayLocation!.latitude.toStringAsFixed(6)),
-                _DetailRow('Longitude', contact.displayLocation!.longitude.toStringAsFixed(6)),
-                const Divider(),
-              ],
-              if (contact.telemetry != null) ...[
-                const Text('Telemetry:', style: TextStyle(fontWeight: FontWeight.bold)),
-                if (contact.telemetry!.batteryPercentage != null)
-                  _DetailRow('Battery', '${contact.telemetry!.batteryPercentage!.toStringAsFixed(1)}%'),
-                if (contact.telemetry!.temperature != null)
-                  _DetailRow('Temperature', '${contact.telemetry!.temperature!.toStringAsFixed(1)}°C'),
-                _DetailRow('Updated', contact.telemetry!.isRecent ? 'Recently' : 'Stale'),
-              ],
-            ],
-          ),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 8, bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _getTypeColor(contact.type),
+                    child: contact.roleEmoji != null
+                        ? Text(
+                            contact.roleEmoji!,
+                            style: const TextStyle(fontSize: 24),
+                          )
+                        : Icon(
+                            _getTypeIcon(contact.type),
+                            color: Colors.white,
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      contact.displayName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            // Content
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _DetailRow('Type', contact.type.displayName),
+                  _DetailRow('Public Key', contact.publicKeyShort),
+                  _DetailRow('Last Seen', contact.timeSinceLastSeen),
+                  const SizedBox(height: 16),
+                  if (contact.displayLocation != null) ...[
+                    const Text(
+                      'Location:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _DetailRow('Latitude', contact.displayLocation!.latitude.toStringAsFixed(6)),
+                    _DetailRow('Longitude', contact.displayLocation!.longitude.toStringAsFixed(6)),
+                    const SizedBox(height: 16),
+                  ],
+                  if (contact.telemetry != null) ...[
+                    const Text(
+                      'Telemetry:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (contact.telemetry!.batteryPercentage != null)
+                      _DetailRow('Battery', '${contact.telemetry!.batteryPercentage!.toStringAsFixed(1)}%'),
+                    if (contact.telemetry!.temperature != null)
+                      _DetailRow('Temperature', '${contact.telemetry!.temperature!.toStringAsFixed(1)}°C'),
+                    _DetailRow('Updated', contact.telemetry!.isRecent ? 'Recently' : 'Stale'),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }

@@ -29,6 +29,9 @@ class MessagesProvider with ChangeNotifier {
   List<SarMarker> get stagingAreaMarkers =>
       sarMarkers.where((m) => m.type == SarMarkerType.stagingArea).toList();
 
+  List<SarMarker> get objectMarkers =>
+      sarMarkers.where((m) => m.type == SarMarkerType.object).toList();
+
   /// Add a message
   void addMessage(Message message) {
     _messages.add(message);
@@ -151,6 +154,7 @@ class MessagesProvider with ChangeNotifier {
       'foundPerson': foundPersonMarkers.length,
       'fire': fireMarkers.length,
       'stagingArea': stagingAreaMarkers.length,
+      'object': objectMarkers.length,
     };
   }
 }

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import '../models/contact.dart';
 import '../models/sar_marker.dart';
 
 class MapMarkers {
   static List<Marker> createTeamMemberMarkers(
     List<Contact> contacts,
-    BuildContext context,
-  ) {
+    BuildContext context, {
+    Function(Contact)? onContactTap,
+    double mapRotation = 0,
+  }) {
     return contacts.map((contact) {
       final location = contact.displayLocation;
       if (location == null) return null;
@@ -17,21 +18,29 @@ class MapMarkers {
         point: location,
         width: 80,
         height: 100,
-        child: GestureDetector(
-          onTap: () => _showContactInfo(context, contact),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Battery indicator
-              if (contact.displayBattery != null)
+        rotate: false, // Don't rotate the entire marker with map
+        child: Transform.rotate(
+          angle: -mapRotation * 3.14159265359 / 180,
+          child: GestureDetector(
+            onTap: () {
+              if (onContactTap != null) {
+                onContactTap(contact);
+              } else {
+                _showContactInfo(context, contact);
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Location update time indicator
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
-                    color: _getBatteryColor(contact.displayBattery!),
+                    color: _getLocationAgeColor(contact),
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: Text(
-                    '${contact.displayBattery!.round()}%',
+                    contact.timeSinceLocationUpdate,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 9,
@@ -39,50 +48,51 @@ class MapMarkers {
                     ),
                   ),
                 ),
-              if (contact.displayBattery != null) const SizedBox(height: 2),
-              // Marker icon
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(6),
-                child: const Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(height: 2),
-              // Name label
-              Container(
-                constraints: const BoxConstraints(maxWidth: 80),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Text(
-                  contact.advName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 2),
+                // Marker icon
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
+                  padding: const EdgeInsets.all(6),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                // Name label (without emoji)
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 80),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    contact.displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -91,77 +101,89 @@ class MapMarkers {
 
   static List<Marker> createSarMarkers(
     List<SarMarker> sarMarkers,
-    BuildContext context,
-  ) {
+    BuildContext context, {
+    Function(SarMarker)? onSarMarkerTap,
+    double mapRotation = 0,
+  }) {
     return sarMarkers.map((marker) {
       return Marker(
         point: marker.location,
         width: 90,
         height: 100,
-        child: GestureDetector(
-          onTap: () => _showSarMarkerInfo(context, marker),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Time ago label
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: _getSarMarkerColor(marker.type),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Text(
-                  marker.timeAgo,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
+        rotate: false, // Don't rotate the entire marker with map
+        child: Transform.rotate(
+          angle: -mapRotation * 3.14159265359 / 180,
+          child: GestureDetector(
+            onTap: () {
+              if (onSarMarkerTap != null) {
+                onSarMarkerTap(marker);
+              } else {
+                _showSarMarkerInfo(context, marker);
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Time ago label
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: _getSarMarkerColor(marker.type),
+                    borderRadius: BorderRadius.circular(3),
                   ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              // Marker emoji/icon
-              Container(
-                decoration: BoxDecoration(
-                  color: _getSarMarkerColor(marker.type),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                  child: Text(
+                    marker.timeAgo,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(6),
-                child: Text(
-                  marker.type.emoji,
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ),
-              const SizedBox(height: 2),
-              // Type label
-              Container(
-                constraints: const BoxConstraints(maxWidth: 90),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Text(
-                  marker.type.displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                // Marker emoji/icon
+                Container(
+                  decoration: BoxDecoration(
+                    color: _getSarMarkerColor(marker.type),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: Text(
+                    marker.type.emoji,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                // Type label
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 90),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    marker.type.displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -169,6 +191,11 @@ class MapMarkers {
   }
 
   static void _showContactInfo(BuildContext context, Contact contact) {
+    // Import provider to get all contacts and SAR markers for detailed view
+    // This will be handled by importing the screen's detailed compass dialog
+    // Since we can't directly access _DetailedCompassDialog from here,
+    // we'll pass a callback to the screen
+    // For now, show the simple dialog as a fallback
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -176,7 +203,7 @@ class MapMarkers {
           children: [
             const Icon(Icons.person, color: Colors.blue),
             const SizedBox(width: 8),
-            Expanded(child: Text(contact.advName)),
+            Expanded(child: Text(contact.displayName)),
           ],
         ),
         content: Column(
@@ -242,10 +269,15 @@ class MapMarkers {
     );
   }
 
-  static Color _getBatteryColor(double percentage) {
-    if (percentage > 50) return Colors.green;
-    if (percentage > 20) return Colors.orange;
-    return Colors.red;
+  static Color _getLocationAgeColor(Contact contact) {
+    final updateTime = contact.locationUpdateTime;
+    if (updateTime == null) return Colors.grey;
+
+    final diff = DateTime.now().difference(updateTime);
+    if (diff.inMinutes < 5) return Colors.green; // Very recent
+    if (diff.inMinutes < 30) return Colors.blue; // Recent
+    if (diff.inHours < 2) return Colors.orange; // Getting old
+    return Colors.red; // Stale
   }
 
   static Color _getSarMarkerColor(SarMarkerType type) {
@@ -256,6 +288,8 @@ class MapMarkers {
         return Colors.red;
       case SarMarkerType.stagingArea:
         return Colors.orange;
+      case SarMarkerType.object:
+        return Colors.purple;
       case SarMarkerType.unknown:
         return Colors.grey;
     }

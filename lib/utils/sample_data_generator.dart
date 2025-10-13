@@ -20,14 +20,14 @@ class SampleDataGenerator {
     final now = DateTime.now();
 
     final teamNames = [
-      'Alpha Team Lead',
-      'Bravo Scout',
-      'Charlie Medic',
-      'Delta Navigator',
-      'Echo Support',
-      'Foxtrot Runner',
-      'Golf Comms',
-      'Hotel Base',
+      '👮Police Lead',
+      '🚁Drone Operator',
+      '🧑🏻‍🚒Firefighter Alpha',
+      '🧑‍⚕️Medic Charlie',
+      '📡Command Delta',
+      '🚒Fire Engine',
+      '👨‍✈️Air Support',
+      '🧑‍💼Base Coordinator',
     ];
 
     final channelNames = [

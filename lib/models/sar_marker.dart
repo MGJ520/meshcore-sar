@@ -6,6 +6,7 @@ enum SarMarkerType {
   foundPerson('🧑', 'Found Person'),
   fire('🔥', 'Fire'),
   stagingArea('🏕️', 'Staging Area'),
+  object('📦', 'Object'),
   unknown('❓', 'Unknown');
 
   const SarMarkerType(this.emoji, this.displayName);
@@ -22,6 +23,8 @@ enum SarMarkerType {
       case '🏕️':
       case '⛺':
         return SarMarkerType.stagingArea;
+      case '📦':
+        return SarMarkerType.object;
       default:
         return SarMarkerType.unknown;
     }
@@ -36,6 +39,8 @@ enum SarMarkerType {
         return '#F44336'; // Red
       case SarMarkerType.stagingArea:
         return '#2196F3'; // Blue
+      case SarMarkerType.object:
+        return '#9C27B0'; // Purple
       default:
         return '#9E9E9E'; // Gray
     }

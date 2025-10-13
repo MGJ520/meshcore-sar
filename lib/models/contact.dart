@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:latlong2/latlong.dart';
+import 'package:flutter/material.dart';
 import 'contact_telemetry.dart';
 
 /// MeshCore contact types
@@ -127,6 +128,67 @@ class Contact {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
+  }
+
+  /// Get time when location was last updated
+  DateTime? get locationUpdateTime {
+    // Prefer telemetry timestamp if available
+    if (telemetry?.gpsLocation != null) {
+      return telemetry!.timestamp;
+    }
+    // Fall back to lastAdvert time if using advertised location
+    if (advertLocation != null) {
+      return lastSeenTime;
+    }
+    return null;
+  }
+
+  /// Get friendly time since location was last updated
+  String get timeSinceLocationUpdate {
+    final updateTime = locationUpdateTime;
+    if (updateTime == null) return 'Unknown';
+
+    final diff = DateTime.now().difference(updateTime);
+    if (diff.inMinutes < 1) return 'Now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+
+  /// Extract role emoji from name (e.g., "🧑🏻‍🚒Janez" → "🧑🏻‍🚒")
+  /// Returns null if no emoji at start of name
+  String? get roleEmoji {
+    if (advName.isEmpty) return null;
+
+    // Get the first character/grapheme cluster (which could be a complex emoji)
+    final firstChar = advName.characters.first;
+
+    // Check if it's an emoji (basic check - emojis are typically in certain Unicode ranges)
+    final firstCodeUnit = firstChar.runes.first;
+
+    // Emoji ranges (simplified check):
+    // 0x1F300-0x1F9FF: Misc Symbols and Pictographs, Emoticons, Transport, etc.
+    // 0x2600-0x26FF: Misc symbols
+    // 0x2700-0x27BF: Dingbats
+    // 0xFE00-0xFE0F: Variation Selectors
+    // 0x1F900-0x1F9FF: Supplemental Symbols and Pictographs
+    if ((firstCodeUnit >= 0x1F300 && firstCodeUnit <= 0x1F9FF) ||
+        (firstCodeUnit >= 0x2600 && firstCodeUnit <= 0x27BF) ||
+        (firstCodeUnit >= 0x1F600 && firstCodeUnit <= 0x1F64F)) {
+      return firstChar;
+    }
+
+    return null;
+  }
+
+  /// Get display name without role emoji (e.g., "🧑🏻‍🚒Janez" → "Janez")
+  /// If no emoji, returns full advName
+  String get displayName {
+    final emoji = roleEmoji;
+    if (emoji == null) return advName;
+
+    // Remove the emoji from the beginning
+    return advName.substring(emoji.length).trim();
   }
 
   Contact copyWith({

@@ -527,6 +527,60 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     );
   }
 
+  void _showDetailedCompassWithContact(
+    BuildContext context,
+    List<Contact> contacts,
+    List<SarMarker> sarMarkers,
+    Contact selectedContact,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: _DetailedCompassDialog(
+          initialPosition: _currentPosition,
+          initialHeading: _currentHeading,
+          contacts: contacts,
+          sarMarkers: sarMarkers,
+          preSelectedContact: selectedContact,
+        ),
+      ),
+    );
+  }
+
+  void _showDetailedCompassWithSarMarker(
+    BuildContext context,
+    List<Contact> contacts,
+    List<SarMarker> sarMarkers,
+    SarMarker selectedMarker,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: _DetailedCompassDialog(
+          initialPosition: _currentPosition,
+          initialHeading: _currentHeading,
+          contacts: contacts,
+          sarMarkers: sarMarkers,
+          preSelectedSarMarker: selectedMarker,
+        ),
+      ),
+    );
+  }
+
   void _restartLocationStream() {
     // Cancel existing subscription
     _positionStreamSubscription?.cancel();
@@ -600,10 +654,28 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                           ...MapMarkers.createTeamMemberMarkers(
                             contactsWithLocation,
                             context,
+                            mapRotation: _mapController.camera.rotation,
+                            onContactTap: (contact) {
+                              _showDetailedCompassWithContact(
+                                context,
+                                contactsProvider.chatContactsWithLocation,
+                                messagesProvider.sarMarkers,
+                                contact,
+                              );
+                            },
                           ),
                           ...MapMarkers.createSarMarkers(
                             sarMarkers,
                             context,
+                            mapRotation: _mapController.camera.rotation,
+                            onSarMarkerTap: (marker) {
+                              _showDetailedCompassWithSarMarker(
+                                context,
+                                contactsProvider.chatContactsWithLocation,
+                                messagesProvider.sarMarkers,
+                                marker,
+                              );
+                            },
                           ),
                           // User location marker
                           if (_currentPosition != null)
@@ -657,33 +729,33 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                       ],
                     ),
                   ),
-            // Compass widget - top right
-            if (_rotateMarkerWithHeading)
-              Positioned(
-                top: 16,
-                right: 16,
-                child: GestureDetector(
-                  onTap: () => _showDetailedCompass(
-                    context,
-                    contactsProvider.chatContactsWithLocation,
-                    messagesProvider.sarMarkers,
-                  ),
-                  child: _CompassWidget(
-                    heading: _currentHeading ?? 0,
-                    hasHeading: _currentHeading != null,
-                  ),
+            // Compass widget - top right (always visible)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => _showDetailedCompass(
+                  context,
+                  contactsProvider.chatContactsWithLocation,
+                  messagesProvider.sarMarkers,
+                ),
+                child: _CompassWidget(
+                  heading: _currentHeading ?? 0,
+                  hasHeading: _currentHeading != null,
                 ),
               ),
+            ),
             // Map legend overlay
             if (_showLegend)
               Positioned(
-                top: _rotateMarkerWithHeading ? 80 : 16,
-                right: 16,
+                top: 80, // Position below compass (which is always visible now)
+                left: 16,
                 child: _MapLegend(
                   teamMemberCount: contactsWithLocation.length,
                   foundPersonCount: messagesProvider.foundPersonMarkers.length,
                   fireCount: messagesProvider.fireMarkers.length,
                   stagingAreaCount: messagesProvider.stagingAreaMarkers.length,
+                  objectCount: messagesProvider.objectMarkers.length,
                 ),
               ),
             // Map controls - right side
@@ -764,12 +836,14 @@ class _MapLegend extends StatelessWidget {
   final int foundPersonCount;
   final int fireCount;
   final int stagingAreaCount;
+  final int objectCount;
 
   const _MapLegend({
     required this.teamMemberCount,
     required this.foundPersonCount,
     required this.fireCount,
     required this.stagingAreaCount,
+    required this.objectCount,
   });
 
   @override
@@ -811,6 +885,12 @@ class _MapLegend extends StatelessWidget {
               color: Colors.orange,
               label: 'Staging',
               count: stagingAreaCount,
+            ),
+            _LegendItem(
+              icon: Icons.inventory_2,
+              color: Colors.purple,
+              label: 'Object',
+              count: objectCount,
             ),
           ],
         ),
@@ -975,12 +1055,16 @@ class _DetailedCompassDialog extends StatefulWidget {
   final double? initialHeading;
   final List<Contact> contacts;
   final List<SarMarker> sarMarkers;
+  final Contact? preSelectedContact;
+  final SarMarker? preSelectedSarMarker;
 
   const _DetailedCompassDialog({
     required this.initialPosition,
     required this.initialHeading,
     required this.contacts,
     required this.sarMarkers,
+    this.preSelectedContact,
+    this.preSelectedSarMarker,
   });
 
   @override
@@ -1004,11 +1088,17 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
   bool _showFire = true;
   bool _showStagingArea = true;
 
+  // Selected item for isolation
+  Contact? _selectedContact;
+  SarMarker? _selectedSarMarker;
+
   @override
   void initState() {
     super.initState();
     _currentHeading = widget.initialHeading;
     _currentPosition = widget.initialPosition;
+    _selectedContact = widget.preSelectedContact;
+    _selectedSarMarker = widget.preSelectedSarMarker;
 
     // Subscribe to compass updates
     final compassStream = FlutterCompass.events;
@@ -1063,6 +1153,8 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
           return _showFire;
         case SarMarkerType.stagingArea:
           return _showStagingArea;
+        case SarMarkerType.object:
+          return true; // Always show object markers (add filter if needed)
         case SarMarkerType.unknown:
           return true; // Always show unknown markers
       }
@@ -1261,12 +1353,24 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                         heading: heading ?? 0,
                         hasHeading: heading != null,
                         currentPosition: position,
-                        contacts: _showContacts ? widget.contacts : [],
-                        sarMarkers: _getFilteredSarMarkers(),
+                        contacts: _selectedContact != null
+                            ? [_selectedContact!]
+                            : (_selectedSarMarker != null
+                                ? []
+                                : (_showContacts ? widget.contacts : [])),
+                        sarMarkers: _selectedSarMarker != null
+                            ? [_selectedSarMarker!]
+                            : (_selectedContact != null
+                                ? []
+                                : _getFilteredSarMarkers()),
                         zoomLevel: _zoomLevel,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  // Selected item detail view
+                  if (_selectedContact != null || _selectedSarMarker != null)
+                    _buildSelectedItemDetail(context, heading, position),
                   const SizedBox(height: 12),
                   // Contacts list
                   if (_showContacts && widget.contacts.isNotEmpty) _buildContactsList(context, heading, position),
@@ -1333,6 +1437,230 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
 
   Widget _buildLocationFormats(BuildContext context, Position position) {
     return _LocationFormatToggle(position: position);
+  }
+
+  Widget _buildSelectedItemDetail(BuildContext context, double? heading, Position? position) {
+    if (position == null) {
+      return const SizedBox.shrink();
+    }
+
+    String title;
+    IconData icon;
+    Color color;
+    double? bearing;
+    double? distance;
+    LatLng? targetLocation;
+    String? additionalInfo;
+
+    if (_selectedContact != null) {
+      title = _selectedContact!.displayName;
+      icon = Icons.person;
+      color = Colors.blue;
+      targetLocation = _selectedContact!.displayLocation;
+
+      if (targetLocation != null) {
+        bearing = _calculateBearing(
+          position.latitude,
+          position.longitude,
+          targetLocation.latitude,
+          targetLocation.longitude,
+        );
+        distance = _calculateDistance(
+          position.latitude,
+          position.longitude,
+          targetLocation.latitude,
+          targetLocation.longitude,
+        );
+      }
+
+      // Show battery if available
+      if (_selectedContact!.telemetry?.batteryPercentage != null) {
+        additionalInfo = 'Battery: ${_selectedContact!.telemetry!.batteryPercentage!.round()}%';
+      }
+    } else if (_selectedSarMarker != null) {
+      title = _selectedSarMarker!.type.displayName;
+      targetLocation = _selectedSarMarker!.location;
+      additionalInfo = _selectedSarMarker!.timeAgo;
+
+      switch (_selectedSarMarker!.type) {
+        case SarMarkerType.foundPerson:
+          icon = Icons.person_pin;
+          color = Colors.green;
+          break;
+        case SarMarkerType.fire:
+          icon = Icons.local_fire_department;
+          color = Colors.red;
+          break;
+        case SarMarkerType.stagingArea:
+          icon = Icons.home_work;
+          color = Colors.orange;
+          break;
+        case SarMarkerType.object:
+          icon = Icons.inventory_2;
+          color = Colors.purple;
+          break;
+        case SarMarkerType.unknown:
+          icon = Icons.help_outline;
+          color = Colors.grey;
+          break;
+      }
+
+      bearing = _calculateBearing(
+        position.latitude,
+        position.longitude,
+        targetLocation.latitude,
+        targetLocation.longitude,
+      );
+      distance = _calculateDistance(
+        position.latitude,
+        position.longitude,
+        targetLocation.latitude,
+        targetLocation.longitude,
+      );
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Header with icon and title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: _selectedContact != null && _selectedContact!.roleEmoji != null
+                      ? Text(
+                          _selectedContact!.roleEmoji!,
+                          style: const TextStyle(fontSize: 32),
+                        )
+                      : Icon(icon, size: 32, color: color),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      if (additionalInfo != null)
+                        Text(
+                          additionalInfo,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey,
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _selectedContact = null;
+                      _selectedSarMarker = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+            if (bearing != null && distance != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              // Distance and bearing info
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildLargeInfoCard(
+                    context,
+                    'Distance',
+                    _formatDistance(distance),
+                    Icons.straighten,
+                    color,
+                  ),
+                  _buildLargeInfoCard(
+                    context,
+                    'Bearing',
+                    '${bearing.round()}°',
+                    Icons.navigation,
+                    color,
+                  ),
+                  _buildLargeInfoCard(
+                    context,
+                    'Direction',
+                    _bearingToCardinal(bearing),
+                    Icons.explore,
+                    color,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Coordinates
+              if (targetLocation != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${targetLocation.latitude.toStringAsFixed(5)}, ${targetLocation.longitude.toStringAsFixed(5)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLargeInfoCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Column(
+      children: [
+        Icon(icon, size: 28, color: color),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
   }
 
   // Convert decimal degrees to DMS (Degrees, Minutes, Seconds)
@@ -1404,17 +1732,30 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: _selectedContact == contact
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
+              border: _selectedContact == contact
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    )
+                  : null,
             ),
             child: ListTile(
               dense: true,
-              leading: const Icon(
-                Icons.person,
-                color: Colors.blue,
-                size: 24,
-              ),
-              title: Text(contact.advName),
+              leading: contact.roleEmoji != null
+                  ? Text(
+                      contact.roleEmoji!,
+                      style: const TextStyle(fontSize: 24),
+                    )
+                  : const Icon(
+                      Icons.person,
+                      color: Colors.blue,
+                      size: 24,
+                    ),
+              title: Text(contact.displayName),
               subtitle: Text(
                 '${_bearingToCardinal(bearing)} • ${_formatDistance(distance)}',
                 style: Theme.of(context).textTheme.bodySmall,
@@ -1425,6 +1766,18 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                       fontWeight: FontWeight.bold,
                     ),
               ),
+              onTap: () {
+                setState(() {
+                  if (_selectedContact == contact) {
+                    // Deselect if already selected
+                    _selectedContact = null;
+                  } else {
+                    // Select this contact and deselect SAR marker
+                    _selectedContact = contact;
+                    _selectedSarMarker = null;
+                  }
+                });
+              },
             ),
           );
         }),
@@ -1500,6 +1853,10 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
               markerColor = Colors.orange;
               markerIcon = Icons.home_work;
               break;
+            case SarMarkerType.object:
+              markerColor = Colors.purple;
+              markerIcon = Icons.inventory_2;
+              break;
             case SarMarkerType.unknown:
               markerColor = Colors.grey;
               markerIcon = Icons.help_outline;
@@ -1509,8 +1866,16 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: _selectedSarMarker == marker
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
+              border: _selectedSarMarker == marker
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    )
+                  : null,
             ),
             child: ListTile(
               dense: true,
@@ -1530,6 +1895,18 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                       fontWeight: FontWeight.bold,
                     ),
               ),
+              onTap: () {
+                setState(() {
+                  if (_selectedSarMarker == marker) {
+                    // Deselect if already selected
+                    _selectedSarMarker = null;
+                  } else {
+                    // Select this marker and deselect contact
+                    _selectedSarMarker = marker;
+                    _selectedContact = null;
+                  }
+                });
+              },
             ),
           );
         }),
@@ -1861,6 +2238,9 @@ class _LargeCompassPainter extends CustomPainter {
             break;
           case SarMarkerType.stagingArea:
             markerColor = Colors.orange;
+            break;
+          case SarMarkerType.object:
+            markerColor = Colors.purple;
             break;
           case SarMarkerType.unknown:
             markerColor = Colors.grey;

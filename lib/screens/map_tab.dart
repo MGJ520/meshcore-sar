@@ -993,8 +993,16 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<Position>? _positionSubscription;
   double _zoomLevel = 1.0; // 1.0 = default, 0.5 = zoomed out 2x, 2.0 = zoomed in 2x
+  double _previousScale = 1.0; // Track previous scale for smoother zooming
   static const double _minZoom = 0.25;
   static const double _maxZoom = 4.0;
+  static const double _zoomSensitivity = 0.5; // Lower = less sensitive (0.5 = half speed)
+
+  // Visibility toggles
+  bool _showContacts = true;
+  bool _showFoundPerson = true;
+  bool _showFire = true;
+  bool _showStagingArea = true;
 
   @override
   void initState() {
@@ -1045,6 +1053,128 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
     return null;
   }
 
+  // Filter SAR markers based on visibility settings
+  List<SarMarker> _getFilteredSarMarkers() {
+    return widget.sarMarkers.where((marker) {
+      switch (marker.type) {
+        case SarMarkerType.foundPerson:
+          return _showFoundPerson;
+        case SarMarkerType.fire:
+          return _showFire;
+        case SarMarkerType.stagingArea:
+          return _showStagingArea;
+        case SarMarkerType.unknown:
+          return true; // Always show unknown markers
+      }
+    }).toList();
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.filter_list, size: 20),
+              SizedBox(width: 8),
+              Text('Filter Markers'),
+            ],
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Contacts filter
+              _CompactFilterItem(
+                icon: Icons.person,
+                color: Colors.blue,
+                label: 'Contacts',
+                value: _showContacts,
+                onChanged: (value) {
+                  setState(() {
+                    _showContacts = value;
+                  });
+                  setDialogState(() {});
+                },
+              ),
+              const SizedBox(height: 4),
+              const Divider(height: 8),
+              const SizedBox(height: 4),
+              // SAR Markers section
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 8, top: 4),
+                child: Text(
+                  'SAR Markers',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+              _CompactFilterItem(
+                icon: Icons.person_pin,
+                color: Colors.green,
+                label: 'Found Person',
+                value: _showFoundPerson,
+                onChanged: (value) {
+                  setState(() {
+                    _showFoundPerson = value;
+                  });
+                  setDialogState(() {});
+                },
+              ),
+              const SizedBox(height: 4),
+              _CompactFilterItem(
+                icon: Icons.local_fire_department,
+                color: Colors.red,
+                label: 'Fire',
+                value: _showFire,
+                onChanged: (value) {
+                  setState(() {
+                    _showFire = value;
+                  });
+                  setDialogState(() {});
+                },
+              ),
+              const SizedBox(height: 4),
+              _CompactFilterItem(
+                icon: Icons.home_work,
+                color: Colors.orange,
+                label: 'Staging Area',
+                value: _showStagingArea,
+                onChanged: (value) {
+                  setState(() {
+                    _showStagingArea = value;
+                  });
+                  setDialogState(() {});
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _showContacts = true;
+                  _showFoundPerson = true;
+                  _showFire = true;
+                  _showStagingArea = true;
+                });
+                setDialogState(() {});
+              },
+              child: const Text('Show All'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final heading = currentHeading;
@@ -1080,7 +1210,11 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                   ],
                 ),
               ),
-              const SizedBox(width: 48), // Balance for back button
+              IconButton(
+                icon: const Icon(Icons.filter_list),
+                tooltip: 'Filter markers',
+                onPressed: () => _showFilterDialog(),
+              ),
             ],
           ),
         ),
@@ -1099,10 +1233,26 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                   const SizedBox(height: 12),
                   // Large compass with zoom controls
                   GestureDetector(
+                    onScaleStart: (details) {
+                      _previousScale = 1.0;
+                    },
                     onScaleUpdate: (details) {
                       setState(() {
-                        _zoomLevel = (_zoomLevel * details.scale).clamp(_minZoom, _maxZoom);
+                        // Calculate scale delta from previous scale
+                        final scaleDelta = details.scale - _previousScale;
+
+                        // Apply sensitivity factor to make it more coarse
+                        final adjustedDelta = scaleDelta * _zoomSensitivity;
+
+                        // Apply the delta to current zoom level
+                        _zoomLevel = (_zoomLevel * (1.0 + adjustedDelta)).clamp(_minZoom, _maxZoom);
+
+                        // Update previous scale
+                        _previousScale = details.scale;
                       });
+                    },
+                    onScaleEnd: (details) {
+                      _previousScale = 1.0;
                     },
                     child: SizedBox(
                       width: 300,
@@ -1111,14 +1261,17 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                         heading: heading ?? 0,
                         hasHeading: heading != null,
                         currentPosition: position,
-                        contacts: widget.contacts,
+                        contacts: _showContacts ? widget.contacts : [],
+                        sarMarkers: _getFilteredSarMarkers(),
                         zoomLevel: _zoomLevel,
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   // Contacts list
-                  if (widget.contacts.isNotEmpty) _buildContactsList(context, heading, position),
+                  if (_showContacts && widget.contacts.isNotEmpty) _buildContactsList(context, heading, position),
+                  // SAR Markers list
+                  if (_getFilteredSarMarkers().isNotEmpty) _buildSarMarkersList(context, heading, position),
                 ],
               ),
             ),
@@ -1279,6 +1432,111 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
     );
   }
 
+  Widget _buildSarMarkersList(BuildContext context, double? heading, Position? position) {
+    if (position == null) {
+      return const Text('Location unavailable');
+    }
+
+    // Use filtered SAR markers
+    final filteredMarkers = _getFilteredSarMarkers();
+
+    // Calculate bearings and distances for SAR markers
+    final markersWithBearing = filteredMarkers.map((marker) {
+      final bearing = _calculateBearing(
+        position.latitude,
+        position.longitude,
+        marker.location.latitude,
+        marker.location.longitude,
+      );
+
+      final distance = _calculateDistance(
+        position.latitude,
+        position.longitude,
+        marker.location.latitude,
+        marker.location.longitude,
+      );
+
+      return {
+        'marker': marker,
+        'bearing': bearing,
+        'distance': distance,
+      };
+    }).toList();
+
+    // Sort by distance
+    markersWithBearing.sort((a, b) =>
+        (a['distance'] as double).compareTo(b['distance'] as double));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
+          child: Text(
+            'SAR Markers',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        ...markersWithBearing.map((item) {
+          final marker = item['marker'] as SarMarker;
+          final bearing = item['bearing'] as double;
+          final distance = item['distance'] as double;
+
+          // Determine color and icon based on marker type
+          Color markerColor;
+          IconData markerIcon;
+          switch (marker.type) {
+            case SarMarkerType.foundPerson:
+              markerColor = Colors.green;
+              markerIcon = Icons.person_pin;
+              break;
+            case SarMarkerType.fire:
+              markerColor = Colors.red;
+              markerIcon = Icons.local_fire_department;
+              break;
+            case SarMarkerType.stagingArea:
+              markerColor = Colors.orange;
+              markerIcon = Icons.home_work;
+              break;
+            case SarMarkerType.unknown:
+              markerColor = Colors.grey;
+              markerIcon = Icons.help_outline;
+              break;
+          }
+
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListTile(
+              dense: true,
+              leading: Icon(
+                markerIcon,
+                color: markerColor,
+                size: 24,
+              ),
+              title: Text(marker.type.displayName),
+              subtitle: Text(
+                '${_bearingToCardinal(bearing)} • ${_formatDistance(distance)} • ${marker.timeAgo}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              trailing: Text(
+                '${bearing.round()}°',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   // Calculate bearing between two points (in degrees)
   double _calculateBearing(
       double lat1, double lon1, double lat2, double lon2) {
@@ -1332,6 +1590,7 @@ class _DetailedCompassPainter extends StatelessWidget {
   final bool hasHeading;
   final Position? currentPosition;
   final List<Contact> contacts;
+  final List<SarMarker> sarMarkers;
   final double zoomLevel;
 
   const _DetailedCompassPainter({
@@ -1339,6 +1598,7 @@ class _DetailedCompassPainter extends StatelessWidget {
     required this.hasHeading,
     required this.currentPosition,
     required this.contacts,
+    required this.sarMarkers,
     this.zoomLevel = 1.0,
   });
 
@@ -1350,6 +1610,7 @@ class _DetailedCompassPainter extends StatelessWidget {
         hasHeading: hasHeading,
         currentPosition: currentPosition,
         contacts: contacts,
+        sarMarkers: sarMarkers,
         zoomLevel: zoomLevel,
       ),
       child: Container(),
@@ -1362,6 +1623,7 @@ class _LargeCompassPainter extends CustomPainter {
   final bool hasHeading;
   final Position? currentPosition;
   final List<Contact> contacts;
+  final List<SarMarker> sarMarkers;
   final double zoomLevel;
 
   _LargeCompassPainter({
@@ -1369,6 +1631,7 @@ class _LargeCompassPainter extends CustomPainter {
     required this.hasHeading,
     required this.currentPosition,
     required this.contacts,
+    required this.sarMarkers,
     this.zoomLevel = 1.0,
   });
 
@@ -1546,6 +1809,128 @@ class _LargeCompassPainter extends CustomPainter {
       }
     }
 
+    // Draw SAR markers as colored dots relative to distance, scaled by zoom level
+    if (currentPosition != null && sarMarkers.isNotEmpty) {
+      // Calculate distances for all SAR markers
+      final markersWithDistance = sarMarkers.map((marker) {
+        final bearing = _calculateBearing(
+          currentPosition!.latitude,
+          currentPosition!.longitude,
+          marker.location.latitude,
+          marker.location.longitude,
+        );
+        final distance = _calculateDistance(
+          currentPosition!.latitude,
+          currentPosition!.longitude,
+          marker.location.latitude,
+          marker.location.longitude,
+        );
+        return {'marker': marker, 'bearing': bearing, 'distance': distance};
+      }).toList();
+
+      // Base distance for zoom level 1.0 (in meters)
+      final baseDistance = 1000.0 / zoomLevel;
+
+      for (final item in markersWithDistance) {
+        final marker = item['marker'] as SarMarker;
+        final bearing = item['bearing'] as double;
+        final distance = item['distance'] as double;
+
+        // Adjust bearing relative to current heading
+        final relativeBearing = (bearing - heading + 360) % 360;
+        final angle = relativeBearing * pi / 180 - pi / 2;
+
+        // Calculate normalized distance (0 to 1, where 1 is at the rim)
+        double normalizedDistance = (distance / baseDistance).clamp(0.0, 1.0);
+
+        // Calculate marker position radius (from center to rim based on distance)
+        final markerRadius = radius * normalizedDistance * 0.85;
+
+        // Position of marker dot
+        final dotX = center.dx + markerRadius * cos(angle);
+        final dotY = center.dy + markerRadius * sin(angle);
+
+        // Determine color based on SAR marker type
+        Color markerColor;
+        switch (marker.type) {
+          case SarMarkerType.foundPerson:
+            markerColor = Colors.green;
+            break;
+          case SarMarkerType.fire:
+            markerColor = Colors.red;
+            break;
+          case SarMarkerType.stagingArea:
+            markerColor = Colors.orange;
+            break;
+          case SarMarkerType.unknown:
+            markerColor = Colors.grey;
+            break;
+        }
+
+        // Draw line from center to SAR marker
+        final linePaint = Paint()
+          ..color = markerColor.withValues(alpha: 0.3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+        canvas.drawLine(
+          center,
+          Offset(dotX, dotY),
+          linePaint,
+        );
+
+        // Draw SAR marker dot (slightly larger than contacts)
+        final dotSize = (8.0 * (1.0 + zoomLevel * 0.3)).clamp(6.0, 14.0);
+        final dotPaint = Paint()
+          ..color = markerColor
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(Offset(dotX, dotY), dotSize, dotPaint);
+
+        // Draw white border
+        final borderPaint = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5;
+        canvas.drawCircle(Offset(dotX, dotY), dotSize, borderPaint);
+
+        // Draw distance label near the SAR marker
+        if (zoomLevel >= 0.75) {
+          final distanceText = _formatDistance(distance);
+          final labelOffset = dotSize + 14;
+          final labelX = center.dx + (markerRadius + labelOffset) * cos(angle);
+          final labelY = center.dy + (markerRadius + labelOffset) * sin(angle);
+
+          textPainter.text = TextSpan(
+            text: distanceText,
+            style: TextStyle(
+              color: markerColor,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          );
+          textPainter.layout();
+
+          // Draw background for readability
+          final bgRect = RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: Offset(labelX, labelY),
+              width: textPainter.width + 4,
+              height: textPainter.height + 2,
+            ),
+            const Radius.circular(3),
+          );
+          final bgPaint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.9)
+            ..style = PaintingStyle.fill;
+          canvas.drawRRect(bgRect, bgPaint);
+
+          textPainter.paint(
+            canvas,
+            Offset(labelX - textPainter.width / 2, labelY - textPainter.height / 2),
+          );
+        }
+      }
+    }
+
     // Draw center heading indicator (fixed pointing up)
     final indicatorPaint = Paint()
       ..color = hasHeading ? Colors.red : Colors.grey
@@ -1600,6 +1985,52 @@ class _LargeCompassPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// Compact filter item widget
+class _CompactFilterItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _CompactFilterItem({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            Checkbox(
+              value: value,
+              onChanged: (val) => onChanged(val ?? false),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // Location format toggle widget

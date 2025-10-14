@@ -377,21 +377,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               )
             else
-              OutlinedButton(
-                onPressed: () async {
-                  await provider.disconnect();
-                  if (context.mounted) {
-                    context.read<AppProvider>().clearAllData();
-                  }
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // RX indicator
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: provider.rxActivity
+                          ? Colors.green
+                          : Colors.grey.withOpacity(0.3),
+                    ),
                   ),
-                ),
-                child: const Text('Disconnect'),
+                  const SizedBox(width: 4),
+                  Text(
+                    'RX:${provider.rxPacketCount}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // TX indicator
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: provider.txActivity
+                          ? Colors.blue
+                          : Colors.grey.withOpacity(0.3),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'TX:${provider.txPacketCount}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton(
+                    onPressed: () async {
+                      await provider.disconnect();
+                      if (context.mounted) {
+                        context.read<AppProvider>().clearAllData();
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('Disconnect', style: TextStyle(fontSize: 13)),
+                  ),
+                ],
               ),
           ],
         );

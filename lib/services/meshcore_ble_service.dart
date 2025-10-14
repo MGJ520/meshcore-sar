@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/contact.dart';
 import '../models/contact_telemetry.dart';
@@ -35,6 +36,16 @@ class MeshCoreBleService {
   final List<Contact> _pendingContacts = [];
   bool _isConnected = false;
   bool get isConnected => _isConnected;
+
+  // Packet counters
+  int _rxPacketCount = 0;
+  int _txPacketCount = 0;
+  int get rxPacketCount => _rxPacketCount;
+  int get txPacketCount => _txPacketCount;
+
+  // Activity callbacks (for blinking indicators)
+  VoidCallback? onRxActivity;
+  VoidCallback? onTxActivity;
 
   /// Scan for MeshCore devices
   Stream<BluetoothDevice> scanForDevices({Duration timeout = const Duration(seconds: 10)}) async* {
@@ -225,6 +236,10 @@ class MeshCoreBleService {
         throw Exception('Characteristic does not support write operations');
       }
 
+      // Increment TX packet counter and trigger activity indicator
+      _txPacketCount++;
+      onTxActivity?.call();
+
       print('✅ [BLE] Write successful');
     } catch (e) {
       print('❌ [BLE] Write error: $e');
@@ -237,6 +252,17 @@ class MeshCoreBleService {
   void _onDataReceived(List<int> data) {
     try {
       print('📥 [BLE] Received ${data.length} bytes from TX characteristic');
+
+      // Handle empty data
+      if (data.isEmpty) {
+        print('  ⚠️ Empty data received, ignoring');
+        return;
+      }
+
+      // Increment RX packet counter and trigger activity indicator
+      _rxPacketCount++;
+      onRxActivity?.call();
+
       print('  Raw data: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
 
       final reader = BufferReader(Uint8List.fromList(data));
@@ -256,6 +282,10 @@ class MeshCoreBleService {
         case MeshCoreConstants.respEndOfContacts:
           print('  → Handling EndOfContacts');
           _handleEndOfContacts(reader);
+          break;
+        case MeshCoreConstants.respSent:
+          print('  → Handling Sent confirmation');
+          _handleSentConfirmation(reader);
           break;
         case MeshCoreConstants.respContactMsgRecv:
           print('  → Handling ContactMessage');
@@ -313,16 +343,41 @@ class MeshCoreBleService {
   /// Handle Contact response
   void _handleContact(BufferReader reader) {
     try {
+      print('  [Contact] Parsing contact...');
+      print('    Remaining bytes: ${reader.remainingBytesCount}');
+
       final publicKey = reader.readBytes(32);
-      final type = ContactType.fromValue(reader.readByte());
+      print('    Public key prefix: ${publicKey.sublist(0, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join(':')}');
+
+      final typeByte = reader.readByte();
+      final type = ContactType.fromValue(typeByte);
+      print('    Type byte: $typeByte → Type: $type');
+
       final flags = reader.readByte();
+      print('    Flags: $flags (0x${flags.toRadixString(16).padLeft(2, '0')})');
+
       final outPathLen = reader.readInt8();
+      print('    Out path length: $outPathLen');
+
       final outPath = reader.readBytes(64);
+      print('    Out path: ${outPath.sublist(0, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join(':')}...');
+
       final advName = reader.readCString(32);
+      print('    Advertised name: "$advName"');
+
       final lastAdvert = reader.readUInt32LE();
+      print('    Last advert timestamp: $lastAdvert');
+
       final advLat = reader.readInt32LE();
+      print('    Latitude (raw int32): $advLat');
+      print('    Latitude (decimal): ${advLat / 1000000.0}°');
+
       final advLon = reader.readInt32LE();
+      print('    Longitude (raw int32): $advLon');
+      print('    Longitude (decimal): ${advLon / 1000000.0}°');
+
       final lastMod = reader.readUInt32LE();
+      print('    Last modified timestamp: $lastMod');
 
       final contact = Contact(
         publicKey: publicKey,
@@ -337,9 +392,11 @@ class MeshCoreBleService {
         lastMod: lastMod,
       );
 
+      print('  ✅ [Contact] Parsed successfully');
       _pendingContacts.add(contact);
       onContactReceived?.call(contact);
     } catch (e) {
+      print('  ❌ [Contact] Parsing error: $e');
       onError?.call('Contact parsing error: $e');
     }
   }
@@ -350,14 +407,62 @@ class MeshCoreBleService {
     _pendingContacts.clear();
   }
 
+  /// Handle Sent confirmation response
+  void _handleSentConfirmation(BufferReader reader) {
+    try {
+      print('  [Sent] Parsing sent confirmation...');
+      print('    Remaining bytes: ${reader.remainingBytesCount}');
+
+      // Sent confirmation format (from protocol):
+      // - 1 byte: reserved
+      // - 4 bytes: public key prefix (recipient)
+      // - 2 bytes: message ID
+      // - 2 bytes: reserved
+
+      if (reader.remainingBytesCount >= 9) {
+        final reserved1 = reader.readByte();
+        print('    Reserved: $reserved1');
+
+        final pubKeyPrefix = reader.readBytes(4);
+        print('    Recipient public key prefix: ${pubKeyPrefix.map((b) => b.toRadixString(16).padLeft(2, '0')).join(':')}');
+
+        final messageId = reader.readUInt16LE();
+        print('    Message ID: $messageId');
+
+        if (reader.remainingBytesCount >= 2) {
+          final reserved2 = reader.readUInt16LE();
+          print('    Reserved2: $reserved2');
+        }
+      }
+
+      print('  ✅ [Sent] Message sent confirmation');
+    } catch (e) {
+      print('  ❌ [Sent] Parsing error: $e');
+      // Don't call onError - sent confirmations are informational
+    }
+  }
+
   /// Handle ContactMsgRecv response
   void _handleContactMessage(BufferReader reader) {
     try {
+      print('  [ContactMessage] Parsing contact message...');
+      print('    Remaining bytes: ${reader.remainingBytesCount}');
+
       final pubKeyPrefix = reader.readBytes(6);
+      print('    Sender public key prefix: ${pubKeyPrefix.map((b) => b.toRadixString(16).padLeft(2, '0')).join(':')}');
+
       final pathLen = reader.readByte();
-      final txtType = MessageTextType.fromValue(reader.readByte());
+      print('    Path length: $pathLen');
+
+      final txtTypeByte = reader.readByte();
+      final txtType = MessageTextType.fromValue(txtTypeByte);
+      print('    Text type byte: $txtTypeByte → Type: $txtType');
+
       final senderTimestamp = reader.readUInt32LE();
+      print('    Sender timestamp: $senderTimestamp (${DateTime.fromMillisecondsSinceEpoch(senderTimestamp * 1000)})');
+
       final text = reader.readString();
+      print('    Text: "$text"');
 
       final message = Message(
         id: '${DateTime.now().millisecondsSinceEpoch}_${pubKeyPrefix.map((b) => b.toRadixString(16)).join()}',
@@ -370,8 +475,10 @@ class MeshCoreBleService {
         receivedAt: DateTime.now(),
       );
 
+      print('  ✅ [ContactMessage] Parsed successfully');
       onMessageReceived?.call(message);
     } catch (e) {
+      print('  ❌ [ContactMessage] Parsing error: $e');
       onError?.call('Contact message parsing error: $e');
     }
   }
@@ -379,11 +486,24 @@ class MeshCoreBleService {
   /// Handle ChannelMsgRecv response
   void _handleChannelMessage(BufferReader reader) {
     try {
+      print('  [ChannelMessage] Parsing channel message...');
+      print('    Remaining bytes: ${reader.remainingBytesCount}');
+
       final channelIdx = reader.readInt8();
+      print('    Channel index: $channelIdx');
+
       final pathLen = reader.readByte();
-      final txtType = MessageTextType.fromValue(reader.readByte());
+      print('    Path length: $pathLen');
+
+      final txtTypeByte = reader.readByte();
+      final txtType = MessageTextType.fromValue(txtTypeByte);
+      print('    Text type byte: $txtTypeByte → Type: $txtType');
+
       final senderTimestamp = reader.readUInt32LE();
+      print('    Sender timestamp: $senderTimestamp (${DateTime.fromMillisecondsSinceEpoch(senderTimestamp * 1000)})');
+
       final text = reader.readString();
+      print('    Text: "$text"');
 
       final message = Message(
         id: '${DateTime.now().millisecondsSinceEpoch}_ch$channelIdx',
@@ -396,8 +516,10 @@ class MeshCoreBleService {
         receivedAt: DateTime.now(),
       );
 
+      print('  ✅ [ChannelMessage] Parsed successfully');
       onMessageReceived?.call(message);
     } catch (e) {
+      print('  ❌ [ChannelMessage] Parsing error: $e');
       onError?.call('Channel message parsing error: $e');
     }
   }
@@ -405,12 +527,23 @@ class MeshCoreBleService {
   /// Handle TelemetryResponse push
   void _handleTelemetryResponse(BufferReader reader) {
     try {
-      reader.readByte(); // reserved
-      final pubKeyPrefix = reader.readBytes(6);
-      final lppSensorData = reader.readRemainingBytes();
+      print('  [Telemetry] Parsing telemetry response...');
+      print('    Remaining bytes: ${reader.remainingBytesCount}');
 
+      final reserved = reader.readByte();
+      print('    Reserved byte: $reserved');
+
+      final pubKeyPrefix = reader.readBytes(6);
+      print('    Public key prefix: ${pubKeyPrefix.map((b) => b.toRadixString(16).padLeft(2, '0')).join(':')}');
+
+      final lppSensorData = reader.readRemainingBytes();
+      print('    LPP sensor data length: ${lppSensorData.length} bytes');
+      print('    LPP sensor data (hex): ${lppSensorData.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+
+      print('  ✅ [Telemetry] Parsed successfully');
       onTelemetryReceived?.call(pubKeyPrefix, lppSensorData);
     } catch (e) {
+      print('  ❌ [Telemetry] Parsing error: $e');
       onError?.call('Telemetry parsing error: $e');
     }
   }
@@ -500,7 +633,7 @@ class MeshCoreBleService {
       print('    Device type: $deviceType');
       print('    TX power: $txPower / $maxTxPower dBm');
       print('    Public key prefix: ${publicKey.sublist(0, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join(':')}');
-      print('    Position: ${advLat / 10000.0}, ${advLon / 10000.0}');
+      print('    Position: ${advLat / 1000000.0}, ${advLon / 1000000.0}');
       print('    Radio: freq=$radioFreq, bw=$radioBw, sf=$radioSf, cr=$radioCr');
 
       if (reader.hasRemaining) {
@@ -655,9 +788,15 @@ class MeshCoreBleService {
     final writer = BufferWriter();
     writer.writeByte(MeshCoreConstants.cmdSendSelfAdvert);
     writer.writeByte(MeshCoreConstants.selfAdvertFlood);
-    writer.writeInt32LE((latitude * 10000).round());
-    writer.writeInt32LE((longitude * 10000).round());
+    writer.writeInt32LE((latitude * 1000000).round());
+    writer.writeInt32LE((longitude * 1000000).round());
     await _writeData(writer.toBytes());
+  }
+
+  /// Reset packet counters
+  void resetCounters() {
+    _rxPacketCount = 0;
+    _txPacketCount = 0;
   }
 
   /// Dispose resources

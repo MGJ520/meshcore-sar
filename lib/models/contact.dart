@@ -79,8 +79,8 @@ class Contact {
   LatLng? get advertLocation {
     if (advLat == 0 && advLon == 0) return null;
     // Convert from int32 to double (degrees)
-    final lat = advLat / 1e7;
-    final lon = advLon / 1e7;
+    final lat = advLat / 1e6;
+    final lon = advLon / 1e6;
     return LatLng(lat, lon);
   }
 

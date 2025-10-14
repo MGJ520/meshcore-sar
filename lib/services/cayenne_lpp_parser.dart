@@ -9,6 +9,10 @@ import 'meshcore_constants.dart';
 class CayenneLppParser {
   /// Parse Cayenne LPP data into ContactTelemetry
   static ContactTelemetry parse(Uint8List data) {
+    print('  [CayenneLPP] Parsing LPP data...');
+    print('    Data length: ${data.length} bytes');
+    print('    Data (hex): ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+
     final reader = BufferReader(data);
 
     LatLng? gpsLocation;
@@ -19,91 +23,144 @@ class CayenneLppParser {
     double? pressure;
     final extraSensorData = <String, dynamic>{};
 
+    int fieldCount = 0;
     while (reader.hasRemaining) {
       try {
+        fieldCount++;
+        print('    [Field $fieldCount] Position: ${data.length - reader.remainingBytesCount}');
+
         final channel = reader.readByte();
+        print('      Channel: $channel');
+
         final type = reader.readByte();
+        print('      Type: $type (0x${type.toRadixString(16).padLeft(2, '0')})');
 
         switch (type) {
           case MeshCoreConstants.lppDigitalInput:
             final value = reader.readByte();
+            print('      Digital Input: $value');
             extraSensorData['digital_input_$channel'] = value;
             break;
 
           case MeshCoreConstants.lppDigitalOutput:
             final value = reader.readByte();
+            print('      Digital Output: $value');
             extraSensorData['digital_output_$channel'] = value;
             break;
 
           case MeshCoreConstants.lppAnalogInput:
-            final value = reader.readInt16LE() / 100.0;
+            final rawValue = reader.readInt16LE();
+            final value = rawValue / 100.0;
+            print('      Analog Input (raw): $rawValue');
+            print('      Analog Input (volts): ${value}V');
             extraSensorData['analog_input_$channel'] = value;
             // If this is a battery reading
             if (channel == 0 || channel == 1) {
               batteryMilliVolts = value * 1000;
               batteryPercentage = _calculateBatteryPercentage(value);
+              print('      → Battery: ${batteryPercentage?.toStringAsFixed(1)}% (${batteryMilliVolts?.toStringAsFixed(0)}mV)');
             }
             break;
 
           case MeshCoreConstants.lppAnalogOutput:
-            final value = reader.readInt16LE() / 100.0;
+            final rawValue = reader.readInt16LE();
+            final value = rawValue / 100.0;
+            print('      Analog Output (raw): $rawValue');
+            print('      Analog Output (volts): ${value}V');
             extraSensorData['analog_output_$channel'] = value;
             break;
 
           case MeshCoreConstants.lppIlluminanceSensor:
             final value = reader.readUInt16LE();
+            print('      Illuminance: $value lux');
             extraSensorData['illuminance_$channel'] = value;
             break;
 
           case MeshCoreConstants.lppPresenceSensor:
             final value = reader.readByte();
+            print('      Presence: $value');
             extraSensorData['presence_$channel'] = value;
             break;
 
           case MeshCoreConstants.lppTemperatureSensor:
-            temperature = reader.readInt16LE() / 10.0;
+            final rawValue = reader.readInt16LE();
+            temperature = rawValue / 10.0;
+            print('      Temperature (raw): $rawValue');
+            print('      Temperature: ${temperature?.toStringAsFixed(1)}°C');
             break;
 
           case MeshCoreConstants.lppHumiditySensor:
-            humidity = reader.readByte() / 2.0;
+            final rawValue = reader.readByte();
+            humidity = rawValue / 2.0;
+            print('      Humidity (raw): $rawValue');
+            print('      Humidity: ${humidity?.toStringAsFixed(1)}%');
             break;
 
           case MeshCoreConstants.lppAccelerometer:
             final x = reader.readInt16LE() / 1000.0;
             final y = reader.readInt16LE() / 1000.0;
             final z = reader.readInt16LE() / 1000.0;
+            print('      Accelerometer: x=$x, y=$y, z=$z');
             extraSensorData['accelerometer_$channel'] = {'x': x, 'y': y, 'z': z};
             break;
 
           case MeshCoreConstants.lppBarometer:
-            pressure = reader.readUInt16LE() / 10.0;
+            final rawValue = reader.readUInt16LE();
+            pressure = rawValue / 10.0;
+            print('      Barometer (raw): $rawValue');
+            print('      Barometer: ${pressure?.toStringAsFixed(1)} hPa');
+            break;
+
+          case MeshCoreConstants.lppVoltageSensor:
+            final rawValue = reader.readUInt16LE();
+            final value = rawValue / 100.0;
+            print('      Voltage (raw): $rawValue');
+            print('      Voltage: ${value}V');
+            // Treat voltage sensor as battery reading
+            batteryMilliVolts = value * 1000;
+            batteryPercentage = _calculateBatteryPercentage(value);
+            print('      → Battery: ${batteryPercentage?.toStringAsFixed(1)}% (${batteryMilliVolts?.toStringAsFixed(0)}mV)');
             break;
 
           case MeshCoreConstants.lppGyrometer:
             final x = reader.readInt16LE() / 100.0;
             final y = reader.readInt16LE() / 100.0;
             final z = reader.readInt16LE() / 100.0;
+            print('      Gyrometer: x=$x, y=$y, z=$z');
             extraSensorData['gyrometer_$channel'] = {'x': x, 'y': y, 'z': z};
             break;
 
           case MeshCoreConstants.lppGps:
-            final lat = reader.readInt32LE() / 10000.0;
-            final lon = reader.readInt32LE() / 10000.0;
-            final alt = reader.readInt32LE() / 100.0;
+            final rawLat = reader.readInt32LE();
+            final rawLon = reader.readInt32LE();
+            final rawAlt = reader.readInt32LE();
+            final lat = rawLat / 1000000.0;
+            final lon = rawLon / 1000000.0;
+            final alt = rawAlt / 100.0;
+            print('      GPS Location (raw): lat=$rawLat, lon=$rawLon, alt=$rawAlt');
+            print('      GPS Location: ${lat}°, ${lon}°, altitude=${alt}m');
             gpsLocation = LatLng(lat, lon);
             extraSensorData['altitude_$channel'] = alt;
             break;
 
           default:
+            print('      ⚠️ Unknown type, skipping remaining ${reader.remainingBytesCount} bytes');
             // Unknown type, skip remaining to avoid parsing errors
             reader.skip(reader.remainingBytesCount);
             break;
         }
       } catch (e) {
+        print('      ❌ Parsing error: $e');
         // If we encounter a parsing error, break and return what we have
         break;
       }
     }
+
+    print('    Parsed $fieldCount fields');
+    print('  ✅ [CayenneLPP] Parsing complete');
+    print('    GPS: ${gpsLocation != null ? '${gpsLocation.latitude}°, ${gpsLocation.longitude}°' : 'none'}');
+    print('    Battery: ${batteryPercentage != null ? '${batteryPercentage.toStringAsFixed(1)}%' : 'none'}');
+    print('    Temperature: ${temperature != null ? '${temperature.toStringAsFixed(1)}°C' : 'none'}');
 
     return ContactTelemetry(
       gpsLocation: gpsLocation,

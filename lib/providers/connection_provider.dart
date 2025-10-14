@@ -28,6 +28,19 @@ class ConnectionProvider with ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  // Activity indicators (for blinking)
+  bool _rxActivity = false;
+  bool _txActivity = false;
+  bool get rxActivity => _rxActivity;
+  bool get txActivity => _txActivity;
+
+  Timer? _rxActivityTimer;
+  Timer? _txActivityTimer;
+
+  // Packet counters
+  int get rxPacketCount => _bleService.rxPacketCount;
+  int get txPacketCount => _bleService.txPacketCount;
+
   // Callbacks for other providers
   Function(Contact)? onContactReceived;
   Function(List<Contact>)? onContactsComplete;
@@ -89,6 +102,31 @@ class ConnectionProvider with ChangeNotifier {
 
     _bleService.onTelemetryReceived = (publicKey, lppData) {
       onTelemetryReceived?.call(publicKey, lppData);
+    };
+
+    // Activity indicators
+    _bleService.onRxActivity = () {
+      _rxActivity = true;
+      notifyListeners();
+
+      // Reset after 100ms
+      _rxActivityTimer?.cancel();
+      _rxActivityTimer = Timer(const Duration(milliseconds: 100), () {
+        _rxActivity = false;
+        notifyListeners();
+      });
+    };
+
+    _bleService.onTxActivity = () {
+      _txActivity = true;
+      notifyListeners();
+
+      // Reset after 100ms
+      _txActivityTimer?.cancel();
+      _txActivityTimer = Timer(const Duration(milliseconds: 100), () {
+        _txActivity = false;
+        notifyListeners();
+      });
     };
   }
 
@@ -269,6 +307,8 @@ class ConnectionProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _rxActivityTimer?.cancel();
+    _txActivityTimer?.cancel();
     _bleService.dispose();
     super.dispose();
   }

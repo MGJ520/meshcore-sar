@@ -125,6 +125,7 @@ class MeshCoreConstants {
   static const int lppHumiditySensor = 104;
   static const int lppAccelerometer = 113;
   static const int lppBarometer = 115;
+  static const int lppVoltageSensor = 116;
   static const int lppGyrometer = 134;
   static const int lppGps = 136;
 

@@ -687,7 +687,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Consumer2<ContactsProvider, MessagesProvider>(
       builder: (context, contactsProvider, messagesProvider, child) {
-        final contactsWithLocation = contactsProvider.chatContactsWithLocation;
+        final contactsWithLocation = contactsProvider.contactsWithLocation;
         final sarMarkers = messagesProvider.sarMarkers;
         final center = _calculateCenter(contactsWithLocation, sarMarkers);
 
@@ -729,7 +729,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                             onContactTap: (contact) {
                               _showDetailedCompassWithContact(
                                 context,
-                                contactsProvider.chatContactsWithLocation,
+                                contactsProvider.contactsWithLocation,
                                 messagesProvider.sarMarkers,
                                 contact,
                               );
@@ -742,7 +742,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                             onSarMarkerTap: (marker) {
                               _showDetailedCompassWithSarMarker(
                                 context,
-                                contactsProvider.chatContactsWithLocation,
+                                contactsProvider.contactsWithLocation,
                                 messagesProvider.sarMarkers,
                                 marker,
                               );
@@ -807,7 +807,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
               child: GestureDetector(
                 onTap: () => _showDetailedCompass(
                   context,
-                  contactsProvider.chatContactsWithLocation,
+                  contactsProvider.contactsWithLocation,
                   messagesProvider.sarMarkers,
                 ),
                 child: _CompassWidget(

@@ -104,6 +104,31 @@ class ConnectionProvider with ChangeNotifier {
       onTelemetryReceived?.call(publicKey, lppData);
     };
 
+    _bleService.onSelfInfoReceived = (selfInfo) {
+      print('📥 [Provider] Received SelfInfo:');
+      print('  TX Power: ${selfInfo['txPower']} / ${selfInfo['maxTxPower']} dBm');
+      print('  Radio: freq=${selfInfo['radioFreq']}, bw=${selfInfo['radioBw']}, sf=${selfInfo['radioSf']}, cr=${selfInfo['radioCr']}');
+      print('  Position: ${selfInfo['advLat'] / 1000000.0}, ${selfInfo['advLon'] / 1000000.0}');
+      print('  Self Name: ${selfInfo['selfName']}');
+
+      _deviceInfo = _deviceInfo.copyWith(
+        deviceType: selfInfo['deviceType'] as int?,
+        txPower: selfInfo['txPower'] as int?,
+        maxTxPower: selfInfo['maxTxPower'] as int?,
+        publicKey: selfInfo['publicKey'] as Uint8List?,
+        advLat: selfInfo['advLat'] as int?,
+        advLon: selfInfo['advLon'] as int?,
+        manualAddContacts: selfInfo['manualAddContacts'] as bool?,
+        radioFreq: selfInfo['radioFreq'] as int?,
+        radioBw: selfInfo['radioBw'] as int?,
+        radioSf: selfInfo['radioSf'] as int?,
+        radioCr: selfInfo['radioCr'] as int?,
+        selfName: selfInfo['selfName'] as String?,
+      );
+      notifyListeners();
+      print('✅ [Provider] Device info updated with SelfInfo');
+    };
+
     // Activity indicators
     _bleService.onRxActivity = () {
       _rxActivity = true;
@@ -295,6 +320,103 @@ class ConnectionProvider with ChangeNotifier {
       await _bleService.setDeviceTime();
     } catch (e) {
       _error = 'Failed to sync time: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Set advertised name
+  Future<void> setAdvertName(String name) async {
+    if (!_bleService.isConnected) {
+      _error = 'Not connected to device';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      await _bleService.setAdvertName(name);
+    } catch (e) {
+      _error = 'Failed to set name: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Set advertised position
+  Future<void> setAdvertLatLon({
+    required double latitude,
+    required double longitude,
+  }) async {
+    if (!_bleService.isConnected) {
+      _error = 'Not connected to device';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      await _bleService.setAdvertLatLon(
+        latitude: latitude,
+        longitude: longitude,
+      );
+    } catch (e) {
+      _error = 'Failed to set position: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Set radio parameters
+  Future<void> setRadioParams({
+    required int frequency,
+    required int bandwidth,
+    required int spreadingFactor,
+    required int codingRate,
+  }) async {
+    if (!_bleService.isConnected) {
+      _error = 'Not connected to device';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      await _bleService.setRadioParams(
+        frequency: frequency,
+        bandwidth: bandwidth,
+        spreadingFactor: spreadingFactor,
+        codingRate: codingRate,
+      );
+    } catch (e) {
+      _error = 'Failed to set radio params: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Set transmit power
+  Future<void> setTxPower(int powerDbm) async {
+    if (!_bleService.isConnected) {
+      _error = 'Not connected to device';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      await _bleService.setTxPower(powerDbm);
+    } catch (e) {
+      _error = 'Failed to set TX power: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Request fresh device info (triggers SelfInfo response)
+  Future<void> refreshDeviceInfo() async {
+    if (!_bleService.isConnected) {
+      _error = 'Not connected to device';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      // The device query command triggers a SelfInfo response
+      await _bleService.refreshDeviceInfo();
+    } catch (e) {
+      _error = 'Failed to refresh device info: $e';
       notifyListeners();
     }
   }

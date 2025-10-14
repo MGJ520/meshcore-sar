@@ -52,7 +52,7 @@ class MapMarkers {
                 // Marker icon
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: _getContactTypeColor(contact, context),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
@@ -64,8 +64,8 @@ class MapMarkers {
                     ],
                   ),
                   padding: const EdgeInsets.all(6),
-                  child: const Icon(
-                    Icons.person,
+                  child: Icon(
+                    _getContactTypeIcon(contact),
                     color: Colors.white,
                     size: 18,
                   ),
@@ -292,6 +292,32 @@ class MapMarkers {
         return Colors.purple;
       case SarMarkerType.unknown:
         return Colors.grey;
+    }
+  }
+
+  static Color _getContactTypeColor(Contact contact, BuildContext context) {
+    switch (contact.type) {
+      case ContactType.chat:
+        return Theme.of(context).colorScheme.primary; // Blue for team members
+      case ContactType.repeater:
+        return Colors.deepPurple; // Purple for repeaters
+      case ContactType.room:
+        return Colors.teal; // Teal for rooms/channels
+      case ContactType.none:
+        return Colors.grey;
+    }
+  }
+
+  static IconData _getContactTypeIcon(Contact contact) {
+    switch (contact.type) {
+      case ContactType.chat:
+        return Icons.person; // Person for team members
+      case ContactType.repeater:
+        return Icons.router; // Router icon for repeaters
+      case ContactType.room:
+        return Icons.forum; // Forum/chat icon for rooms
+      case ContactType.none:
+        return Icons.help_outline;
     }
   }
 }

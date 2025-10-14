@@ -114,6 +114,15 @@ class DeviceInfo {
         .join('');
   }
 
+  /// Get display name with "MeshCore-" prefix removed
+  String? get displayName {
+    if (deviceName == null) return null;
+    if (deviceName!.startsWith('MeshCore-')) {
+      return deviceName!.substring(9); // Remove "MeshCore-" (9 characters)
+    }
+    return deviceName;
+  }
+
   DeviceInfo copyWith({
     String? deviceId,
     String? deviceName,

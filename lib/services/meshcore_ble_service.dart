@@ -14,6 +14,7 @@ typedef OnContactCallback = void Function(Contact contact);
 typedef OnContactsCompleteCallback = void Function(List<Contact> contacts);
 typedef OnMessageCallback = void Function(Message message);
 typedef OnTelemetryCallback = void Function(Uint8List publicKey, Uint8List lppData);
+typedef OnSelfInfoCallback = void Function(Map<String, dynamic> selfInfo);
 typedef OnErrorCallback = void Function(String error);
 typedef OnConnectionStateCallback = void Function(bool isConnected);
 
@@ -30,6 +31,7 @@ class MeshCoreBleService {
   OnContactsCompleteCallback? onContactsComplete;
   OnMessageCallback? onMessageReceived;
   OnTelemetryCallback? onTelemetryReceived;
+  OnSelfInfoCallback? onSelfInfoReceived;
   OnErrorCallback? onError;
 
   // Internal state
@@ -636,10 +638,28 @@ class MeshCoreBleService {
       print('    Position: ${advLat / 1000000.0}, ${advLon / 1000000.0}');
       print('    Radio: freq=$radioFreq, bw=$radioBw, sf=$radioSf, cr=$radioCr');
 
+      String? selfName;
       if (reader.hasRemaining) {
-        final selfName = String.fromCharCodes(reader.readRemainingBytes().takeWhile((b) => b != 0));
+        selfName = String.fromCharCodes(reader.readRemainingBytes().takeWhile((b) => b != 0));
         print('    Self name: $selfName');
       }
+
+      // Call callback with parsed data
+      onSelfInfoReceived?.call({
+        'protocolVersion': protocolVersion,
+        'deviceType': deviceType,
+        'txPower': txPower,
+        'maxTxPower': maxTxPower,
+        'publicKey': publicKey,
+        'advLat': advLat,
+        'advLon': advLon,
+        'manualAddContacts': manualAddContacts == 1,
+        'radioFreq': radioFreq,
+        'radioBw': radioBw,
+        'radioSf': radioSf,
+        'radioCr': radioCr,
+        'selfName': selfName,
+      });
 
       print('  ✅ [SelfInfo] Parsed successfully');
     } catch (e) {
@@ -718,6 +738,11 @@ class MeshCoreBleService {
     await _sendAppStart();
   }
 
+  /// Refresh device info (public method)
+  Future<void> refreshDeviceInfo() async {
+    await _sendDeviceQuery();
+  }
+
   /// Get contacts from device
   Future<void> getContacts() async {
     final writer = BufferWriter();
@@ -790,6 +815,50 @@ class MeshCoreBleService {
     writer.writeByte(MeshCoreConstants.selfAdvertFlood);
     writer.writeInt32LE((latitude * 1000000).round());
     writer.writeInt32LE((longitude * 1000000).round());
+    await _writeData(writer.toBytes());
+  }
+
+  /// Set advertised name
+  Future<void> setAdvertName(String name) async {
+    final writer = BufferWriter();
+    writer.writeByte(MeshCoreConstants.cmdSetAdvertName);
+    writer.writeString(name);
+    await _writeData(writer.toBytes());
+  }
+
+  /// Set advertised latitude and longitude
+  Future<void> setAdvertLatLon({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final writer = BufferWriter();
+    writer.writeByte(MeshCoreConstants.cmdSetAdvertLatLon);
+    writer.writeInt32LE((latitude * 1000000).round());
+    writer.writeInt32LE((longitude * 1000000).round());
+    await _writeData(writer.toBytes());
+  }
+
+  /// Set radio parameters
+  Future<void> setRadioParams({
+    required int frequency, // Hz
+    required int bandwidth, // 0-9 (see bandwidth options)
+    required int spreadingFactor, // 7-12
+    required int codingRate, // 5-8
+  }) async {
+    final writer = BufferWriter();
+    writer.writeByte(MeshCoreConstants.cmdSetRadioParams);
+    writer.writeUInt32LE(frequency);
+    writer.writeUInt16LE(bandwidth);
+    writer.writeByte(spreadingFactor);
+    writer.writeByte(codingRate);
+    await _writeData(writer.toBytes());
+  }
+
+  /// Set transmit power
+  Future<void> setTxPower(int powerDbm) async {
+    final writer = BufferWriter();
+    writer.writeByte(MeshCoreConstants.cmdSetTxPower);
+    writer.writeByte(powerDbm);
     await _writeData(writer.toBytes());
   }
 

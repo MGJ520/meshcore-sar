@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/connection_provider.dart';
 import '../providers/app_provider.dart';
-import '../models/device_info.dart' as models;
-import '../services/tile_cache_service.dart';
 import '../theme/app_theme.dart';
 import 'messages_tab.dart';
 import 'contacts_tab.dart';
 import 'map_tab.dart';
 import 'map_management_screen.dart';
 import 'settings_screen.dart';
+import 'device_config_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
@@ -352,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   Text(
                     isConnected
-                        ? deviceInfo.deviceName ?? 'Connected'
+                        ? deviceInfo.displayName ?? 'Connected'
                         : 'Disconnected',
                     style: TextStyle(
                       fontSize: 14,
@@ -420,22 +419,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton(
+                  // Settings button
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DeviceConfigScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.settings),
+                    iconSize: 20,
+                    tooltip: 'Device Settings',
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(width: 8),
+                  // Disconnect button (prominent, icon only)
+                  FilledButton(
                     onPressed: () async {
                       await provider.disconnect();
                       if (context.mounted) {
                         context.read<AppProvider>().clearAllData();
                       }
                     },
-                    style: OutlinedButton.styleFrom(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.all(10),
+                      minimumSize: const Size(40, 40),
+                      shape: const CircleBorder(),
                     ),
-                    child: const Text('Disconnect', style: TextStyle(fontSize: 13)),
+                    child: const Icon(Icons.power_settings_new, size: 20),
                   ),
                 ],
               ),
@@ -467,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Expanded(
                     child: Text(
                       isConnected
-                          ? deviceInfo.deviceName ?? 'Connected'
+                          ? deviceInfo.displayName ?? 'Connected'
                           : 'Not Connected',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),

@@ -72,8 +72,8 @@ class SampleDataGenerator {
         outPath: Uint8List(32),
         advName: teamNames[i],
         lastAdvert: now.millisecondsSinceEpoch ~/ 1000,
-        advLat: (lat * 1e7).toInt(),
-        advLon: (lon * 1e7).toInt(),
+        advLat: (lat * 1e6).toInt(),
+        advLon: (lon * 1e6).toInt(),
         lastMod: now.millisecondsSinceEpoch ~/ 1000,
         telemetry: telemetry,
       );

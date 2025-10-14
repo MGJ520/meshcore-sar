@@ -186,12 +186,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             color: Colors.white,
                           ),
                           onTap: () async {
+                            print('🔵 [UI] User tapped device: ${device.platformName}');
+
+                            // Get app provider reference before popping dialog
+                            final appProvider = context.read<AppProvider>();
+
+                            print('🔵 [UI] Closing dialog...');
                             Navigator.pop(context);
-                            await provider.connect(device);
-                            if (context.mounted &&
-                                provider.deviceInfo.isConnected) {
-                              final appProvider = context.read<AppProvider>();
+
+                            print('🔵 [UI] Calling provider.connect()...');
+                            final success = await provider.connect(device);
+                            print(success
+                                ? '✅ [UI] provider.connect() returned success'
+                                : '❌ [UI] provider.connect() returned failure');
+
+                            if (success && provider.deviceInfo.isConnected) {
+                              print('✅ [UI] Device is connected, initializing app provider...');
                               await appProvider.initialize();
+                              print('✅ [UI] App provider initialized');
+                            } else {
+                              print('❌ [UI] Device not connected after connect() call');
+                              print('  Connection state: ${provider.deviceInfo.connectionState}');
+                              print('  Error: ${provider.error}');
                             }
                           },
                         ),
@@ -317,6 +333,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       builder: (context, provider, child) {
         final deviceInfo = provider.deviceInfo;
         final isConnected = deviceInfo.isConnected;
+
+        print('🎨 [UI] Building status bar - isConnected: $isConnected, state: ${deviceInfo.connectionState}');
 
         return Row(
           children: [

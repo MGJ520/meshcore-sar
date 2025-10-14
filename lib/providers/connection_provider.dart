@@ -40,20 +40,36 @@ class ConnectionProvider with ChangeNotifier {
 
   void _initializeBleService() {
     _bleService.onConnectionStateChanged = (isConnected) {
+      print('🔔 [Provider] Connection state callback fired: $isConnected');
       _deviceInfo = _deviceInfo.copyWith(
         connectionState: isConnected
             ? ConnectionState.connected
             : ConnectionState.disconnected,
         lastUpdate: DateTime.now(),
       );
+      print('  Updated deviceInfo.connectionState: ${_deviceInfo.connectionState}');
+      print('  Updated deviceInfo.isConnected: ${_deviceInfo.isConnected}');
       notifyListeners();
+      print('  Notified listeners');
     };
 
     _bleService.onError = (error) {
+      print('⚠️ [Provider] BLE error received: $error');
+      print('  Current connection state: ${_deviceInfo.connectionState}');
+
       _error = error;
-      _deviceInfo = _deviceInfo.copyWith(
-        connectionState: ConnectionState.error,
-      );
+
+      // Only set connection state to error if we're not already connected
+      // Data parsing errors after connection shouldn't disconnect us
+      if (_deviceInfo.connectionState != ConnectionState.connected) {
+        print('  Setting connection state to error');
+        _deviceInfo = _deviceInfo.copyWith(
+          connectionState: ConnectionState.error,
+        );
+      } else {
+        print('  Keeping connection state as connected (ignoring data parsing error)');
+      }
+
       notifyListeners();
     };
 
@@ -78,22 +94,30 @@ class ConnectionProvider with ChangeNotifier {
 
   /// Start scanning for MeshCore devices
   Future<void> startScan() async {
+    print('🔍 [Provider] startScan() called');
     _isScanning = true;
     _scannedDevices.clear();
     _error = null;
     notifyListeners();
+    print('✅ [Provider] Scan state initialized, notifying listeners');
 
     try {
       await for (final device
           in _bleService.scanForDevices(timeout: const Duration(seconds: 10))) {
+        print('📱 [Provider] Device received from scan stream');
         if (!_scannedDevices.any((d) => d.remoteId == device.remoteId)) {
           _scannedDevices.add(device);
+          print('✅ [Provider] Added device to list: ${device.platformName}, total: ${_scannedDevices.length}');
           notifyListeners();
+        } else {
+          print('  ⏭️ [Provider] Device already in list, skipping');
         }
       }
     } catch (e) {
+      print('❌ [Provider] Scan error: $e');
       _error = 'Scan error: $e';
     } finally {
+      print('🏁 [Provider] Scan completed');
       _isScanning = false;
       notifyListeners();
     }
@@ -108,16 +132,24 @@ class ConnectionProvider with ChangeNotifier {
 
   /// Connect to a device
   Future<bool> connect(BluetoothDevice device) async {
+    print('🔵 [Provider] connect() called for device: ${device.platformName}');
+
     _deviceInfo = _deviceInfo.copyWith(
       deviceId: device.remoteId.toString(),
       deviceName: device.platformName.isNotEmpty ? device.platformName : 'Unknown',
       connectionState: ConnectionState.connecting,
     );
     _error = null;
+    print('✅ [Provider] Device info updated to connecting state');
     notifyListeners();
 
+    print('🔵 [Provider] Calling BLE service connect()...');
     final success = await _bleService.connect(device);
-    if (!success) {
+
+    if (success) {
+      print('✅ [Provider] BLE service connect() returned success');
+    } else {
+      print('❌ [Provider] BLE service connect() returned failure');
       _deviceInfo = _deviceInfo.copyWith(
         connectionState: ConnectionState.error,
       );

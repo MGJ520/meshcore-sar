@@ -31,7 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingSampleData = false;
   double _gpsUpdateDistance = 10.0;
   bool _backgroundTrackingEnabled = false;
-  final BackgroundLocationService _backgroundLocationService = BackgroundLocationService();
+  final BackgroundLocationService _backgroundLocationService =
+      BackgroundLocationService();
 
   @override
   void initState() {
@@ -55,14 +56,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       setState(() {
         _gpsUpdateDistance = prefs.getDouble('map_gps_update_distance') ?? 10.0;
-        _backgroundTrackingEnabled = prefs.getBool('background_tracking_enabled') ?? false;
+        _backgroundTrackingEnabled =
+            prefs.getBool('background_tracking_enabled') ?? false;
       });
 
       // Initialize background location service
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           final appProvider = context.read<AppProvider>();
-          _backgroundLocationService.initialize(appProvider.connectionProvider.bleService);
+          _backgroundLocationService.initialize(
+            appProvider.connectionProvider.bleService,
+          );
 
           // Restore background tracking state
           if (_backgroundTrackingEnabled) {
@@ -76,7 +80,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveLocationSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('map_gps_update_distance', _gpsUpdateDistance);
-    await prefs.setBool('background_tracking_enabled', _backgroundTrackingEnabled);
+    await prefs.setBool(
+      'background_tracking_enabled',
+      _backgroundTrackingEnabled,
+    );
   }
 
   Future<void> _saveThemePreference(AppThemeMode theme) async {
@@ -138,8 +145,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final allMessages = [...sarMessages, ...channelMessages];
 
       // Add to providers
-      final contactsProvider = Provider.of<ContactsProvider>(context, listen: false);
-      final messagesProvider = Provider.of<MessagesProvider>(context, listen: false);
+      final contactsProvider = Provider.of<ContactsProvider>(
+        context,
+        listen: false,
+      );
+      final messagesProvider = Provider.of<MessagesProvider>(
+        context,
+        listen: false,
+      );
 
       contactsProvider.addContacts(contacts);
       messagesProvider.addMessages(allMessages);
@@ -186,7 +199,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to start background tracking. Check permissions and BLE connection.'),
+            content: Text(
+              'Failed to start background tracking. Check permissions and BLE connection.',
+            ),
             duration: Duration(seconds: 3),
           ),
         );
@@ -222,8 +237,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final contactsProvider = Provider.of<ContactsProvider>(context, listen: false);
-    final messagesProvider = Provider.of<MessagesProvider>(context, listen: false);
+    final contactsProvider = Provider.of<ContactsProvider>(
+      context,
+      listen: false,
+    );
+    final messagesProvider = Provider.of<MessagesProvider>(
+      context,
+      listen: false,
+    );
 
     contactsProvider.clearContacts();
     messagesProvider.clearAll();
@@ -241,9 +262,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
           // General Settings Section
@@ -327,8 +346,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(
               'Load or clear sample contacts, channel messages, and SAR markers for testing',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
           ),
           Padding(
@@ -377,9 +396,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -416,14 +435,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '1m',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    Text(
-                      '100m',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text('1m', style: Theme.of(context).textTheme.bodySmall),
+                    Text('100m', style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
               ),
@@ -443,7 +456,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Update background tracking if active
                 if (_backgroundTrackingEnabled) {
-                  _backgroundLocationService.updateDistanceThreshold(tempDistance);
+                  _backgroundLocationService.updateDistanceThreshold(
+                    tempDistance,
+                  );
                 }
 
                 Navigator.pop(context);
@@ -467,7 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               RadioListTile<AppThemeMode>(
                 title: const Text('Light'),
-                subtitle: const Text('Orange light theme'),
+                subtitle: const Text('Blue light theme'),
                 value: AppThemeMode.light,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -477,7 +492,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               RadioListTile<AppThemeMode>(
                 title: const Text('Dark'),
-                subtitle: const Text('Orange dark theme'),
+                subtitle: const Text('Blue dark theme'),
                 value: AppThemeMode.dark,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -570,9 +585,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 'MeshCore SAR',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -594,9 +609,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 16),
               Text(
                 'Technologies Used:',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(

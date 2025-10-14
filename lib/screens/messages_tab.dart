@@ -568,71 +568,65 @@ class _SarUpdateSheetState extends State<_SarUpdateSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header with drag handle
+          // Header
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Column(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                // Drag handle
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Send SAR Marker',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Quick location marker',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Title
-                Row(
-                  children: [
-                    Icon(
-                      Icons.add_location_alt,
-                      size: 24,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Send SAR Marker',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
+                IconButton(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onPressed: () {},
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
           // Content
-          Flexible(
+          Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Marker type selection
-                  Text(
+                  const Text(
                     'Marker Type',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _MarkerTypeChip(
@@ -661,29 +655,37 @@ class _SarUpdateSheetState extends State<_SarUpdateSheet> {
                   const SizedBox(height: 24),
 
                   // Location display
-                  Text(
+                  const Text(
                     'Current Location',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   if (_loadingLocation)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFF2D2D2D),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Row(
                         children: [
                           SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
                           ),
                           SizedBox(width: 16),
-                          Text('Getting location...'),
+                          Text(
+                            'Getting location...',
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ],
                       ),
                     )
@@ -737,22 +739,18 @@ class _SarUpdateSheetState extends State<_SarUpdateSheet> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
+                        color: const Color(0xFF2D2D2D),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.location_on,
                                 size: 20,
-                                color: Theme.of(context).colorScheme.primary,
+                                color: Colors.green,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -762,11 +760,12 @@ class _SarUpdateSheetState extends State<_SarUpdateSheet> {
                                     fontFamily: 'monospace',
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.refresh, size: 20),
+                                icon: const Icon(Icons.refresh, size: 20, color: Colors.white),
                                 onPressed: _getCurrentLocation,
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
@@ -778,15 +777,18 @@ class _SarUpdateSheetState extends State<_SarUpdateSheet> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.my_location,
                                   size: 14,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  color: Colors.grey,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Accuracy: ±${_currentPosition!.accuracy!.round()}m',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ],
                             ),
@@ -797,89 +799,73 @@ class _SarUpdateSheetState extends State<_SarUpdateSheet> {
                   const SizedBox(height: 24),
 
                   // Optional notes
-                  Text(
+                  const Text(
                     'Notes (optional)',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _notesController,
                     maxLines: 3,
                     maxLength: 100,
+                    style: const TextStyle(fontSize: 14, color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Add additional information...',
-                      hintStyle: const TextStyle(fontSize: 14),
+                      hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+                      filled: true,
+                      fillColor: const Color(0xFF2D2D2D),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.all(16),
                     ),
-                    style: const TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 8),
                 ],
               ),
             ),
           ),
-          // Bottom action buttons
+          // Bottom action button
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).dividerColor,
-                  width: 1,
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.all(16),
             child: SafeArea(
               top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Cancel'),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _currentPosition == null
+                      ? null
+                      : () async {
+                          await widget.onSend(
+                            _selectedType,
+                            _currentPosition!,
+                            _notesController.text.trim().isEmpty
+                                ? null
+                                : _notesController.text.trim(),
+                          );
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    disabledBackgroundColor: Colors.grey,
+                    disabledForegroundColor: Colors.white70,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton.icon(
-                      onPressed: _currentPosition == null
-                          ? null
-                          : () async {
-                              await widget.onSend(
-                                _selectedType,
-                                _currentPosition!,
-                                _notesController.text.trim().isEmpty
-                                    ? null
-                                    : _notesController.text.trim(),
-                              );
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                              }
-                            },
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.send, size: 20),
-                      label: const Text('Send SAR Marker'),
-                    ),
+                  icon: const Icon(Icons.send, size: 20),
+                  label: const Text(
+                    'Send SAR Marker',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -922,36 +908,22 @@ class _MarkerTypeChip extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.15)
-              : Colors.transparent,
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.withValues(alpha: 0.3),
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF2D2D2D),
+          border: isSelected
+              ? Border.all(color: color, width: 2)
+              : null,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? color.withValues(alpha: 0.2)
-                    : Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                type.emoji,
-                style: const TextStyle(fontSize: 28),
-              ),
+            Text(
+              type.emoji,
+              style: const TextStyle(fontSize: 32),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -959,8 +931,8 @@ class _MarkerTypeChip extends StatelessWidget {
                 type.displayName,
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? color : null,
+                  fontWeight: FontWeight.w500,
+                  color: isSelected ? color : Colors.white,
                 ),
               ),
             ),
@@ -968,12 +940,6 @@ class _MarkerTypeChip extends StatelessWidget {
               Icon(
                 Icons.check_circle,
                 color: color,
-                size: 24,
-              )
-            else
-              Icon(
-                Icons.radio_button_unchecked,
-                color: Colors.grey.withValues(alpha: 0.4),
                 size: 24,
               ),
           ],

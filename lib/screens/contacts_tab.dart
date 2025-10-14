@@ -140,7 +140,7 @@ class _ContactTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getTypeColor(contact.type),
+          backgroundColor: _getTypeColor(contact.type, context),
           child: contact.roleEmoji != null
               ? Text(
                   contact.roleEmoji!,
@@ -187,7 +187,7 @@ class _ContactTile extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: _getTypeColor(contact.type).withOpacity(0.2),
+                    color: _getTypeColor(contact.type, context).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -283,7 +283,7 @@ class _ContactTile extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: _getTypeColor(contact.type),
+                    backgroundColor: _getTypeColor(contact.type, context),
                     child: contact.roleEmoji != null
                         ? Text(
                             contact.roleEmoji!,
@@ -393,10 +393,10 @@ class _ContactTile extends StatelessWidget {
     }
   }
 
-  Color _getTypeColor(ContactType type) {
+  Color _getTypeColor(ContactType type, BuildContext context) {
     switch (type) {
       case ContactType.chat:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case ContactType.repeater:
         return Colors.green;
       case ContactType.room:

@@ -8,6 +8,7 @@ import 'providers/map_provider.dart';
 import 'providers/app_provider.dart';
 import 'services/tile_cache_service.dart';
 import 'screens/home_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const MeshCoreSarApp());
@@ -21,7 +22,7 @@ class MeshCoreSarApp extends StatefulWidget {
 }
 
 class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  AppThemeMode _themeMode = AppThemeMode.system;
 
   @override
   void initState() {
@@ -33,14 +34,11 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
     final prefs = await SharedPreferences.getInstance();
     final themeName = prefs.getString('theme_mode') ?? 'system';
     setState(() {
-      _themeMode = ThemeMode.values.firstWhere(
-        (mode) => mode.name == themeName,
-        orElse: () => ThemeMode.system,
-      );
+      _themeMode = AppTheme.themeFromString(themeName);
     });
   }
 
-  void _handleThemeChanged(ThemeMode mode) {
+  void _handleThemeChanged(AppThemeMode mode) {
     setState(() {
       _themeMode = mode;
     });
@@ -78,57 +76,19 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
               ),
         ),
       ],
-      child: MaterialApp(
-        title: 'MeshCore SAR',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.orange,
-            brightness: Brightness.light,
-          ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      child: Builder(
+        builder: (context) {
+          final systemBrightness = MediaQuery.platformBrightnessOf(context);
+          return MaterialApp(
+            title: 'MeshCore SAR',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.getTheme(_themeMode, systemBrightness),
+            home: HomeScreen(
+              onThemeChanged: _handleThemeChanged,
+              currentTheme: _themeMode,
             ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            filled: true,
-          ),
-        ),
-        darkTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.orange,
-            brightness: Brightness.dark,
-          ),
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            filled: true,
-          ),
-        ),
-        themeMode: _themeMode,
-        home: HomeScreen(onThemeChanged: _handleThemeChanged, currentTheme: _themeMode),
+          );
+        },
       ),
     );
   }

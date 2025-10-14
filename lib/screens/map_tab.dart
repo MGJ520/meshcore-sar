@@ -760,13 +760,13 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                               rotate: false, // Don't rotate with map
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.3),
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Container(
                                   margin: const EdgeInsets.all(8),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.blue,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primary,
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
@@ -935,7 +935,7 @@ class _MapLegend extends StatelessWidget {
             const SizedBox(height: 8),
             _LegendItem(
               icon: Icons.person,
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
               label: 'Team',
               count: teamMemberCount,
             ),
@@ -1252,7 +1252,7 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
               // Contacts filter
               _CompactFilterItem(
                 icon: Icons.person,
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primary,
                 label: 'Contacts',
                 value: _showContacts,
                 onChanged: (value) {
@@ -1526,7 +1526,7 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
     if (_selectedContact != null) {
       title = _selectedContact!.displayName;
       icon = Icons.person;
-      color = Colors.blue;
+      color = Theme.of(context).colorScheme.primary;
       targetLocation = _selectedContact!.displayLocation;
 
       if (targetLocation != null) {
@@ -1821,9 +1821,9 @@ class _DetailedCompassDialogState extends State<_DetailedCompassDialog> {
                       contact.roleEmoji!,
                       style: const TextStyle(fontSize: 24),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.person,
-                      color: Colors.blue,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 24,
                     ),
               title: Text(contact.displayName),
@@ -2195,7 +2195,7 @@ class _LargeCompassPainter extends CustomPainter {
 
         // Draw line from center to contact
         final linePaint = Paint()
-          ..color = Colors.blue.withValues(alpha: 0.3)
+          ..color = Colors.lightBlue.withValues(alpha: 0.3)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5;
         canvas.drawLine(
@@ -2207,7 +2207,7 @@ class _LargeCompassPainter extends CustomPainter {
         // Draw contact dot (size varies with zoom)
         final dotSize = (6.0 * (1.0 + zoomLevel * 0.3)).clamp(4.0, 12.0);
         final dotPaint = Paint()
-          ..color = Colors.blue
+          ..color = Colors.lightBlue
           ..style = PaintingStyle.fill;
         canvas.drawCircle(Offset(dotX, dotY), dotSize, dotPaint);
 
@@ -2228,7 +2228,7 @@ class _LargeCompassPainter extends CustomPainter {
           textPainter.text = TextSpan(
             text: distanceText,
             style: const TextStyle(
-              color: Colors.blue,
+              color: Colors.lightBlue,
               fontSize: 9,
               fontWeight: FontWeight.bold,
             ),

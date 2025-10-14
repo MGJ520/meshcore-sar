@@ -8,6 +8,7 @@ import 'meshcore_ble_service.dart';
 
 /// Background location tracking service for SAR operations
 /// Tracks user location and sends periodic updates via MeshCore BLE
+@pragma('vm:entry-point')
 class BackgroundLocationService {
   static const String _prefKeyEnabled = 'background_tracking_enabled';
   static const String _prefKeyDistance = 'background_tracking_distance';

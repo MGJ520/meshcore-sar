@@ -4,6 +4,7 @@ import '../providers/connection_provider.dart';
 import '../providers/app_provider.dart';
 import '../models/device_info.dart' as models;
 import '../services/tile_cache_service.dart';
+import '../theme/app_theme.dart';
 import 'messages_tab.dart';
 import 'contacts_tab.dart';
 import 'map_tab.dart';
@@ -11,8 +12,8 @@ import 'map_management_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final Function(ThemeMode) onThemeChanged;
-  final ThemeMode currentTheme;
+  final Function(AppThemeMode) onThemeChanged;
+  final AppThemeMode currentTheme;
 
   const HomeScreen({
     super.key,
@@ -109,17 +110,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.white),
-                  SizedBox(width: 12),
+                  Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'The default pin for devices without a screen is 123456. Trouble pairing? Forget the bluetooth device in system settings.',
-                      style: TextStyle(color: Colors.white, fontSize: 13),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontSize: 13),
                     ),
                   ),
                 ],

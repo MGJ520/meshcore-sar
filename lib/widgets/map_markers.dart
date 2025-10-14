@@ -52,7 +52,7 @@ class MapMarkers {
                 // Marker icon
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
@@ -201,7 +201,7 @@ class MapMarkers {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.person, color: Colors.blue),
+            Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             Expanded(child: Text(contact.displayName)),
           ],
@@ -275,7 +275,7 @@ class MapMarkers {
 
     final diff = DateTime.now().difference(updateTime);
     if (diff.inMinutes < 5) return Colors.green; // Very recent
-    if (diff.inMinutes < 30) return Colors.blue; // Recent
+    if (diff.inMinutes < 30) return Colors.lightBlue; // Recent
     if (diff.inHours < 2) return Colors.orange; // Getting old
     return Colors.red; // Stale
   }

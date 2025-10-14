@@ -9,10 +9,11 @@ import '../providers/messages_provider.dart';
 import '../providers/app_provider.dart';
 import '../services/background_location_service.dart';
 import '../utils/sample_data_generator.dart';
+import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
-  final Function(ThemeMode) onThemeChanged;
-  final ThemeMode currentTheme;
+  final Function(AppThemeMode) onThemeChanged;
+  final AppThemeMode currentTheme;
 
   const SettingsScreen({
     super.key,
@@ -25,7 +26,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late ThemeMode _selectedTheme;
+  late AppThemeMode _selectedTheme;
   PackageInfo? _packageInfo;
   bool _isLoadingSampleData = false;
   double _gpsUpdateDistance = 10.0;
@@ -78,12 +79,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool('background_tracking_enabled', _backgroundTrackingEnabled);
   }
 
-  Future<void> _saveThemePreference(ThemeMode theme) async {
+  Future<void> _saveThemePreference(AppThemeMode theme) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', theme.name);
   }
 
-  void _handleThemeChange(ThemeMode? theme) {
+  void _handleThemeChange(AppThemeMode? theme) {
     if (theme != null) {
       setState(() {
         _selectedTheme = theme;
@@ -250,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.palette),
             title: const Text('Theme'),
-            subtitle: Text(_getThemeLabel(_selectedTheme)),
+            subtitle: Text(AppTheme.getThemeDisplayName(_selectedTheme)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showThemeDialog(),
           ),
@@ -383,17 +384,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _getThemeLabel(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 'Light';
-      case ThemeMode.dark:
-        return 'Dark';
-      case ThemeMode.system:
-        return 'Auto (System)';
-    }
-  }
-
   void _showGpsDistanceDialog() {
     double tempDistance = _gpsUpdateDistance;
     showDialog(
@@ -471,40 +461,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Choose Theme'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<ThemeMode>(
-              title: const Text('Light'),
-              subtitle: const Text('Always use light theme'),
-              value: ThemeMode.light,
-              groupValue: _selectedTheme,
-              onChanged: (value) {
-                _handleThemeChange(value);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Dark'),
-              subtitle: const Text('Always use dark theme'),
-              value: ThemeMode.dark,
-              groupValue: _selectedTheme,
-              onChanged: (value) {
-                _handleThemeChange(value);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Auto (System)'),
-              subtitle: const Text('Follow system theme'),
-              value: ThemeMode.system,
-              groupValue: _selectedTheme,
-              onChanged: (value) {
-                _handleThemeChange(value);
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<AppThemeMode>(
+                title: const Text('Light'),
+                subtitle: const Text('Orange light theme'),
+                value: AppThemeMode.light,
+                groupValue: _selectedTheme,
+                onChanged: (value) {
+                  _handleThemeChange(value);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<AppThemeMode>(
+                title: const Text('Dark'),
+                subtitle: const Text('Orange dark theme'),
+                value: AppThemeMode.dark,
+                groupValue: _selectedTheme,
+                onChanged: (value) {
+                  _handleThemeChange(value);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              RadioListTile<AppThemeMode>(
+                title: Row(
+                  children: [
+                    const Text('SAR Red'),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5252),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black26),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: const Text('Alert/Emergency mode'),
+                value: AppThemeMode.sarRed,
+                groupValue: _selectedTheme,
+                onChanged: (value) {
+                  _handleThemeChange(value);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<AppThemeMode>(
+                title: Row(
+                  children: [
+                    const Text('SAR Green'),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF69F0AE),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black26),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: const Text('Safe/All Clear mode'),
+                value: AppThemeMode.sarGreen,
+                groupValue: _selectedTheme,
+                onChanged: (value) {
+                  _handleThemeChange(value);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              RadioListTile<AppThemeMode>(
+                title: const Text('Auto (System)'),
+                subtitle: const Text('Follow system theme'),
+                value: AppThemeMode.system,
+                groupValue: _selectedTheme,
+                onChanged: (value) {
+                  _handleThemeChange(value);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(

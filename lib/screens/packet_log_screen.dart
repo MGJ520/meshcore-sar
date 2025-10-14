@@ -65,7 +65,7 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
 
       // Create CSV content
       final buffer = StringBuffer();
-      buffer.writeln('Timestamp,Direction,Size (bytes),Code,Hex Data,Description');
+      buffer.writeln('Timestamp,Direction,Size (bytes),Opcode Name,Code,Hex Data,Description');
       for (final log in logs) {
         buffer.writeln(log.toCsvRow());
       }
@@ -439,19 +439,16 @@ class _PacketLogCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            if (log.description != null)
-              Flexible(
-                child: Text(
-                  log.description!,
-                  style: const TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+            Flexible(
+              child: Text(
+                log.responseCode != null ? log.opcodeName : 'N/A',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
-              )
-            else
-              Text(
-                'Code: ${log.responseCode != null ? "0x${log.responseCode!.toRadixString(16).padLeft(2, '0')}" : "N/A"}',
-                style: const TextStyle(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
               ),
+            ),
           ],
         ),
         subtitle: Column(
@@ -516,7 +513,7 @@ class _PacketLogCard extends StatelessWidget {
                     if (log.responseCode != null)
                       _InfoChip(
                         icon: Icons.tag,
-                        label: 'Code: 0x${log.responseCode!.toRadixString(16).padLeft(2, '0')} (${log.responseCode})',
+                        label: log.opcodeDescription,
                       ),
                   ],
                 ),

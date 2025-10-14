@@ -9,6 +9,7 @@ import '../models/ble_packet_log.dart';
 import 'buffer_reader.dart';
 import 'buffer_writer.dart';
 import 'meshcore_constants.dart';
+import 'meshcore_opcode_names.dart';
 
 /// Callback types for MeshCore events
 typedef OnContactCallback = void Function(Contact contact);
@@ -226,37 +227,41 @@ class MeshCoreBleService {
       throw Exception('Not connected');
     }
     try {
-      print('📝 [BLE] Writing ${data.length} bytes to RX characteristic...');
-      print('  RX Characteristic properties: ${_rxCharacteristic!.properties}');
+      // Extract command code from first byte
+      final commandCode = data.isNotEmpty ? data[0] : null;
+      final opcodeName = commandCode != null
+          ? MeshCoreOpcodeNames.getCommandName(commandCode)
+          : 'UNKNOWN';
+      final opcodeHex = commandCode != null
+          ? '0x${commandCode.toRadixString(16).padLeft(2, '0').toUpperCase()}'
+          : 'N/A';
+
+      print('📤 [TX] Sending command: $opcodeName ($opcodeHex)');
+      print('  Data size: ${data.length} bytes');
+      print('  Hex: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
 
       // Check if the characteristic supports write without response
       final supportsWriteWithoutResponse = _rxCharacteristic!.properties.writeWithoutResponse;
       final supportsWrite = _rxCharacteristic!.properties.write;
 
-      print('  Supports writeWithoutResponse: $supportsWriteWithoutResponse');
-      print('  Supports write: $supportsWrite');
-
       if (supportsWriteWithoutResponse) {
-        print('  Using write without response');
         await _rxCharacteristic!.write(data, withoutResponse: true);
       } else if (supportsWrite) {
-        print('  Using write with response');
         await _rxCharacteristic!.write(data, withoutResponse: false);
       } else {
         throw Exception('Characteristic does not support write operations');
       }
 
-      // Log TX packet (extract command code from first byte)
-      final commandCode = data.isNotEmpty ? data[0] : null;
+      // Log TX packet
       _logPacket(data, PacketDirection.tx, responseCode: commandCode);
 
       // Increment TX packet counter and trigger activity indicator
       _txPacketCount++;
       onTxActivity?.call();
 
-      print('✅ [BLE] Write successful');
+      print('✅ [TX] Command sent successfully');
     } catch (e) {
-      print('❌ [BLE] Write error: $e');
+      print('❌ [TX] Write error: $e');
       onError?.call('Write error: $e');
       rethrow;
     }
@@ -265,11 +270,9 @@ class MeshCoreBleService {
   /// Handle incoming data from TX characteristic
   void _onDataReceived(List<int> data) {
     try {
-      print('📥 [BLE] Received ${data.length} bytes from TX characteristic');
-
       // Handle empty data
       if (data.isEmpty) {
-        print('  ⚠️ Empty data received, ignoring');
+        print('⚠️ [RX] Empty data received, ignoring');
         return;
       }
 
@@ -279,12 +282,17 @@ class MeshCoreBleService {
       _rxPacketCount++;
       onRxActivity?.call();
 
-      print('  Raw data: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
-
       final reader = BufferReader(dataBytes);
       final responseCode = reader.readByte();
-      print('  Response code: $responseCode (0x${responseCode.toRadixString(16)})');
-      print('  Remaining bytes: ${reader.remainingBytesCount}');
+
+      // Get opcode name for logging
+      final opcodeName = MeshCoreOpcodeNames.getOpcodeName(responseCode, isTx: false);
+      final opcodeHex = '0x${responseCode.toRadixString(16).padLeft(2, '0').toUpperCase()}';
+
+      print('📥 [RX] Received: $opcodeName ($opcodeHex)');
+      print('  Data size: ${data.length} bytes');
+      print('  Hex: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+      print('  Payload: ${reader.remainingBytesCount} bytes');
 
       // Log RX packet (before processing so we capture everything)
       _logPacket(dataBytes, PacketDirection.rx, responseCode: responseCode);
@@ -808,31 +816,20 @@ class MeshCoreBleService {
 
   /// Send AppStart command
   Future<void> _sendAppStart() async {
-    print('📤 [BLE] Preparing AppStart command...');
     final writer = BufferWriter();
     writer.writeByte(MeshCoreConstants.cmdAppStart);
     writer.writeByte(1); // appVer
     writer.writeBytes(Uint8List(6)); // reserved
     writer.writeString('MeshCore SAR'); // appName
-    final data = writer.toBytes();
-    print('  Command: ${MeshCoreConstants.cmdAppStart}');
-    print('  Data length: ${data.length} bytes');
-    await _writeData(data);
-    print('✅ [BLE] AppStart command sent');
+    await _writeData(writer.toBytes());
   }
 
   /// Send DeviceQuery command
   Future<void> _sendDeviceQuery() async {
-    print('📤 [BLE] Preparing DeviceQuery command...');
     final writer = BufferWriter();
     writer.writeByte(MeshCoreConstants.cmdDeviceQuery);
     writer.writeByte(MeshCoreConstants.supportedCompanionProtocolVersion);
-    final data = writer.toBytes();
-    print('  Command: ${MeshCoreConstants.cmdDeviceQuery}');
-    print('  Protocol version: ${MeshCoreConstants.supportedCompanionProtocolVersion}');
-    print('  Data length: ${data.length} bytes');
-    await _writeData(data);
-    print('✅ [BLE] DeviceQuery command sent');
+    await _writeData(writer.toBytes());
     await _sendAppStart();
   }
 

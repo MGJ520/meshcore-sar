@@ -227,7 +227,34 @@ class _MessagesTabState extends State<MessagesTab> {
   }
 
 
-  // Removed _handleRefresh() - messages are synced automatically via PUSH_CODE_MSG_WAITING events
+  /// Handle pull-to-refresh for manual message sync
+  /// This is a FALLBACK mechanism - messages are normally synced automatically via PUSH_CODE_MSG_WAITING
+  Future<void> _handleRefresh() async {
+    final connectionProvider = context.read<ConnectionProvider>();
+
+    if (!connectionProvider.deviceInfo.isConnected) {
+      if (!mounted) return;
+      ToastLogger.warning(context, 'Not connected - cannot sync messages');
+      return;
+    }
+
+    try {
+      print('🔄 [MessagesTab] Manual refresh triggered - syncing messages');
+      final messageCount = await connectionProvider.syncAllMessages();
+      print('✅ [MessagesTab] Synced $messageCount message(s)');
+
+      if (!mounted) return;
+      if (messageCount > 0) {
+        ToastLogger.success(context, 'Synced $messageCount message(s)');
+      } else {
+        ToastLogger.info(context, 'No new messages');
+      }
+    } catch (e) {
+      print('❌ [MessagesTab] Sync error: $e');
+      if (!mounted) return;
+      ToastLogger.error(context, 'Sync failed: $e');
+    }
+  }
 
   List<Message> _getFilteredMessages(MessagesProvider messagesProvider) {
     // Show ALL messages regardless of recipient selection
@@ -243,33 +270,43 @@ class _MessagesTabState extends State<MessagesTab> {
 
         return Column(
           children: [
-            // Messages list
+            // Messages list with pull-to-refresh
             Expanded(
-              child: messages.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.message_outlined,
-                            size: 64,
-                            color: Theme.of(context).disabledColor,
+              child: RefreshIndicator(
+                onRefresh: _handleRefresh,
+                child: messages.isEmpty
+                    ? LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.message_outlined,
+                                    size: 64,
+                                    color: Theme.of(context).disabledColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No messages yet',
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Pull down to sync messages',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No messages yet',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Connect to a device to start receiving messages',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
+                        ),
+                      )
+                    : ListView.builder(
                       reverse: true,
                       padding: const EdgeInsets.all(8),
                       itemCount: messages.length,
@@ -298,6 +335,7 @@ class _MessagesTabState extends State<MessagesTab> {
                         );
                       },
                     ),
+              ),
             ),
 
             // Message input area

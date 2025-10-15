@@ -100,7 +100,7 @@ class LineDrawing extends MapDrawing {
 
     return LineDrawing(
       id: json['id'] as String,
-      color: Color.fromARGB32(json['color'] as int),
+      color: Color(json['color'] as int),
       createdAt: DateTime.parse(json['createdAt'] as String),
       points: points,
     );
@@ -157,7 +157,7 @@ class RectangleDrawing extends MapDrawing {
 
     return RectangleDrawing(
       id: json['id'] as String,
-      color: Color.fromARGB32(json['color'] as int),
+      color: Color(json['color'] as int),
       createdAt: DateTime.parse(json['createdAt'] as String),
       topLeft: LatLng(topLeftJson['lat'] as double, topLeftJson['lon'] as double),
       bottomRight: LatLng(bottomRightJson['lat'] as double, bottomRightJson['lon'] as double),

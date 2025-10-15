@@ -158,8 +158,13 @@ class AppProvider with ChangeNotifier {
       // Automatically login to all saved rooms
       await _autoLoginToRooms();
 
-      // Note: Messages are synced automatically via PUSH_CODE_MSG_WAITING events
-      // No need to manually sync here - the BLE service handles this via callbacks
+      // FALLBACK: Sync messages once after connection to catch any missed push notifications
+      // This handles the case where messages arrived while the app was disconnected
+      debugPrint('🔄 [AppProvider] Performing initial message sync (fallback for missed pushes)');
+      final initialMessageCount = await connectionProvider.syncAllMessages();
+      debugPrint('📥 [AppProvider] Initial sync retrieved $initialMessageCount message(s)');
+
+      // Note: Future messages are synced automatically via PUSH_CODE_MSG_WAITING events
 
       notifyListeners();
     } catch (e) {

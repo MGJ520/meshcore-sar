@@ -31,7 +31,12 @@ import '../widgets/messages/sar_update_sheet.dart';
 import 'map_management_screen.dart';
 
 class MapTab extends StatefulWidget {
-  const MapTab({super.key});
+  final Function(bool)? onFullscreenChanged;
+
+  const MapTab({
+    super.key,
+    this.onFullscreenChanged,
+  });
 
   @override
   State<MapTab> createState() => _MapTabState();
@@ -49,6 +54,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
   bool _rotateMarkerWithHeading = false; // Toggle for rotation
   bool _showLegend = false;
   bool _showMapDebugInfo = false; // Toggle for debug info
+  bool _isFullscreen = false; // Toggle for fullscreen mode
   double _gpsUpdateDistance = 3.0; // meters
   bool _backgroundTrackingEnabled = false; // Toggle for background tracking
   StreamSubscription<CompassEvent>? _compassStreamSubscription;
@@ -180,6 +186,12 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
         _showLegend = prefs.getBool('map_show_legend') ?? false;
         _rotateMarkerWithHeading = prefs.getBool('map_rotate_with_heading') ?? false;
         _showMapDebugInfo = prefs.getBool('map_show_debug_info') ?? false;
+        _isFullscreen = prefs.getBool('map_fullscreen') ?? false;
+
+        // Notify parent about initial fullscreen state
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onFullscreenChanged?.call(_isFullscreen);
+        });
         _gpsUpdateDistance = prefs.getDouble('map_gps_update_distance') ?? 3.0;
         _backgroundTrackingEnabled = prefs.getBool('background_tracking_enabled') ?? false;
 
@@ -202,6 +214,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     await prefs.setBool('map_show_legend', _showLegend);
     await prefs.setBool('map_rotate_with_heading', _rotateMarkerWithHeading);
     await prefs.setBool('map_show_debug_info', _showMapDebugInfo);
+    await prefs.setBool('map_fullscreen', _isFullscreen);
     await prefs.setDouble('map_gps_update_distance', _gpsUpdateDistance);
     await prefs.setBool('background_tracking_enabled', _backgroundTrackingEnabled);
     await prefs.setInt('map_last_layer', MapLayer.allLayers.indexOf(_currentLayer));
@@ -497,6 +510,23 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                   });
                   setModalState(() {});
                   _saveSettings();
+                },
+              ),
+              const Divider(),
+              // Fullscreen mode toggle
+              SwitchListTile(
+                secondary: const Icon(Icons.fullscreen),
+                title: const Text('Fullscreen Mode'),
+                subtitle: const Text('Hide all UI controls for full map view'),
+                value: _isFullscreen,
+                onChanged: (value) {
+                  setState(() {
+                    _isFullscreen = value;
+                  });
+                  setModalState(() {});
+                  _saveSettings();
+                  // Notify parent about fullscreen change
+                  widget.onFullscreenChanged?.call(value);
                 },
               ),
             ],
@@ -1060,9 +1090,10 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                             ),
                         ],
                       ),
-                      // Drawing markers layer (delete buttons on drawings)
+                      // Drawing markers layer (delete buttons on drawings, only shown when in drawing mode)
                       DrawingMarkersLayer(
                         drawings: drawingProvider.drawings,
+                        showDeleteButtons: drawingProvider.isDrawing,
                         onDeleteDrawing: (drawingId) {
                           drawingProvider.removeDrawing(drawingId);
                         },
@@ -1083,26 +1114,46 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                       ],
                     ),
                   ),
-            // Compass widget - top right (always visible)
-            Positioned(
-              top: 16,
-              right: 16,
-              child: GestureDetector(
-                onTap: () => _showDetailedCompass(
-                  context,
-                  contactsProvider.contactsWithLocation,
-                  messagesProvider.sarMarkers,
-                ),
-                child: CompassWidget(
-                  heading: _currentHeading ?? 0,
-                  hasHeading: _currentHeading != null,
+            // Exit fullscreen button - top left (only shown in fullscreen mode)
+            if (_isFullscreen)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: FloatingActionButton.small(
+                  heroTag: 'exit_fullscreen',
+                  onPressed: () {
+                    setState(() {
+                      _isFullscreen = false;
+                    });
+                    _saveSettings();
+                    // Notify parent about fullscreen change
+                    widget.onFullscreenChanged?.call(false);
+                  },
+                  backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                  child: const Icon(Icons.fullscreen_exit),
                 ),
               ),
-            ),
-            // Map legend overlay
-            if (_showLegend)
+            // Compass widget - top right (hidden in fullscreen mode)
+            if (!_isFullscreen)
               Positioned(
-                top: 80, // Position below compass (which is always visible now)
+                top: 16,
+                right: 16,
+                child: GestureDetector(
+                  onTap: () => _showDetailedCompass(
+                    context,
+                    contactsProvider.contactsWithLocation,
+                    messagesProvider.sarMarkers,
+                  ),
+                  child: CompassWidget(
+                    heading: _currentHeading ?? 0,
+                    hasHeading: _currentHeading != null,
+                  ),
+                ),
+              ),
+            // Map legend overlay (hidden in fullscreen mode)
+            if (_showLegend && !_isFullscreen)
+              Positioned(
+                top: 80, // Position below compass
                 left: 16,
                 child: MapLegend(
                   teamMemberCount: contactsWithLocation.length,
@@ -1112,19 +1163,17 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                   objectCount: messagesProvider.objectMarkers.length,
                 ),
               ),
-            // Drawing toolbar - bottom left
-            Positioned(
-              bottom: 16,
-              left: 16,
-              child: const DrawingToolbar(),
-            ),
-            // Map controls - right side
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: Column(
-                children: [
-                  FloatingActionButton.small(
+            // Map controls - right side (hidden in fullscreen mode)
+            if (!_isFullscreen)
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: Column(
+                  children: [
+                    // Drawing toolbar
+                    const DrawingToolbar(),
+                    const SizedBox(height: 8),
+                    FloatingActionButton.small(
                     heroTag: 'center_map',
                     onPressed: !_isMapReady ? null : () async {
                       // Force update GPS location and jump to it
@@ -1162,16 +1211,16 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                     child: const Icon(Icons.layers),
                   ),
                   const SizedBox(height: 8),
-                  FloatingActionButton.small(
-                    heroTag: 'options_menu',
-                    onPressed: () => _showOptionsMenu(context),
-                    child: const Icon(Icons.more_vert),
-                  ),
-                ],
+                    FloatingActionButton.small(
+                      heroTag: 'options_menu',
+                      onPressed: () => _showOptionsMenu(context),
+                      child: const Icon(Icons.more_vert),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            // Map debug info - bottom left
-            if (_showMapDebugInfo && _isMapReady)
+            // Map debug info - bottom left (hidden in fullscreen mode)
+            if (_showMapDebugInfo && _isMapReady && !_isFullscreen)
               Positioned(
                 bottom: 16,
                 left: 16,

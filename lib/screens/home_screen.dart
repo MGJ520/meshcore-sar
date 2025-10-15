@@ -32,6 +32,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentIndex = 0;
+  bool _isMapFullscreen = false;
 
   @override
   void initState() {
@@ -40,6 +41,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _tabController.addListener(() {
       setState(() {
         _currentIndex = _tabController.index;
+        // Exit fullscreen when switching away from map tab
+        if (_currentIndex != 2) {
+          _isMapFullscreen = false;
+        }
       });
     });
   }
@@ -308,8 +313,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    // Determine if we should hide the UI (only in fullscreen on map tab)
+    final shouldHideUI = _isMapFullscreen && _currentIndex == 2;
+
     return Scaffold(
-      appBar: AppBar(
+      appBar: shouldHideUI ? null : AppBar(
         title: _buildCompactStatusBar(),
         actions: [
           PopupMenuButton(
@@ -368,10 +376,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           MessagesTab(onNavigateToMap: () => _tabController.animateTo(2)),
           const ContactsTab(),
-          const MapTab(),
+          MapTab(
+            onFullscreenChanged: (isFullscreen) {
+              setState(() {
+                _isMapFullscreen = isFullscreen;
+              });
+            },
+          ),
         ],
       ),
-      bottomNavigationBar: Consumer2<MessagesProvider, ContactsProvider>(
+      bottomNavigationBar: shouldHideUI ? null : Consumer2<MessagesProvider, ContactsProvider>(
         builder: (context, messagesProvider, contactsProvider, child) {
           final unreadCount = messagesProvider.unreadCount;
           final newContactsCount = contactsProvider.newContactsCount;
@@ -512,47 +526,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       );
                     },
-                    child: Row(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // RX indicator
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: provider.rxActivity
-                                ? Colors.green
-                                : Colors.grey.withOpacity(0.3),
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: provider.rxActivity
+                                    ? Colors.green
+                                    : Colors.grey.withOpacity(0.3),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'RX:${provider.rxPacketCount}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'RX:${provider.rxPacketCount}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+                        const SizedBox(height: 4),
                         // TX indicator
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: provider.txActivity
-                                ? Colors.blue
-                                : Colors.grey.withOpacity(0.3),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'TX:${provider.txPacketCount}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: provider.txActivity
+                                    ? Colors.blue
+                                    : Colors.grey.withOpacity(0.3),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'TX:${provider.txPacketCount}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

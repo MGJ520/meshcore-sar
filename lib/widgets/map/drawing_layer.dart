@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../models/map_drawing.dart';
 
 /// Widget that renders map drawings as polylines
@@ -37,9 +38,9 @@ class DrawingLayer extends StatelessWidget {
 
     return Polyline(
       points: points,
-      color: drawing.color.withOpacity(opacity),
+      color: drawing.color.withValues(alpha: opacity),
       strokeWidth: 4.0,
-      borderColor: Colors.white.withOpacity(opacity * 0.8),
+      borderColor: Colors.white.withValues(alpha: opacity * 0.8),
       borderStrokeWidth: 1.0,
     );
   }
@@ -59,15 +60,22 @@ class DrawingLayer extends StatelessWidget {
 class DrawingMarkersLayer extends StatelessWidget {
   final List<MapDrawing> drawings;
   final Function(String drawingId)? onDeleteDrawing;
+  final bool showDeleteButtons;
 
   const DrawingMarkersLayer({
     super.key,
     required this.drawings,
     this.onDeleteDrawing,
+    this.showDeleteButtons = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Only show delete buttons when showDeleteButtons is true
+    if (!showDeleteButtons) {
+      return const SizedBox.shrink();
+    }
+
     final List<Marker> markers = [];
 
     // Add delete markers for each drawing (at the center point)
@@ -87,12 +95,12 @@ class DrawingMarkersLayer extends StatelessWidget {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: drawing.color.withOpacity(0.9),
+                  color: drawing.color.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),

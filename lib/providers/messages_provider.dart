@@ -338,8 +338,9 @@ class MessagesProvider with ChangeNotifier {
   void markMessageSent(String messageId, int expectedAckTag, int suggestedTimeoutMs) {
     print('📤 [MessagesProvider] markMessageSent called');
     print('  Message ID: $messageId');
-    print('  Expected ACK tag: $expectedAckTag');
+    print('  Expected ACK tag: $expectedAckTag (0x${expectedAckTag.toRadixString(16).padLeft(8, '0')})');
     print('  Timeout: ${suggestedTimeoutMs}ms');
+    print('  Current pending ACKs before adding: ${_pendingSentMessages.keys.toList()}');
 
     final index = _messages.indexWhere((m) => m.id == messageId);
     print('  Message index in list: $index');
@@ -347,6 +348,7 @@ class MessagesProvider with ChangeNotifier {
     if (index != -1) {
       final message = _messages[index];
       print('  Current status: ${message.deliveryStatus}');
+      print('  Message text preview: ${message.text.substring(0, message.text.length > 30 ? 30 : message.text.length)}...');
 
       final updatedMessage = message.copyWith(
         deliveryStatus: MessageDeliveryStatus.sent,
@@ -357,8 +359,9 @@ class MessagesProvider with ChangeNotifier {
 
       // Track by ACK tag for matching with delivery confirmation
       _pendingSentMessages[expectedAckTag] = updatedMessage;
-      print('  Added to pending messages map with ACK: $expectedAckTag');
+      print('  ✅ Added to pending messages map with ACK: $expectedAckTag');
       print('  Total pending messages: ${_pendingSentMessages.length}');
+      print('  Pending ACKs after adding: ${_pendingSentMessages.keys.toList()}');
 
       // Start timeout timer
       _timeoutTimers[expectedAckTag] = Timer(
@@ -372,11 +375,19 @@ class MessagesProvider with ChangeNotifier {
       );
 
       print('⏱️ [MessagesProvider] Started ${suggestedTimeoutMs}ms timeout timer for message $messageId (ACK $expectedAckTag)');
+      print('  Calling notifyListeners() to update UI with "sent" status');
 
       _persistMessages();
       notifyListeners();
+
+      print('  ✅ markMessageSent completed successfully');
     } else {
       print('⚠️ [MessagesProvider] Message not found in list: $messageId');
+      print('  Total messages in list: ${_messages.length}');
+      print('  Recent messages:');
+      for (final m in _messages.take(5)) {
+        print('     - ID: ${m.id}, Status: ${m.deliveryStatus}');
+      }
     }
   }
 
@@ -384,12 +395,13 @@ class MessagesProvider with ChangeNotifier {
   void markMessageDelivered(int ackCode, int roundTripTimeMs) {
     print('🔍 [MessagesProvider] markMessageDelivered called with ACK: $ackCode, RTT: ${roundTripTimeMs}ms');
     print('  Current pending messages: ${_pendingSentMessages.keys.toList()}');
+    print('  Total messages in list: ${_messages.length}');
     print('  Looking for ACK: $ackCode');
 
     // Find message by ACK code
     final message = _pendingSentMessages[ackCode];
     if (message != null) {
-      print('  ✅ Found message: ${message.id}');
+      print('  ✅ Found message in pending map: ${message.id}');
       final index = _messages.indexWhere((m) => m.id == message.id);
       print('  Message index in list: $index');
 
@@ -409,19 +421,43 @@ class MessagesProvider with ChangeNotifier {
         _pendingSentMessages.remove(ackCode);
 
         print('✅ [MessagesProvider] Message ${message.id} delivered in ${roundTripTimeMs}ms (ACK $ackCode)');
+        print('  Updated status to: ${updatedMessage.deliveryStatus}');
         print('  Calling notifyListeners() to update UI');
 
         _persistMessages();
         notifyListeners();
+
+        print('  ✅ notifyListeners() called successfully');
       } else {
-        print('⚠️ [MessagesProvider] Message not found in list (index=-1)');
+        print('⚠️ [MessagesProvider] Message not found in messages list (index=-1)');
+        print('  This should never happen - message was in pending map but not in messages list');
       }
     } else {
       print('⚠️ [MessagesProvider] No pending message found for ACK code: $ackCode');
+      print('  Pending ACK codes: ${_pendingSentMessages.keys.toList()}');
       print('  This means either:');
-      print('  1. markMessageSent() was never called for this message');
-      print('  2. The ACK code doesn\'t match the expected ACK tag from RESP_CODE_SENT');
+      print('  1. markMessageSent() was never called for this message (ACK tag not stored)');
+      print('  2. The ACK code from PUSH_CODE_SEND_CONFIRMED doesn\'t match the expected ACK tag from RESP_CODE_SENT');
       print('  3. The message was already delivered or timed out');
+      print('  Searching all messages for debugging...');
+
+      // Debug: Search for any message with this ACK tag
+      final matchingMessages = _messages.where((m) => m.expectedAckTag == ackCode).toList();
+      if (matchingMessages.isNotEmpty) {
+        print('  ⚠️ Found ${matchingMessages.length} message(s) with matching ACK tag but NOT in pending map:');
+        for (final m in matchingMessages) {
+          print('     - Message ID: ${m.id}, Status: ${m.deliveryStatus}, ACK: ${m.expectedAckTag}');
+        }
+        print('  This indicates the message was sent but never added to _pendingSentMessages map');
+        print('  Likely cause: markMessageSent() was not called with correct message ID');
+      } else {
+        print('  No messages found with ACK tag $ackCode');
+        print('  Recent sent messages:');
+        final sentMessages = _messages.where((m) => m.isSentMessage).take(5).toList();
+        for (final m in sentMessages) {
+          print('     - ID: ${m.id}, Status: ${m.deliveryStatus}, ACK: ${m.expectedAckTag}');
+        }
+      }
     }
   }
 

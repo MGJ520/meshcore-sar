@@ -60,6 +60,7 @@ class Message {
   final int? suggestedTimeoutMs; // Suggested timeout from SENT response
   final int? roundTripTimeMs; // RTT from SEND_CONFIRMED
   final DateTime? deliveredAt; // When delivery was confirmed
+  final Uint8List? recipientPublicKey; // Full 32-byte public key of recipient (for retry)
 
   Message({
     required this.id,
@@ -80,6 +81,7 @@ class Message {
     this.suggestedTimeoutMs,
     this.roundTripTimeMs,
     this.deliveredAt,
+    this.recipientPublicKey,
   });
 
   /// Get sender public key as hex string
@@ -182,6 +184,7 @@ class Message {
     int? suggestedTimeoutMs,
     int? roundTripTimeMs,
     DateTime? deliveredAt,
+    Uint8List? recipientPublicKey,
   }) {
     return Message(
       id: id ?? this.id,
@@ -202,6 +205,7 @@ class Message {
       suggestedTimeoutMs: suggestedTimeoutMs ?? this.suggestedTimeoutMs,
       roundTripTimeMs: roundTripTimeMs ?? this.roundTripTimeMs,
       deliveredAt: deliveredAt ?? this.deliveredAt,
+      recipientPublicKey: recipientPublicKey ?? this.recipientPublicKey,
     );
   }
 

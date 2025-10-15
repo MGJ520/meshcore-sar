@@ -137,6 +137,9 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Get keyboard height to adjust padding
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
@@ -185,7 +188,12 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
           // Content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: keyboardHeight > 0 ? keyboardHeight + 16 : 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

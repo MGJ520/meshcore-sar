@@ -488,9 +488,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   FilledButton(
                     onPressed: () async {
                       await provider.disconnect();
-                      if (context.mounted) {
-                        context.read<AppProvider>().clearAllData();
-                      }
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
@@ -587,9 +584,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ? null
                           : () async {
                               await provider.disconnect();
-                              if (context.mounted) {
-                                context.read<AppProvider>().clearAllData();
-                              }
                             },
                       icon: const Icon(Icons.bluetooth_disabled, size: 18),
                       label: const Text('Disconnect'),

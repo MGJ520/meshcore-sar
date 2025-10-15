@@ -12,6 +12,20 @@ import 'compass/compass_filters.dart';
 import 'compass/compass_sar_list.dart';
 import 'compass/compass_contact_list.dart';
 
+enum HeadingAccuracySeverity { low, medium, high }
+
+class HeadingAccuracyInfo {
+  final bool isAccurate;
+  final String? warning;
+  final HeadingAccuracySeverity severity;
+
+  HeadingAccuracyInfo({
+    required this.isAccurate,
+    this.warning,
+    this.severity = HeadingAccuracySeverity.low,
+  });
+}
+
 class DetailedCompassDialog extends StatefulWidget {
   final Position? initialPosition;
   final double? initialHeading;
@@ -36,6 +50,7 @@ class DetailedCompassDialog extends StatefulWidget {
 
 class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
   double? _currentHeading;
+  double? _compassAccuracy; // Compass accuracy in degrees
   Position? _currentPosition;
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<Position>? _positionSubscription;
@@ -78,6 +93,7 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
         if (mounted && event.heading != null) {
           setState(() {
             _currentHeading = event.heading;
+            _compassAccuracy = event.accuracy;
           });
         }
       });
@@ -112,6 +128,67 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
       return _currentPosition!.heading;
     }
     return null;
+  }
+
+  // Check heading accuracy and return warning information
+  HeadingAccuracyInfo get headingAccuracyInfo {
+    // Using compass
+    if (_currentHeading != null) {
+      if (_compassAccuracy == null) {
+        return HeadingAccuracyInfo(
+          isAccurate: false,
+          warning: 'Compass accuracy unknown',
+          severity: HeadingAccuracySeverity.low,
+        );
+      } else if (_compassAccuracy! > 30) {
+        return HeadingAccuracyInfo(
+          isAccurate: false,
+          warning: 'Low compass accuracy (±${_compassAccuracy!.round()}°). Calibrate device.',
+          severity: HeadingAccuracySeverity.high,
+        );
+      } else if (_compassAccuracy! > 15) {
+        return HeadingAccuracyInfo(
+          isAccurate: true,
+          warning: 'Moderate compass accuracy (±${_compassAccuracy!.round()}°)',
+          severity: HeadingAccuracySeverity.medium,
+        );
+      }
+      return HeadingAccuracyInfo(isAccurate: true);
+    }
+
+    // Using GPS heading
+    if (_currentPosition?.heading != null && _currentPosition!.heading >= 0) {
+      final headingAccuracy = _currentPosition!.headingAccuracy;
+      if (headingAccuracy > 0) {
+        if (headingAccuracy > 30) {
+          return HeadingAccuracyInfo(
+            isAccurate: false,
+            warning: 'Low GPS heading accuracy (±${headingAccuracy.round()}°). Move faster or use compass.',
+            severity: HeadingAccuracySeverity.high,
+          );
+        } else if (headingAccuracy > 15) {
+          return HeadingAccuracyInfo(
+            isAccurate: true,
+            warning: 'Moderate GPS heading accuracy (±${headingAccuracy.round()}°)',
+            severity: HeadingAccuracySeverity.medium,
+          );
+        }
+        return HeadingAccuracyInfo(isAccurate: true);
+      }
+      // GPS heading available but no accuracy info
+      return HeadingAccuracyInfo(
+        isAccurate: true,
+        warning: 'Using GPS heading (accuracy unknown)',
+        severity: HeadingAccuracySeverity.low,
+      );
+    }
+
+    // No heading available
+    return HeadingAccuracyInfo(
+      isAccurate: false,
+      warning: 'No heading available',
+      severity: HeadingAccuracySeverity.high,
+    );
   }
 
   // Filter SAR markers based on visibility settings
@@ -193,6 +270,8 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
   Widget build(BuildContext context) {
     final heading = currentHeading;
     final position = _currentPosition;
+    final accuracyInfo = headingAccuracyInfo;
+
     return Column(
       children: [
         // Header with back button
@@ -261,6 +340,9 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
             ],
           ),
         ),
+        // Heading accuracy warning banner
+        if (accuracyInfo.warning != null)
+          _buildAccuracyWarning(context, accuracyInfo),
         Expanded(
           child: SingleChildScrollView(
             child: Padding(
@@ -335,6 +417,59 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAccuracyWarning(BuildContext context, HeadingAccuracyInfo info) {
+    Color backgroundColor;
+    Color iconColor;
+    IconData icon;
+
+    switch (info.severity) {
+      case HeadingAccuracySeverity.high:
+        backgroundColor = Colors.red.shade100;
+        iconColor = Colors.red.shade700;
+        icon = Icons.error_outline;
+        break;
+      case HeadingAccuracySeverity.medium:
+        backgroundColor = Colors.orange.shade100;
+        iconColor = Colors.orange.shade700;
+        icon = Icons.warning_amber_outlined;
+        break;
+      case HeadingAccuracySeverity.low:
+        backgroundColor = Colors.blue.shade100;
+        iconColor = Colors.blue.shade700;
+        icon = Icons.info_outline;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: iconColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              info.warning!,
+              style: TextStyle(
+                color: iconColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

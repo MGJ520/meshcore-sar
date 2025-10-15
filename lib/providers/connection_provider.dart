@@ -522,10 +522,19 @@ class ConnectionProvider with ChangeNotifier {
       // Channel messages are ephemeral (not persisted) - mark as "sent" immediately
       // They don't have ACK/TAG mechanism like direct messages
       if (messageId != null) {
-        print('✅ [Provider] Channel message sent successfully - marking as sent: $messageId');
+        print('✅ [ConnectionProvider] Channel message sent successfully');
+        print('  Message ID: $messageId');
+        print('  onMessageSent callback exists: ${onMessageSent != null}');
+
+        // Small delay to ensure the message is in the MessagesProvider list
+        // before we try to mark it as sent
+        await Future.delayed(const Duration(milliseconds: 50));
+
         // Use a dummy ACK tag (0) and timeout (0) for channel messages
         // This will trigger the callback to mark the message as "sent"
+        print('  Calling onMessageSent callback...');
         onMessageSent?.call(messageId, 0, 0);
+        print('  onMessageSent callback completed');
       }
     } catch (e) {
       _error = 'Failed to send channel message: $e';

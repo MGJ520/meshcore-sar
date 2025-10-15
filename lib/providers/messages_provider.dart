@@ -334,6 +334,12 @@ class MessagesProvider with ChangeNotifier {
 
   /// Add a sent message with initial status
   void addSentMessage(Message message) {
+    print('📝 [MessagesProvider] addSentMessage called');
+    print('  Message ID: ${message.id}');
+    print('  Message type: ${message.messageType}');
+    print('  Initial status: ${message.deliveryStatus}');
+    print('  Message text preview: ${message.text.substring(0, message.text.length > 30 ? 30 : message.text.length)}...');
+
     // Always enhance message with SAR parser to detect SAR markers
     final enhancedMessage = SarMessageParser.enhanceMessage(message);
 
@@ -348,6 +354,8 @@ class MessagesProvider with ChangeNotifier {
       deliveryStatus: MessageDeliveryStatus.sending,
     );
     _messages.add(sendingMessage);
+    print('  ✅ Message added to list at index ${_messages.length - 1}');
+    print('  Total messages in list: ${_messages.length}');
 
     // If it's a SAR marker message, extract and store the marker
     if (sendingMessage.isSarMarker) {
@@ -359,6 +367,7 @@ class MessagesProvider with ChangeNotifier {
 
     _persistMessages();
     notifyListeners();
+    print('  ✅ notifyListeners() called - UI should update');
   }
 
   /// Update message status to sent with ACK tag

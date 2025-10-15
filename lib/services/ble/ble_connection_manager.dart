@@ -20,8 +20,19 @@ class BleConnectionManager {
   int _reconnectionAttempt = 0;
   Timer? _reconnectionTimer;
   StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
-  static const int _maxReconnectionAttempts = 5;
-  static const List<int> _reconnectionDelaysMs = [1000, 2000, 3000, 5000, 10000]; // Exponential backoff
+
+  // SAR-optimized reconnection: ~15 minutes total
+  // Pattern: Fast retries first (for temporary issues), then slower retries (for extended disconnections)
+  static const int _maxReconnectionAttempts = 30;
+  static const List<int> _reconnectionDelaysMs = [
+    2000,   // 2s  - immediate retry
+    3000,   // 3s  - quick retry
+    5000,   // 5s  - fast retry
+    10000,  // 10s - moderate retry
+    15000,  // 15s - longer retry
+    30000,  // 30s - extended retry
+    30000,  // 30s - keep trying every 30s after this
+  ]; // Total: ~15 minutes of reconnection attempts
 
   // Callbacks
   OnConnectionStateCallback? onConnectionStateChanged;
@@ -234,17 +245,17 @@ class BleConnectionManager {
     onReconnectionAttempt?.call(_reconnectionAttempt, _maxReconnectionAttempts);
 
     if (_reconnectionAttempt > _maxReconnectionAttempts) {
-      print('❌ [BLE] Max reconnection attempts reached. Giving up.');
+      print('❌ [BLE] Max reconnection attempts reached after ~15 minutes. Giving up.');
       _isReconnecting = false;
-      onError?.call('Connection lost. Max reconnection attempts ($_maxReconnectionAttempts) reached.');
+      onError?.call('Connection lost. Unable to reconnect after 15 minutes ($_maxReconnectionAttempts attempts).');
       return;
     }
 
-    // Calculate delay with exponential backoff
+    // Calculate delay with exponential backoff (uses last delay for attempts beyond array length)
     final delayIndex = (_reconnectionAttempt - 1).clamp(0, _reconnectionDelaysMs.length - 1);
     final delayMs = _reconnectionDelaysMs[delayIndex];
 
-    print('🔄 [BLE] Waiting ${delayMs}ms before reconnection attempt $_reconnectionAttempt...');
+    print('🔄 [BLE] Waiting ${(delayMs / 1000).toStringAsFixed(0)}s before reconnection attempt $_reconnectionAttempt...');
 
     // Wait before attempting reconnection
     _reconnectionTimer = Timer(Duration(milliseconds: delayMs), () async {
@@ -272,7 +283,7 @@ class BleConnectionManager {
           if (_reconnectionAttempt < _maxReconnectionAttempts) {
             _attemptReconnection();
           } else {
-            onError?.call('Connection lost. Unable to reconnect after $_maxReconnectionAttempts attempts.');
+            onError?.call('Connection lost. Unable to reconnect after 15 minutes ($_maxReconnectionAttempts attempts).');
           }
         }
       } catch (e) {
@@ -283,7 +294,7 @@ class BleConnectionManager {
         if (_reconnectionAttempt < _maxReconnectionAttempts) {
           _attemptReconnection();
         } else {
-          onError?.call('Connection lost. Unable to reconnect: $e');
+          onError?.call('Connection lost. Unable to reconnect after 15 minutes: $e');
         }
       }
     });

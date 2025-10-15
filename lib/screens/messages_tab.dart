@@ -170,7 +170,7 @@ class _MessagesTabState extends State<MessagesTab> {
         final devicePublicKey = connectionProvider.deviceInfo.publicKey;
         final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
 
-        // Create sent message object
+        // Create sent message object with recipient public key for retry support
         final sentMessage = Message(
           id: messageId,
           messageType: MessageType.contact,
@@ -181,6 +181,7 @@ class _MessagesTabState extends State<MessagesTab> {
           text: fullMessage,
           receivedAt: DateTime.now(),
           deliveryStatus: MessageDeliveryStatus.sending,
+          recipientPublicKey: roomPublicKey, // Store recipient for retry
           // SAR marker data is automatically added by SarMessageParser.enhanceMessage in MessagesProvider
         );
 
@@ -408,15 +409,42 @@ class _MessageBubble extends StatelessWidget {
 
       // Resend the message
       if (failedMessage.messageType == MessageType.contact) {
-        // Direct message retry - NOT YET IMPLEMENTED
-        // Would need to look up contact's full public key by senderKeyShort
-        messagesProvider.markMessageFailed(retryMessageId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Direct message retry not yet implemented'),
-            backgroundColor: Colors.orange,
-          ),
+        // Direct message retry (for SAR markers sent to rooms)
+        if (failedMessage.recipientPublicKey == null) {
+          messagesProvider.markMessageFailed(retryMessageId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot retry: recipient information missing'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        // Resend to the same room
+        final sentSuccessfully = await connectionProvider.sendTextMessage(
+          contactPublicKey: failedMessage.recipientPublicKey!,
+          text: failedMessage.text,
+          messageId: retryMessageId,
         );
+
+        if (!sentSuccessfully) {
+          messagesProvider.markMessageFailed(retryMessageId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to resend message'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Retrying message...'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       } else if (failedMessage.messageType == MessageType.channel) {
         // Channel message retry
         await connectionProvider.sendChannelMessage(

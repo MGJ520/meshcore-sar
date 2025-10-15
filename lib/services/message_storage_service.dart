@@ -120,6 +120,14 @@ class MessageStorageService {
       'sarGpsLon': message.sarGpsCoordinates?.longitude,
       'receivedAtMillis': message.receivedAt.millisecondsSinceEpoch,
       'senderName': message.senderName,
+      'deliveryStatus': message.deliveryStatus.name,
+      'expectedAckTag': message.expectedAckTag,
+      'suggestedTimeoutMs': message.suggestedTimeoutMs,
+      'roundTripTimeMs': message.roundTripTimeMs,
+      'deliveredAtMillis': message.deliveredAt?.millisecondsSinceEpoch,
+      'recipientPublicKey': message.recipientPublicKey != null
+          ? base64Encode(message.recipientPublicKey!)
+          : null,
     };
   }
 
@@ -155,6 +163,23 @@ class MessageStorageService {
         receivedAt: DateTime.fromMillisecondsSinceEpoch(
             json['receivedAtMillis'] as int),
         senderName: json['senderName'] as String?,
+        deliveryStatus: json['deliveryStatus'] != null
+            ? MessageDeliveryStatus.values.firstWhere(
+                (e) => e.name == json['deliveryStatus'],
+                orElse: () => MessageDeliveryStatus.received,
+              )
+            : MessageDeliveryStatus.received,
+        expectedAckTag: json['expectedAckTag'] as int?,
+        suggestedTimeoutMs: json['suggestedTimeoutMs'] as int?,
+        roundTripTimeMs: json['roundTripTimeMs'] as int?,
+        deliveredAt: json['deliveredAtMillis'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                json['deliveredAtMillis'] as int)
+            : null,
+        recipientPublicKey: json['recipientPublicKey'] != null
+            ? Uint8List.fromList(
+                base64Decode(json['recipientPublicKey'] as String))
+            : null,
       );
     } catch (e) {
       print('❌ [MessageStorage] Error parsing message from JSON: $e');

@@ -249,6 +249,10 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
                     label: const Text('Send Direct Message'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                      disabledForegroundColor: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),

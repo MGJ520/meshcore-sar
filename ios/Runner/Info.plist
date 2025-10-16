@@ -68,5 +68,14 @@
 	<array>
 		<string>dev.flutter.background.refresh</string>
 	</array>
+	<key>UIUserNotificationSettings</key>
+	<dict>
+		<key>UIUserNotificationTypesEnabled</key>
+		<array>
+			<string>UIUserNotificationTypeAlert</string>
+			<string>UIUserNotificationTypeBadge</string>
+			<string>UIUserNotificationTypeSound</string>
+		</array>
+	</dict>
 </dict>
 </plist>

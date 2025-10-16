@@ -1808,6 +1808,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed'**
   String get failed;
+
+  /// SAR marker type: found person
+  ///
+  /// In en, this message translates to:
+  /// **'Found Person'**
+  String get sarMarkerFoundPerson;
+
+  /// SAR marker type: fire
+  ///
+  /// In en, this message translates to:
+  /// **'Fire Location'**
+  String get sarMarkerFire;
+
+  /// SAR marker type: staging area
+  ///
+  /// In en, this message translates to:
+  /// **'Staging Area'**
+  String get sarMarkerStagingArea;
+
+  /// SAR marker type: object
+  ///
+  /// In en, this message translates to:
+  /// **'Object Found'**
+  String get sarMarkerObject;
+
+  /// Sender label in notifications
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get from;
+
+  /// Coordinates label
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinates'**
+  String get coordinates;
+
+  /// Notification action text
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view on map'**
+  String get tapToViewOnMap;
 }
 
 class _AppLocalizationsDelegate

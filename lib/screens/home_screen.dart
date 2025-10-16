@@ -451,6 +451,13 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Set localizations for notifications
+    final messagesProvider = context.read<MessagesProvider>();
+    final localizations = AppLocalizations.of(context);
+    if (localizations != null) {
+      messagesProvider.setLocalizations(localizations);
+    }
+
     // Determine if we should hide the UI (only in fullscreen on map tab)
     final shouldHideUI = _isMapFullscreen && _currentIndex == 2;
 

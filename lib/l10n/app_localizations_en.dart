@@ -988,4 +988,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failed => 'Failed';
+
+  @override
+  String get sarMarkerFoundPerson => 'Found Person';
+
+  @override
+  String get sarMarkerFire => 'Fire Location';
+
+  @override
+  String get sarMarkerStagingArea => 'Staging Area';
+
+  @override
+  String get sarMarkerObject => 'Object Found';
+
+  @override
+  String get from => 'From';
+
+  @override
+  String get coordinates => 'Coordinates';
+
+  @override
+  String get tapToViewOnMap => 'Tap to view on map';
 }

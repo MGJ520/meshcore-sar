@@ -4,14 +4,18 @@ import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import '../models/sar_marker.dart';
 import '../services/message_storage_service.dart';
+import '../services/notification_service.dart';
 import '../utils/sar_message_parser.dart';
+import '../l10n/app_localizations.dart';
 
 /// Messages Provider - manages message history and SAR markers
 class MessagesProvider with ChangeNotifier {
   final List<Message> _messages = [];
   final Map<String, SarMarker> _sarMarkers = {};
   final MessageStorageService _storageService = MessageStorageService();
+  final NotificationService _notificationService = NotificationService();
   bool _isInitialized = false;
+  AppLocalizations? _localizations;
 
   // Track pending sent messages by expected ACK/TAG
   final Map<int, Message> _pendingSentMessages = {};
@@ -48,6 +52,11 @@ class MessagesProvider with ChangeNotifier {
       sarMarkers.where((m) => m.type == SarMarkerType.object).toList();
 
   bool get isInitialized => _isInitialized;
+
+  /// Set localizations for notifications
+  void setLocalizations(AppLocalizations localizations) {
+    _localizations = localizations;
+  }
 
   /// Get count of unread messages (excluding sent messages and system messages)
   int get unreadCount => _messages
@@ -146,6 +155,11 @@ class MessagesProvider with ChangeNotifier {
       final marker = finalMessage.toSarMarker();
       if (marker != null) {
         _sarMarkers[marker.id] = marker;
+
+        // Trigger urgent notification for received SAR messages (not sent by user)
+        if (!finalMessage.isSentMessage) {
+          _triggerSarNotification(finalMessage, marker);
+        }
       }
     }
 
@@ -229,6 +243,31 @@ class MessagesProvider with ChangeNotifier {
     _persistMessages();
 
     notifyListeners();
+  }
+
+  /// Trigger urgent notification for SAR marker
+  Future<void> _triggerSarNotification(Message message, SarMarker marker) async {
+    try {
+      // Format coordinates
+      final coords = '${marker.location.latitude.toStringAsFixed(5)}, ${marker.location.longitude.toStringAsFixed(5)}';
+
+      // Get sender name from message
+      final senderName = message.senderName ?? message.senderKeyShort ?? 'Unknown';
+
+      print('🔔 [MessagesProvider] Triggering SAR notification for ${marker.type.displayName}');
+      print('   Sender: $senderName');
+      print('   Coordinates: $coords');
+
+      await _notificationService.showSarNotification(
+        type: marker.type,
+        senderName: senderName,
+        coordinates: coords,
+        notes: marker.notes,
+        localizations: _localizations,
+      );
+    } catch (e) {
+      print('❌ [MessagesProvider] Error triggering SAR notification: $e');
+    }
   }
 
   /// Persist messages to storage (async, non-blocking)

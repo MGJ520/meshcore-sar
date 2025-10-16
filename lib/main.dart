@@ -9,6 +9,7 @@ import 'providers/map_provider.dart';
 import 'providers/drawing_provider.dart';
 import 'providers/app_provider.dart';
 import 'services/tile_cache_service.dart';
+import 'services/notification_service.dart';
 import 'services/locale_preferences.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -39,6 +40,8 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
   Future<void> _initializeApp() async {
     await _loadThemePreference();
     await _loadLocalePreference();
+    // Initialize notification service
+    await NotificationService().initialize();
     setState(() {
       _isInitialized = true;
     });

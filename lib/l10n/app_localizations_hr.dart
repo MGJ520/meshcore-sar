@@ -990,4 +990,25 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get failed => 'Neuspjelo';
+
+  @override
+  String get sarMarkerFoundPerson => 'Pronađena osoba';
+
+  @override
+  String get sarMarkerFire => 'Lokacija požara';
+
+  @override
+  String get sarMarkerStagingArea => 'Zbirno mjesto';
+
+  @override
+  String get sarMarkerObject => 'Pronađen objekt';
+
+  @override
+  String get from => 'Od';
+
+  @override
+  String get coordinates => 'Koordinate';
+
+  @override
+  String get tapToViewOnMap => 'Dodirnite za prikaz na karti';
 }

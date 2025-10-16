@@ -1698,5 +1698,40 @@
   "failed": "Failed",
   "@failed": {
     "description": "Delivery status: failed"
+  },
+
+  "sarMarkerFoundPerson": "Found Person",
+  "@sarMarkerFoundPerson": {
+    "description": "SAR marker type: found person"
+  },
+
+  "sarMarkerFire": "Fire Location",
+  "@sarMarkerFire": {
+    "description": "SAR marker type: fire"
+  },
+
+  "sarMarkerStagingArea": "Staging Area",
+  "@sarMarkerStagingArea": {
+    "description": "SAR marker type: staging area"
+  },
+
+  "sarMarkerObject": "Object Found",
+  "@sarMarkerObject": {
+    "description": "SAR marker type: object"
+  },
+
+  "from": "From",
+  "@from": {
+    "description": "Sender label in notifications"
+  },
+
+  "coordinates": "Coordinates",
+  "@coordinates": {
+    "description": "Coordinates label"
+  },
+
+  "tapToViewOnMap": "Tap to view on map",
+  "@tapToViewOnMap": {
+    "description": "Notification action text"
   }
 }

@@ -567,5 +567,19 @@
 
   "messageDeleted": "Sporočilo izbrisano",
 
-  "refreshedContacts": "Stiki osveženi"
+  "refreshedContacts": "Stiki osveženi",
+
+  "sarMarkerFoundPerson": "Najdena oseba",
+
+  "sarMarkerFire": "Lokacija ognja",
+
+  "sarMarkerStagingArea": "Zbirališče",
+
+  "sarMarkerObject": "Najden predmet",
+
+  "from": "Od",
+
+  "coordinates": "Koordinate",
+
+  "tapToViewOnMap": "Tapnite za prikaz na zemljevidu"
 }

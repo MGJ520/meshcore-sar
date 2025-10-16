@@ -574,7 +574,7 @@ class _HomeScreenState extends State<HomeScreen>
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // BLE connection strength indicator
+                        // BLE connection strength indicator with RSSI
                         Icon(
                           Icons.bluetooth_connected,
                           color: deviceInfo.signalRssi != null
@@ -582,7 +582,17 @@ class _HomeScreenState extends State<HomeScreen>
                               : Colors.grey,
                           size: 16,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
+                        if (deviceInfo.signalRssi != null)
+                          Text(
+                            '${deviceInfo.signalRssi}dBm',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _getSignalColor(deviceInfo.signalRssi!),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        const SizedBox(width: 12),
                         // Battery indicator
                         if (deviceInfo.batteryPercent != null) ...[
                           Icon(

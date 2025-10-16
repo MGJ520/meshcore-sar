@@ -7,6 +7,7 @@ import '../../models/message.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../utils/toast_logger.dart';
+import '../../l10n/app_localizations.dart';
 
 class DirectMessageSheet extends StatefulWidget {
   final Contact contact;
@@ -51,7 +52,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
 
     if (!connectionProvider.deviceInfo.isConnected) {
       if (!mounted) return;
-      ToastLogger.error(context, 'Not connected to device');
+      ToastLogger.error(context, AppLocalizations.of(context)!.notConnectedToDevice);
       return;
     }
 
@@ -100,10 +101,10 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
       if (!mounted) return;
       Navigator.pop(context); // Close the dialog
 
-      ToastLogger.success(context, 'Direct message sent to ${widget.contact.displayName}');
+      ToastLogger.success(context, AppLocalizations.of(context)!.directMessageSentTo(widget.contact.displayName));
     } catch (e) {
       if (!mounted) return;
-      ToastLogger.error(context, 'Failed to send: $e');
+      ToastLogger.error(context, AppLocalizations.of(context)!.failedToSend(e.toString()));
     }
   }
 
@@ -137,7 +138,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
                   child: Column(
                     children: [
                       Text(
-                        'Direct Message',
+                        AppLocalizations.of(context)!.directMessage,
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 18,
@@ -173,7 +174,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'This message will be sent directly to ${widget.contact.displayName}. It will also appear in the main messages feed.',
+                    AppLocalizations.of(context)!.directMessageInfo(widget.contact.displayName),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                       fontSize: 13,
@@ -210,7 +211,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
                   maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
-                    hintText: 'Type your message...',
+                    hintText: AppLocalizations.of(context)!.typeYourMessage,
                     hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -246,7 +247,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
                         ? null
                         : _sendDirectMessage,
                     icon: const Icon(Icons.send),
-                    label: const Text('Send Direct Message'),
+                    label: Text(AppLocalizations.of(context)!.sendDirectMessage),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       backgroundColor: colorScheme.primary,

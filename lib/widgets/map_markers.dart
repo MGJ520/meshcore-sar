@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import '../models/contact.dart';
 import '../models/sar_marker.dart';
+import '../l10n/app_localizations.dart';
 
 class MapMarkers {
   static List<Marker> createTeamMemberMarkers(
@@ -238,7 +239,7 @@ class MapMarkers {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(AppLocalizations.of(context)!.close),
           ),
         ],
       ),
@@ -272,7 +273,7 @@ class MapMarkers {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(AppLocalizations.of(context)!.close),
           ),
         ],
       ),

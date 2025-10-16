@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../models/map_drawing.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Widget that renders map drawings as polylines
 class DrawingLayer extends StatelessWidget {
@@ -212,14 +213,14 @@ class DrawingMarkersLayer extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Drawing'),
+        title: Text(AppLocalizations.of(context)!.deleteDrawing),
         content: Text(
           'Delete this ${drawing.type.name}?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -229,7 +230,7 @@ class DrawingMarkersLayer extends StatelessWidget {
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),

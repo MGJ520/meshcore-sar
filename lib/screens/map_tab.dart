@@ -28,6 +28,7 @@ import '../widgets/map/detailed_compass_dialog.dart';
 import '../widgets/map/drawing_layer.dart';
 import '../widgets/map/drawing_toolbar.dart';
 import '../widgets/messages/sar_update_sheet.dart';
+import '../l10n/app_localizations.dart';
 import 'map_management_screen.dart';
 
 class MapTab extends StatefulWidget {
@@ -643,8 +644,8 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
         _saveSettings();
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to start background tracking. Check permissions and BLE connection.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToStartBackgroundTracking),
             duration: Duration(seconds: 3),
           ),
         );
@@ -710,8 +711,8 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     if (!connectionProvider.deviceInfo.isConnected) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Not connected to device'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.deviceNotConnected),
           backgroundColor: Colors.red,
         ),
       );

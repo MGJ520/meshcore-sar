@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Reusable location display widget with tap-to-show modal
 /// Shows coordinates in a compact format with ability to view all formats
@@ -149,7 +150,7 @@ class LocationDisplay extends StatelessWidget {
               Clipboard.setData(ClipboardData(text: value));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('$label copied to clipboard'),
+                  content: Text(AppLocalizations.of(context)!.copiedToClipboard(label)),
                   duration: const Duration(seconds: 2),
                 ),
               );

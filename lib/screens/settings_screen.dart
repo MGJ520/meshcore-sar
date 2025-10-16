@@ -11,6 +11,7 @@ import '../services/location_tracking_service.dart';
 import '../services/locale_preferences.dart';
 import '../utils/sample_data_generator.dart';
 import '../theme/app_theme.dart';
+import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
@@ -97,7 +98,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Location broadcast: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
+                  AppLocalizations.of(context)!.locationBroadcast(
+                    position.latitude.toStringAsFixed(5),
+                    position.longitude.toStringAsFixed(5),
+                  ),
                 ),
                 backgroundColor: Colors.green,
                 duration: const Duration(seconds: 2),
@@ -220,7 +224,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Loaded $teamCount team members, $channelCount channels, ${sarMessages.length} SAR markers, ${channelMessages.length} messages',
+            AppLocalizations.of(context)!.loadedSampleData(
+              teamCount,
+              channelCount,
+              sarMessages.length,
+              channelMessages.length,
+            ),
           ),
           backgroundColor: Colors.green,
         ),
@@ -229,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to load sample data: $e'),
+          content: Text(AppLocalizations.of(context)!.failedToLoadSampleData(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -247,11 +256,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Failed to start background tracking. Check permissions and BLE connection.',
+            AppLocalizations.of(context)!.failedToStartBackgroundTracking,
           ),
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -272,19 +281,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Text(
-          'This will clear all contacts and SAR markers. Are you sure?',
+        title: Text(AppLocalizations.of(context)!.clearAllDataConfirmTitle),
+        content: Text(
+          AppLocalizations.of(context)!.clearAllDataConfirmMessage,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear'),
+            child: Text(AppLocalizations.of(context)!.clear),
           ),
         ],
       ),
@@ -307,8 +316,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All data cleared'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.allDataCleared),
         backgroundColor: Colors.orange,
       ),
     );
@@ -317,22 +326,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.settings)),
       body: ListView(
         children: [
           // General Settings Section
-          _buildSectionHeader('General'),
+          _buildSectionHeader(AppLocalizations.of(context)!.general),
           ListTile(
             leading: const Icon(Icons.palette),
-            title: const Text('Theme'),
+            title: Text(AppLocalizations.of(context)!.theme),
             subtitle: Text(AppTheme.getThemeDisplayName(_selectedTheme)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showThemeDialog(),
           ),
           SwitchListTile(
             secondary: const Icon(Icons.radar),
-            title: const Text('Show RX/TX Indicators'),
-            subtitle: const Text('Display packet activity indicators in top bar'),
+            title: Text(AppLocalizations.of(context)!.showRxTxIndicators),
+            subtitle: Text(AppLocalizations.of(context)!.displayPacketActivity),
             value: _showRxTxIndicators,
             onChanged: (value) async {
               setState(() {
@@ -343,7 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.language),
-            title: const Text('Language'),
+            title: Text(AppLocalizations.of(context)!.language),
             subtitle: Text(LocalePreferences.getDisplayName(_selectedLocale)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLanguageDialog(),
@@ -351,13 +360,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
 
           // Location Settings Section
-          _buildSectionHeader('Location Broadcasting'),
+          _buildSectionHeader(AppLocalizations.of(context)!.locationBroadcasting),
 
           // Automatic tracking settings
           SwitchListTile(
             secondary: const Icon(Icons.location_on),
-            title: const Text('Auto Location Tracking'),
-            subtitle: const Text('Automatically broadcast position updates'),
+            title: Text(AppLocalizations.of(context)!.autoLocationTracking),
+            subtitle: Text(AppLocalizations.of(context)!.automaticallyBroadcastPosition),
             value: _locationService.isTracking,
             onChanged: (value) {
               if (value) {
@@ -371,8 +380,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_locationService.isTracking) ...[
             ListTile(
               leading: const Icon(Icons.tune),
-              title: const Text('Configure Tracking'),
-              subtitle: const Text('Distance and time thresholds'),
+              title: Text(AppLocalizations.of(context)!.configureTracking),
+              subtitle: Text(AppLocalizations.of(context)!.distanceAndTimeThresholds),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _showTrackingConfigDialog(),
             ),
@@ -381,10 +390,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
 
           // About Section
-          _buildSectionHeader('About'),
+          _buildSectionHeader(AppLocalizations.of(context)!.about),
           ListTile(
             leading: const Icon(Icons.info),
-            title: const Text('App Version'),
+            title: Text(AppLocalizations.of(context)!.appVersion),
             subtitle: Text(
               _packageInfo != null
                   ? '${_packageInfo!.version} (${_packageInfo!.buildNumber})'
@@ -393,34 +402,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.badge),
-            title: const Text('App Name'),
+            title: Text(AppLocalizations.of(context)!.appName),
             subtitle: Text(_packageInfo?.appName ?? 'MeshCore SAR'),
           ),
           ListTile(
             leading: const Icon(Icons.description),
-            title: const Text('About MeshCore SAR'),
-            subtitle: const Text(
-              'Search & Rescue application with BLE mesh networking and offline maps',
+            title: Text(AppLocalizations.of(context)!.aboutMeshCoreSar),
+            subtitle: Text(
+              AppLocalizations.of(context)!.aboutDescription.split('\n\n')[0],
             ),
             onTap: () => _showAboutDialog(),
           ),
           const Divider(),
 
           // Developer Section
-          _buildSectionHeader('Developer'),
+          _buildSectionHeader(AppLocalizations.of(context)!.developer),
           ListTile(
             leading: const Icon(Icons.bug_report),
-            title: const Text('Package Name'),
+            title: Text(AppLocalizations.of(context)!.packageName),
             subtitle: Text(_packageInfo?.packageName ?? 'com.meshcore.sar'),
           ),
           const Divider(),
 
           // Sample Data Section
-          _buildSectionHeader('Sample Data'),
+          _buildSectionHeader(AppLocalizations.of(context)!.sampleData),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
-              'Load or clear sample contacts, channel messages, and SAR markers for testing',
+              AppLocalizations.of(context)!.sampleDataDescription,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
@@ -440,7 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.add_circle_outline),
-                    label: const Text('Load Sample Data'),
+                    label: Text(AppLocalizations.of(context)!.loadSampleData),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -451,7 +460,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _isLoadingSampleData ? null : _clearSampleData,
                     icon: const Icon(Icons.delete_outline),
-                    label: const Text('Clear All Data'),
+                    label: Text(AppLocalizations.of(context)!.clearAllData),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -488,7 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Location Tracking Configuration'),
+          title: Text(AppLocalizations.of(context)!.locationTrackingConfiguration),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -496,7 +505,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 // Description
                 Text(
-                  'Configure when location broadcasts are sent to the mesh network',
+                  AppLocalizations.of(context)!.configureWhenLocationBroadcasts,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey,
                   ),
@@ -505,14 +514,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Minimum Distance
                 Text(
-                  'Minimum Distance',
+                  AppLocalizations.of(context)!.minimumDistance,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Broadcast only after moving ${tempMinDistance.toStringAsFixed(0)} meters',
+                  AppLocalizations.of(context)!.broadcastAfterMoving(tempMinDistance.toStringAsFixed(0)),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
@@ -551,14 +560,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Maximum Distance
                 Text(
-                  'Maximum Distance',
+                  AppLocalizations.of(context)!.maximumDistance,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Always broadcast after moving ${tempMaxDistance.toStringAsFixed(0)} meters',
+                  AppLocalizations.of(context)!.alwaysBroadcastAfterMoving(tempMaxDistance.toStringAsFixed(0)),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
@@ -594,14 +603,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Minimum Time Interval
                 Text(
-                  'Minimum Time Interval',
+                  AppLocalizations.of(context)!.minimumTimeInterval,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Always broadcast every ${_formatDuration(tempTimeInterval)}',
+                  AppLocalizations.of(context)!.alwaysBroadcastEvery(_formatDuration(tempTimeInterval)),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
@@ -638,7 +647,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () async {
@@ -663,7 +672,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() {});
                 }
               },
-              child: const Text('Save'),
+              child: Text(AppLocalizations.of(context)!.save),
             ),
           ],
         ),
@@ -689,14 +698,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose Theme'),
+        title: Text(AppLocalizations.of(context)!.chooseTheme),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<AppThemeMode>(
-                title: const Text('Light'),
-                subtitle: const Text('Blue light theme'),
+                title: Text(AppLocalizations.of(context)!.light),
+                subtitle: Text(AppLocalizations.of(context)!.blueLightTheme),
                 value: AppThemeMode.light,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -705,8 +714,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               RadioListTile<AppThemeMode>(
-                title: const Text('Dark'),
-                subtitle: const Text('Blue dark theme'),
+                title: Text(AppLocalizations.of(context)!.dark),
+                subtitle: Text(AppLocalizations.of(context)!.blueDarkTheme),
                 value: AppThemeMode.dark,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -718,7 +727,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               RadioListTile<AppThemeMode>(
                 title: Row(
                   children: [
-                    const Text('SAR Red'),
+                    Text(AppLocalizations.of(context)!.sarRed),
                     const SizedBox(width: 8),
                     Container(
                       width: 16,
@@ -731,7 +740,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-                subtitle: const Text('Alert/Emergency mode'),
+                subtitle: Text(AppLocalizations.of(context)!.alertEmergencyMode),
                 value: AppThemeMode.sarRed,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -742,7 +751,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               RadioListTile<AppThemeMode>(
                 title: Row(
                   children: [
-                    const Text('SAR Green'),
+                    Text(AppLocalizations.of(context)!.sarGreen),
                     const SizedBox(width: 8),
                     Container(
                       width: 16,
@@ -755,7 +764,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-                subtitle: const Text('Safe/All Clear mode'),
+                subtitle: Text(AppLocalizations.of(context)!.safeAllClearMode),
                 value: AppThemeMode.sarGreen,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -765,8 +774,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const Divider(),
               RadioListTile<AppThemeMode>(
-                title: const Text('Auto (System)'),
-                subtitle: const Text('Follow system theme'),
+                title: Text(AppLocalizations.of(context)!.autoSystem),
+                subtitle: Text(AppLocalizations.of(context)!.followSystemTheme),
                 value: AppThemeMode.system,
                 groupValue: _selectedTheme,
                 onChanged: (value) {
@@ -780,7 +789,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
         ],
       ),
@@ -791,14 +800,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose Language'),
+        title: Text(AppLocalizations.of(context)!.chooseLanguage),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<Locale?>(
-                title: const Text('System Default'),
-                subtitle: const Text('Follow system language'),
+                title: Text(LocalePreferences.getDisplayName(null)),
+                subtitle: Text(LocalePreferences.getDisplayName(null)),
                 value: null,
                 groupValue: _selectedLocale,
                 onChanged: (value) {
@@ -824,7 +833,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
         ],
       ),
@@ -835,7 +844,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About MeshCore SAR'),
+        title: Text(AppLocalizations.of(context)!.aboutMeshCoreSar),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -853,31 +862,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'A Search & Rescue application designed for emergency response teams. '
-                'Features include:\n\n'
-                '• BLE mesh networking for device-to-device communication\n'
-                '• Offline maps with multiple layer options\n'
-                '• Real-time team member tracking\n'
-                '• SAR tactical markers (found person, fire, staging)\n'
-                '• Contact management and messaging\n'
-                '• GPS tracking with compass heading\n'
-                '• Map tile caching for offline use',
+              Text(
+                AppLocalizations.of(context)!.aboutDescription,
               ),
               const SizedBox(height: 16),
               Text(
-                'Technologies Used:',
+                AppLocalizations.of(context)!.technologiesUsed,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                '• Flutter for cross-platform development\n'
-                '• BLE (Bluetooth Low Energy) for mesh networking\n'
-                '• OpenStreetMap for mapping\n'
-                '• Provider for state management\n'
-                '• SharedPreferences for local storage',
+              Text(
+                AppLocalizations.of(context)!.technologiesList,
               ),
             ],
           ),
@@ -885,7 +882,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(AppLocalizations.of(context)!.close),
           ),
         ],
       ),

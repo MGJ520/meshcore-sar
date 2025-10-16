@@ -457,5 +457,225 @@
   "defaultPinInfo": "The default pin for devices without a screen is 123456. Trouble pairing? Forget the bluetooth device in system settings.",
   "@defaultPinInfo": {
     "description": "Information about default PIN for pairing"
+  },
+
+  "noMessagesYet": "No messages yet",
+  "@noMessagesYet": {
+    "description": "Empty state message when there are no messages"
+  },
+
+  "pullDownToSync": "Pull down to sync messages",
+  "@pullDownToSync": {
+    "description": "Instruction to pull down to refresh messages"
+  },
+
+  "deleteContact": "Delete Contact",
+  "@deleteContact": {
+    "description": "Delete contact action label"
+  },
+
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button label"
+  },
+
+  "viewOnMap": "View on Map",
+  "@viewOnMap": {
+    "description": "Action to view contact location on map"
+  },
+
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Refresh button label"
+  },
+
+  "sendDirectMessage": "Send Direct Message",
+  "@sendDirectMessage": {
+    "description": "Action to send direct message to contact"
+  },
+
+  "resetPath": "Reset Path (Re-route)",
+  "@resetPath": {
+    "description": "Action to reset contact path for re-routing"
+  },
+
+  "publicKeyCopied": "Public key copied to clipboard",
+  "@publicKeyCopied": {
+    "description": "Success message when public key is copied"
+  },
+
+  "copiedToClipboard": "{label} copied to clipboard",
+  "@copiedToClipboard": {
+    "description": "Success message when a value is copied to clipboard",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+
+  "pleaseEnterPassword": "Please enter a password",
+  "@pleaseEnterPassword": {
+    "description": "Validation message for empty password field"
+  },
+
+  "failedToSyncContacts": "Failed to sync contacts: {error}",
+  "@failedToSyncContacts": {
+    "description": "Error message when contact sync fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "loggedInSuccessfully": "Logged in successfully! Waiting for room messages...",
+  "@loggedInSuccessfully": {
+    "description": "Success message after successful room login"
+  },
+
+  "loginFailed": "Login failed - incorrect password",
+  "@loginFailed": {
+    "description": "Error message when room login fails"
+  },
+
+  "loggingIn": "Logging in to {roomName}...",
+  "@loggingIn": {
+    "description": "Status message during room login process",
+    "placeholders": {
+      "roomName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "failedToSendLogin": "Failed to send login: {error}",
+  "@failedToSendLogin": {
+    "description": "Error message when login command fails to send",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "lowLocationAccuracy": "Low Location Accuracy",
+  "@lowLocationAccuracy": {
+    "description": "Warning title for low GPS accuracy"
+  },
+
+  "continue_": "Continue",
+  "@continue_": {
+    "description": "Continue button label"
+  },
+
+  "sendSarMarker": "Send SAR marker",
+  "@sendSarMarker": {
+    "description": "Action to send SAR marker"
+  },
+
+  "deleteDrawing": "Delete Drawing",
+  "@deleteDrawing": {
+    "description": "Action to delete a map drawing"
+  },
+
+  "drawLine": "Draw Line",
+  "@drawLine": {
+    "description": "Map drawing mode: line"
+  },
+
+  "drawLineDesc": "Draw a freehand line on the map",
+  "@drawLineDesc": {
+    "description": "Description for line drawing mode"
+  },
+
+  "drawRectangle": "Draw Rectangle",
+  "@drawRectangle": {
+    "description": "Map drawing mode: rectangle"
+  },
+
+  "drawRectangleDesc": "Draw a rectangular area on the map",
+  "@drawRectangleDesc": {
+    "description": "Description for rectangle drawing mode"
+  },
+
+  "shareDrawings": "Share Drawings",
+  "@shareDrawings": {
+    "description": "Action to share drawings to network"
+  },
+
+  "clearAllDrawings": "Clear All Drawings",
+  "@clearAllDrawings": {
+    "description": "Action to clear all local drawings"
+  },
+
+  "clearAll": "Clear All",
+  "@clearAll": {
+    "description": "Clear all button label"
+  },
+
+  "noLocalDrawings": "No local drawings to share",
+  "@noLocalDrawings": {
+    "description": "Message when there are no drawings to share"
+  },
+
+  "publicChannel": "Public Channel",
+  "@publicChannel": {
+    "description": "Public channel option for sharing"
+  },
+
+  "broadcastToAll": "Broadcast to all nearby nodes (ephemeral)",
+  "@broadcastToAll": {
+    "description": "Description for public channel broadcast"
+  },
+
+  "storedPermanently": "Stored permanently in room",
+  "@storedPermanently": {
+    "description": "Description for room storage permanence"
+  },
+
+  "notConnectedToDevice": "Not connected to device",
+  "@notConnectedToDevice": {
+    "description": "Error message when device is not connected for direct messaging"
+  },
+
+  "directMessage": "Direct Message",
+  "@directMessage": {
+    "description": "Title for direct message sheet"
+  },
+
+  "directMessageSentTo": "Direct message sent to {contactName}",
+  "@directMessageSentTo": {
+    "description": "Success message after sending direct message",
+    "placeholders": {
+      "contactName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "failedToSend": "Failed to send: {error}",
+  "@failedToSend": {
+    "description": "Error message when sending direct message fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "directMessageInfo": "This message will be sent directly to {contactName}. It will also appear in the main messages feed.",
+  "@directMessageInfo": {
+    "description": "Information about direct messaging behavior",
+    "placeholders": {
+      "contactName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "typeYourMessage": "Type your message...",
+  "@typeYourMessage": {
+    "description": "Placeholder text for message input field"
   }
 }

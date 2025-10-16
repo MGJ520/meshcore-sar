@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/contact.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/contacts_provider.dart';
@@ -62,7 +63,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter a password'),
+          content: Text(AppLocalizations.of(context)!.pleaseEnterPassword),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -73,7 +74,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Not connected to device'),
+          content: Text(AppLocalizations.of(context)!.deviceNotConnected),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -183,7 +184,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to sync contacts: $e'),
+            content: Text(AppLocalizations.of(context)!.failedToSyncContacts(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -215,7 +216,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Logged in successfully! Waiting for room messages...'),
+            content: Text(AppLocalizations.of(context)!.loggedInSuccessfully),
             backgroundColor: Theme.of(context).colorScheme.primary,
             duration: const Duration(seconds: 3),
           ),
@@ -233,7 +234,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Login failed - incorrect password'),
+            content: Text(AppLocalizations.of(context)!.loginFailed),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 3),
           ),
@@ -255,7 +256,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Logging in to ${widget.contact.displayName}...'),
+          content: Text(AppLocalizations.of(context)!.loggingIn(widget.contact.displayName)),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -268,7 +269,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to send login: $e'),
+          content: Text(AppLocalizations.of(context)!.failedToSendLogin(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

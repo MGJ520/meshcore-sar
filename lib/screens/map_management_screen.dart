@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../services/tile_cache_service.dart';
 import '../services/validation_service.dart';
 import '../models/map_layer.dart';
+import '../l10n/app_localizations.dart';
 
 class MapManagementScreen extends StatefulWidget {
   final TileCacheService tileCacheService;
@@ -217,8 +218,8 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Download cancelled'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.cancel),
             backgroundColor: Colors.orange,
           ),
         );
@@ -237,19 +238,19 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
+        title: Text(AppLocalizations.of(context)!.clear),
         content: const Text(
           'Are you sure you want to delete all downloaded maps? This action cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear'),
+            child: Text(AppLocalizations.of(context)!.clear),
           ),
         ],
       ),
@@ -295,7 +296,7 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Map Management'),
+        title: Text(AppLocalizations.of(context)!.mapManagement),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

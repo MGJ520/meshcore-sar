@@ -278,4 +278,130 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get defaultPinInfo =>
       'Privzeta PIN koda za naprave brez zaslona je 123456. Težave s seznanitvijo? Pozabite napravo bluetooth v sistemskih nastavitvah.';
+
+  @override
+  String get noMessagesYet => 'Še ni sporočil';
+
+  @override
+  String get pullDownToSync => 'Potegnite navzdol za sinhronizacijo';
+
+  @override
+  String get deleteContact => 'Izbriši stik';
+
+  @override
+  String get delete => 'Izbriši';
+
+  @override
+  String get viewOnMap => 'Poglej na zemljevidu';
+
+  @override
+  String get refresh => 'Osveži';
+
+  @override
+  String get sendDirectMessage => 'Pošlji neposredno sporočilo';
+
+  @override
+  String get resetPath => 'Ponastavi pot (preusmeri)';
+
+  @override
+  String get publicKeyCopied => 'Javni ključ kopiran v odložišče';
+
+  @override
+  String copiedToClipboard(String label) {
+    return '$label kopirano v odložišče';
+  }
+
+  @override
+  String get pleaseEnterPassword => 'Prosimo, vnesite geslo';
+
+  @override
+  String failedToSyncContacts(String error) {
+    return 'Sinhronizacija stikov ni uspela: $error';
+  }
+
+  @override
+  String get loggedInSuccessfully =>
+      'Uspešno prijavljen! Čakanje na sporočila sobe...';
+
+  @override
+  String get loginFailed => 'Prijava ni uspela - nepravilno geslo';
+
+  @override
+  String loggingIn(String roomName) {
+    return 'Prijavljanje v $roomName...';
+  }
+
+  @override
+  String failedToSendLogin(String error) {
+    return 'Pošiljanje prijave ni uspelo: $error';
+  }
+
+  @override
+  String get lowLocationAccuracy => 'Nizka natančnost lokacije';
+
+  @override
+  String get continue_ => 'Nadaljuj';
+
+  @override
+  String get sendSarMarker => 'Pošlji SAR označevalec';
+
+  @override
+  String get deleteDrawing => 'Izbriši risbo';
+
+  @override
+  String get drawLine => 'Nariši črto';
+
+  @override
+  String get drawLineDesc => 'Nariši prosto črto na zemljevidu';
+
+  @override
+  String get drawRectangle => 'Nariši pravokotnik';
+
+  @override
+  String get drawRectangleDesc => 'Nariši pravokotno področje na zemljevidu';
+
+  @override
+  String get shareDrawings => 'Deli risbe';
+
+  @override
+  String get clearAllDrawings => 'Počisti vse risbe';
+
+  @override
+  String get clearAll => 'Počisti vse';
+
+  @override
+  String get noLocalDrawings => 'Ni lokalnih risb za deljenje';
+
+  @override
+  String get publicChannel => 'Javni kanal';
+
+  @override
+  String get broadcastToAll => 'Oddajaj vsem bližnjim vozliščem (začasno)';
+
+  @override
+  String get storedPermanently => 'Trajno shranjeno v sobi';
+
+  @override
+  String get notConnectedToDevice => 'Ni povezano z napravo';
+
+  @override
+  String get directMessage => 'Neposredno sporočilo';
+
+  @override
+  String directMessageSentTo(String contactName) {
+    return 'Neposredno sporočilo poslano $contactName';
+  }
+
+  @override
+  String failedToSend(String error) {
+    return 'Pošiljanje ni uspelo: $error';
+  }
+
+  @override
+  String directMessageInfo(String contactName) {
+    return 'To sporočilo bo poslano neposredno $contactName. Prikazalo se bo tudi v glavnem viru sporočil.';
+  }
+
+  @override
+  String get typeYourMessage => 'Vnesite svoje sporočilo...';
 }

@@ -12,6 +12,7 @@ import '../models/sar_marker.dart';
 import '../widgets/messages/sar_update_sheet.dart';
 import '../widgets/contacts/direct_message_sheet.dart';
 import '../utils/toast_logger.dart';
+import '../l10n/app_localizations.dart';
 
 class MessagesTab extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -304,14 +305,14 @@ class _MessagesTabState extends State<MessagesTab> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'No messages yet',
+                                        AppLocalizations.of(context)!.noMessagesYet,
                                         style: Theme.of(
                                           context,
                                         ).textTheme.titleLarge,
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Pull down to sync messages',
+                                        AppLocalizations.of(context)!.pullDownToSync,
                                         style: Theme.of(
                                           context,
                                         ).textTheme.bodyMedium,
@@ -374,7 +375,7 @@ class _MessagesTabState extends State<MessagesTab> {
                   // SAR quick action button
                   IconButton(
                     icon: const Icon(Icons.add_location_alt),
-                    tooltip: 'Send SAR marker',
+                    tooltip: AppLocalizations.of(context)!.sendSarMarker,
                     onPressed: _showSarDialog,
                     style: IconButton.styleFrom(
                       backgroundColor: Theme.of(
@@ -579,9 +580,9 @@ class _MessageBubble extends StatelessWidget {
             // Delete message option
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text(
-                'Delete message',
-                style: TextStyle(color: Colors.red),
+              title: Text(
+                AppLocalizations.of(context)!.delete,
+                style: const TextStyle(color: Colors.red),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -633,6 +634,7 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -641,7 +643,7 @@ class _MessageBubble extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {

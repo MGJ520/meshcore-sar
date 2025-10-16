@@ -22,7 +22,8 @@ class LocationTrackingService {
   // Singleton Pattern
   // ============================================================================
 
-  static final LocationTrackingService _instance = LocationTrackingService._internal();
+  static final LocationTrackingService _instance =
+      LocationTrackingService._internal();
 
   /// Get the singleton instance
   factory LocationTrackingService() => _instance;
@@ -52,7 +53,7 @@ class LocationTrackingService {
   double maxDistanceMeters = 100.0;
 
   /// Minimum time interval in seconds between broadcasts
-  int minTimeIntervalSeconds = 30;
+  int minTimeIntervalSeconds = 155;
 
   /// GPS update distance filter for position stream
   double gpsUpdateDistance = 10.0;
@@ -128,7 +129,7 @@ class LocationTrackingService {
   Future<bool> checkPermissions() async {
     final permission = await Geolocator.checkPermission();
     return permission == LocationPermission.always ||
-           permission == LocationPermission.whileInUse;
+        permission == LocationPermission.whileInUse;
   }
 
   /// Request location permissions from user
@@ -154,7 +155,9 @@ class LocationTrackingService {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      onError?.call('Location permission permanently denied. Please enable in settings.');
+      onError?.call(
+        'Location permission permanently denied. Please enable in settings.',
+      );
       return false;
     }
 
@@ -210,7 +213,9 @@ class LocationTrackingService {
   /// Returns true if successful, false otherwise.
   Future<bool> startTracking({double? distanceThreshold}) async {
     if (!_isInitialized || _bleService == null) {
-      debugPrint('⚠️ [LocationTracking] Service not initialized or BLE service null');
+      debugPrint(
+        '⚠️ [LocationTracking] Service not initialized or BLE service null',
+      );
       onError?.call('Location tracking service not initialized');
       return false;
     }
@@ -239,18 +244,21 @@ class LocationTrackingService {
 
     // Start position stream
     try {
-      _positionSubscription = getPositionStream(distanceFilter: threshold).listen(
-        _handlePositionUpdate,
-        onError: (error) {
-          debugPrint('❌ [LocationTracking] Position stream error: $error');
-          onError?.call('Position stream error: $error');
-        },
-      );
+      _positionSubscription = getPositionStream(distanceFilter: threshold)
+          .listen(
+            _handlePositionUpdate,
+            onError: (error) {
+              debugPrint('❌ [LocationTracking] Position stream error: $error');
+              onError?.call('Position stream error: $error');
+            },
+          );
 
       isTracking = true;
       onTrackingStateChanged?.call(true);
 
-      debugPrint('✅ [LocationTracking] Tracking started with ${threshold}m threshold');
+      debugPrint(
+        '✅ [LocationTracking] Tracking started with ${threshold}m threshold',
+      );
       return true;
     } catch (e) {
       debugPrint('❌ [LocationTracking] Failed to start tracking: $e');
@@ -281,7 +289,9 @@ class LocationTrackingService {
     gpsUpdateDistance = meters;
     await saveSettings();
 
-    debugPrint('📏 [LocationTracking] Distance threshold updated to ${meters}m');
+    debugPrint(
+      '📏 [LocationTracking] Distance threshold updated to ${meters}m',
+    );
 
     // Restart tracking if currently active
     if (isTracking) {
@@ -296,7 +306,9 @@ class LocationTrackingService {
 
   /// Handle incoming position updates from GPS stream
   void _handlePositionUpdate(Position position) {
-    debugPrint('📍 [LocationTracking] New position: ${position.latitude}, ${position.longitude}');
+    debugPrint(
+      '📍 [LocationTracking] New position: ${position.latitude}, ${position.longitude}',
+    );
 
     // Update current position
     currentPosition = position;
@@ -317,7 +329,9 @@ class LocationTrackingService {
     }
 
     // Calculate time since last broadcast
-    final timeSinceLastBroadcast = DateTime.now().difference(_lastBroadcastTime!);
+    final timeSinceLastBroadcast = DateTime.now().difference(
+      _lastBroadcastTime!,
+    );
     final secondsSinceLastBroadcast = timeSinceLastBroadcast.inSeconds;
 
     // Calculate distance from last broadcast position
@@ -328,12 +342,16 @@ class LocationTrackingService {
       position.longitude,
     );
 
-    debugPrint('   Distance from last broadcast: ${distanceFromLastBroadcast.toStringAsFixed(1)}m');
+    debugPrint(
+      '   Distance from last broadcast: ${distanceFromLastBroadcast.toStringAsFixed(1)}m',
+    );
     debugPrint('   Time since last broadcast: ${secondsSinceLastBroadcast}s');
 
     // Broadcast if moved beyond max distance threshold
     if (distanceFromLastBroadcast >= maxDistanceMeters) {
-      debugPrint('   📤 Triggering broadcast: exceeded max distance (${maxDistanceMeters}m)');
+      debugPrint(
+        '   📤 Triggering broadcast: exceeded max distance (${maxDistanceMeters}m)',
+      );
       _broadcastPosition(position);
       return;
     }
@@ -341,7 +359,9 @@ class LocationTrackingService {
     // Broadcast if minimum time interval passed AND moved beyond min distance
     if (secondsSinceLastBroadcast >= minTimeIntervalSeconds &&
         distanceFromLastBroadcast >= minDistanceMeters) {
-      debugPrint('   📤 Triggering broadcast: exceeded min time (${minTimeIntervalSeconds}s) and min distance (${minDistanceMeters}m)');
+      debugPrint(
+        '   📤 Triggering broadcast: exceeded min time (${minTimeIntervalSeconds}s) and min distance (${minDistanceMeters}m)',
+      );
       _broadcastPosition(position);
       return;
     }

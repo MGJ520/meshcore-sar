@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/ble_packet_log.dart';
 import '../services/meshcore_ble_service.dart';
+import '../l10n/app_localizations.dart';
 
 class PacketLogScreen extends StatefulWidget {
   final MeshCoreBleService bleService;
@@ -149,12 +150,12 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Packet Logs'),
+        title: Text(AppLocalizations.of(context)!.clearAllData),
         content: const Text('Are you sure you want to clear all packet logs? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -166,7 +167,7 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
               );
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear'),
+            child: Text(AppLocalizations.of(context)!.clear),
           ),
         ],
       ),

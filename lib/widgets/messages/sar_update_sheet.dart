@@ -6,6 +6,7 @@ import '../../providers/contacts_provider.dart';
 import '../../models/contact.dart';
 import '../../models/sar_marker.dart';
 import '../../services/validation_service.dart';
+import '../../l10n/app_localizations.dart';
 
 /// SAR Update Sheet - Modal bottom sheet for creating and sending SAR markers
 /// This widget is public so it can be used from both messages_tab.dart and map_tab.dart
@@ -167,7 +168,7 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                   child: Column(
                     children: [
                       Text(
-                        'Send SAR Marker',
+                        AppLocalizations.of(context)!.sendSarMarker,
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 18,
@@ -645,7 +646,7 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                             final shouldContinue = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
-                                title: const Text('Low Location Accuracy'),
+                                title: Text(AppLocalizations.of(context)!.lowLocationAccuracy),
                                 content: Text(
                                   'Location accuracy is ±${_currentPosition!.accuracy!.round()}m. '
                                   'This may not be accurate enough for SAR operations.\n\n'
@@ -654,11 +655,11 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, false),
-                                    child: const Text('Cancel'),
+                                    child: Text(AppLocalizations.of(context)!.cancel),
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(context, true),
-                                    child: const Text('Continue'),
+                                    child: Text(AppLocalizations.of(context)!.continue_),
                                   ),
                                 ],
                               ),
@@ -688,9 +689,9 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                     ),
                   ),
                   icon: const Icon(Icons.send, size: 20),
-                  label: const Text(
-                    'Send SAR Marker',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  label: Text(
+                    AppLocalizations.of(context)!.sendSarMarker,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

@@ -157,5 +157,79 @@
 
   "locationBroadcast": "Oddajanje lokacije: {latitude}, {longitude}",
 
-  "defaultPinInfo": "Privzeta PIN koda za naprave brez zaslona je 123456. Težave s seznanitvijo? Pozabite napravo bluetooth v sistemskih nastavitvah."
+  "defaultPinInfo": "Privzeta PIN koda za naprave brez zaslona je 123456. Težave s seznanitvijo? Pozabite napravo bluetooth v sistemskih nastavitvah.",
+
+  "noMessagesYet": "Še ni sporočil",
+
+  "pullDownToSync": "Potegnite navzdol za sinhronizacijo",
+
+  "deleteContact": "Izbriši stik",
+
+  "delete": "Izbriši",
+
+  "viewOnMap": "Poglej na zemljevidu",
+
+  "refresh": "Osveži",
+
+  "sendDirectMessage": "Pošlji neposredno sporočilo",
+
+  "resetPath": "Ponastavi pot (preusmeri)",
+
+  "publicKeyCopied": "Javni ključ kopiran v odložišče",
+
+  "copiedToClipboard": "{label} kopirano v odložišče",
+
+  "pleaseEnterPassword": "Prosimo, vnesite geslo",
+
+  "failedToSyncContacts": "Sinhronizacija stikov ni uspela: {error}",
+
+  "loggedInSuccessfully": "Uspešno prijavljen! Čakanje na sporočila sobe...",
+
+  "loginFailed": "Prijava ni uspela - nepravilno geslo",
+
+  "loggingIn": "Prijavljanje v {roomName}...",
+
+  "failedToSendLogin": "Pošiljanje prijave ni uspelo: {error}",
+
+  "lowLocationAccuracy": "Nizka natančnost lokacije",
+
+  "continue_": "Nadaljuj",
+
+  "sendSarMarker": "Pošlji SAR označevalec",
+
+  "deleteDrawing": "Izbriši risbo",
+
+  "drawLine": "Nariši črto",
+
+  "drawLineDesc": "Nariši prosto črto na zemljevidu",
+
+  "drawRectangle": "Nariši pravokotnik",
+
+  "drawRectangleDesc": "Nariši pravokotno področje na zemljevidu",
+
+  "shareDrawings": "Deli risbe",
+
+  "clearAllDrawings": "Počisti vse risbe",
+
+  "clearAll": "Počisti vse",
+
+  "noLocalDrawings": "Ni lokalnih risb za deljenje",
+
+  "publicChannel": "Javni kanal",
+
+  "broadcastToAll": "Oddajaj vsem bližnjim vozliščem (začasno)",
+
+  "storedPermanently": "Trajno shranjeno v sobi",
+
+  "notConnectedToDevice": "Ni povezano z napravo",
+
+  "directMessage": "Neposredno sporočilo",
+
+  "directMessageSentTo": "Neposredno sporočilo poslano {contactName}",
+
+  "failedToSend": "Pošiljanje ni uspelo: {error}",
+
+  "directMessageInfo": "To sporočilo bo poslano neposredno {contactName}. Prikazalo se bo tudi v glavnem viru sporočil.",
+
+  "typeYourMessage": "Vnesite svoje sporočilo..."
 }

@@ -578,6 +578,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The default pin for devices without a screen is 123456. Trouble pairing? Forget the bluetooth device in system settings.'**
   String get defaultPinInfo;
+
+  /// Empty state message when there are no messages
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get noMessagesYet;
+
+  /// Instruction to pull down to refresh messages
+  ///
+  /// In en, this message translates to:
+  /// **'Pull down to sync messages'**
+  String get pullDownToSync;
+
+  /// Delete contact action label
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Contact'**
+  String get deleteContact;
+
+  /// Delete button label
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// Action to view contact location on map
+  ///
+  /// In en, this message translates to:
+  /// **'View on Map'**
+  String get viewOnMap;
+
+  /// Refresh button label
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// Action to send direct message to contact
+  ///
+  /// In en, this message translates to:
+  /// **'Send Direct Message'**
+  String get sendDirectMessage;
+
+  /// Action to reset contact path for re-routing
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Path (Re-route)'**
+  String get resetPath;
+
+  /// Success message when public key is copied
+  ///
+  /// In en, this message translates to:
+  /// **'Public key copied to clipboard'**
+  String get publicKeyCopied;
+
+  /// Success message when a value is copied to clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'{label} copied to clipboard'**
+  String copiedToClipboard(String label);
+
+  /// Validation message for empty password field
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a password'**
+  String get pleaseEnterPassword;
+
+  /// Error message when contact sync fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to sync contacts: {error}'**
+  String failedToSyncContacts(String error);
+
+  /// Success message after successful room login
+  ///
+  /// In en, this message translates to:
+  /// **'Logged in successfully! Waiting for room messages...'**
+  String get loggedInSuccessfully;
+
+  /// Error message when room login fails
+  ///
+  /// In en, this message translates to:
+  /// **'Login failed - incorrect password'**
+  String get loginFailed;
+
+  /// Status message during room login process
+  ///
+  /// In en, this message translates to:
+  /// **'Logging in to {roomName}...'**
+  String loggingIn(String roomName);
+
+  /// Error message when login command fails to send
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send login: {error}'**
+  String failedToSendLogin(String error);
+
+  /// Warning title for low GPS accuracy
+  ///
+  /// In en, this message translates to:
+  /// **'Low Location Accuracy'**
+  String get lowLocationAccuracy;
+
+  /// Continue button label
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continue_;
+
+  /// Action to send SAR marker
+  ///
+  /// In en, this message translates to:
+  /// **'Send SAR marker'**
+  String get sendSarMarker;
+
+  /// Action to delete a map drawing
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Drawing'**
+  String get deleteDrawing;
+
+  /// Map drawing mode: line
+  ///
+  /// In en, this message translates to:
+  /// **'Draw Line'**
+  String get drawLine;
+
+  /// Description for line drawing mode
+  ///
+  /// In en, this message translates to:
+  /// **'Draw a freehand line on the map'**
+  String get drawLineDesc;
+
+  /// Map drawing mode: rectangle
+  ///
+  /// In en, this message translates to:
+  /// **'Draw Rectangle'**
+  String get drawRectangle;
+
+  /// Description for rectangle drawing mode
+  ///
+  /// In en, this message translates to:
+  /// **'Draw a rectangular area on the map'**
+  String get drawRectangleDesc;
+
+  /// Action to share drawings to network
+  ///
+  /// In en, this message translates to:
+  /// **'Share Drawings'**
+  String get shareDrawings;
+
+  /// Action to clear all local drawings
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All Drawings'**
+  String get clearAllDrawings;
+
+  /// Clear all button label
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get clearAll;
+
+  /// Message when there are no drawings to share
+  ///
+  /// In en, this message translates to:
+  /// **'No local drawings to share'**
+  String get noLocalDrawings;
+
+  /// Public channel option for sharing
+  ///
+  /// In en, this message translates to:
+  /// **'Public Channel'**
+  String get publicChannel;
+
+  /// Description for public channel broadcast
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast to all nearby nodes (ephemeral)'**
+  String get broadcastToAll;
+
+  /// Description for room storage permanence
+  ///
+  /// In en, this message translates to:
+  /// **'Stored permanently in room'**
+  String get storedPermanently;
+
+  /// Error message when device is not connected for direct messaging
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected to device'**
+  String get notConnectedToDevice;
+
+  /// Title for direct message sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Direct Message'**
+  String get directMessage;
+
+  /// Success message after sending direct message
+  ///
+  /// In en, this message translates to:
+  /// **'Direct message sent to {contactName}'**
+  String directMessageSentTo(String contactName);
+
+  /// Error message when sending direct message fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send: {error}'**
+  String failedToSend(String error);
+
+  /// Information about direct messaging behavior
+  ///
+  /// In en, this message translates to:
+  /// **'This message will be sent directly to {contactName}. It will also appear in the main messages feed.'**
+  String directMessageInfo(String contactName);
+
+  /// Placeholder text for message input field
+  ///
+  /// In en, this message translates to:
+  /// **'Type your message...'**
+  String get typeYourMessage;
 }
 
 class _AppLocalizationsDelegate

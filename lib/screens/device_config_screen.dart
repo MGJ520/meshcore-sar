@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../providers/connection_provider.dart';
 import '../services/validation_service.dart';
+import '../l10n/app_localizations.dart';
 
 class DeviceConfigScreen extends StatefulWidget {
   const DeviceConfigScreen({super.key});
@@ -174,8 +175,8 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Public info saved'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.save),
             backgroundColor: Colors.green,
           ),
         );
@@ -244,8 +245,8 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Radio settings saved'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.save),
             backgroundColor: Colors.green,
           ),
         );
@@ -268,7 +269,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (!serviceEnabled) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location services disabled')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.locationServicesDisabled)),
           );
         }
         return;
@@ -280,7 +281,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
         if (permission == LocationPermission.denied) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Location permission denied')),
+              SnackBar(content: Text(AppLocalizations.of(context)!.locationPermissionDenied)),
             );
           }
           return;
@@ -290,7 +291,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (permission == LocationPermission.deniedForever) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission permanently denied')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.locationPermissionPermanentlyDenied)),
           );
         }
         return;
@@ -310,8 +311,11 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location updated'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.locationBroadcast(
+              position.latitude.toStringAsFixed(6),
+              position.longitude.toStringAsFixed(6),
+            )),
             backgroundColor: Colors.green,
           ),
         );
@@ -331,8 +335,8 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
     if (!connectionProvider.deviceInfo.isConnected) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Not connected to device'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.deviceNotConnected),
             backgroundColor: Colors.orange,
           ),
         );
@@ -347,9 +351,12 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       await connectionProvider.sendSelfAdvert(floodMode: true);
 
       if (context.mounted) {
+        final deviceInfo = connectionProvider.deviceInfo;
+        final lat = deviceInfo.advLat != null ? (deviceInfo.advLat! / 1000000).toStringAsFixed(6) : '0.0';
+        final lon = deviceInfo.advLon != null ? (deviceInfo.advLon! / 1000000).toStringAsFixed(6) : '0.0';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Advertisement broadcast to mesh network'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.advertisedAtLocation(lat, lon)),
             backgroundColor: Colors.green,
           ),
         );
@@ -358,7 +365,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to broadcast: $e'),
+            content: Text(AppLocalizations.of(context)!.failedToAdvertise(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -377,7 +384,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Device Settings'),
+        title: Text(AppLocalizations.of(context)!.settings),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -441,13 +448,13 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
                                 : const Icon(Icons.sensors),
-                            tooltip: 'Broadcast',
+                            tooltip: AppLocalizations.of(context)!.settings,
                           ),
                           const SizedBox(width: 8),
                           IconButton.filled(
                             onPressed: _savePublicInfo,
                             icon: const Icon(Icons.save),
-                            tooltip: 'Save',
+                            tooltip: AppLocalizations.of(context)!.save,
                           ),
                         ],
                       ),
@@ -555,7 +562,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                       IconButton.filled(
                         onPressed: _saveRadioSettings,
                         icon: const Icon(Icons.save),
-                        tooltip: 'Save',
+                        tooltip: AppLocalizations.of(context)!.save,
                       ),
                     ],
                   ),

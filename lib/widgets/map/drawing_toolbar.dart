@@ -7,6 +7,7 @@ import '../../providers/contacts_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../models/map_drawing.dart';
 import '../../models/contact.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Toolbar for drawing controls on the map
 class DrawingToolbar extends StatelessWidget {
@@ -53,7 +54,7 @@ class DrawingToolbar extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _getTitleForMode(drawingProvider.drawingMode),
+                    _getTitleForMode(drawingProvider.drawingMode, context),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -119,7 +120,7 @@ class DrawingToolbar extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.undo),
                       onPressed: () => drawingProvider.cancelCurrentDrawing(),
-                      tooltip: 'Cancel',
+                      tooltip: AppLocalizations.of(context)!.cancel,
                       iconSize: 20,
                       padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(),
@@ -184,8 +185,8 @@ class DrawingToolbar extends StatelessWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.show_chart),
-              title: const Text('Draw Line'),
-              subtitle: const Text('Draw a freehand line on the map'),
+              title: Text(AppLocalizations.of(context)!.drawLine),
+              subtitle: Text(AppLocalizations.of(context)!.drawLineDesc),
               onTap: () {
                 Navigator.pop(context);
                 drawingProvider.setDrawingMode(DrawingMode.line);
@@ -193,8 +194,8 @@ class DrawingToolbar extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.crop_square),
-              title: const Text('Draw Rectangle'),
-              subtitle: const Text('Draw a rectangular area on the map'),
+              title: Text(AppLocalizations.of(context)!.drawRectangle),
+              subtitle: Text(AppLocalizations.of(context)!.drawRectangleDesc),
               onTap: () {
                 Navigator.pop(context);
                 drawingProvider.setDrawingMode(DrawingMode.rectangle);
@@ -204,7 +205,7 @@ class DrawingToolbar extends StatelessWidget {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.share, color: Colors.blue),
-                title: const Text('Share Drawings'),
+                title: Text(AppLocalizations.of(context)!.shareDrawings),
                 subtitle: Text(
                   'Broadcast ${drawingProvider.drawings.length} drawings to team',
                 ),
@@ -220,7 +221,7 @@ class DrawingToolbar extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_sweep, color: Colors.red),
-                title: const Text('Clear All Drawings'),
+                title: Text(AppLocalizations.of(context)!.clearAllDrawings),
                 subtitle: Text(
                   'Remove all ${drawingProvider.drawings.length} drawings',
                 ),
@@ -244,14 +245,14 @@ class DrawingToolbar extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear All Drawings'),
+        title: Text(AppLocalizations.of(context)!.clearAllDrawings),
         content: Text(
           'Delete all ${drawingProvider.drawings.length} drawings from the map?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -259,7 +260,7 @@ class DrawingToolbar extends StatelessWidget {
               drawingProvider.clearAllDrawings();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear All'),
+            child: Text(AppLocalizations.of(context)!.clearAll),
           ),
         ],
       ),
@@ -279,12 +280,12 @@ class DrawingToolbar extends StatelessWidget {
   }
 
   /// Get title for drawing mode
-  String _getTitleForMode(DrawingMode mode) {
+  String _getTitleForMode(DrawingMode mode, BuildContext context) {
     switch (mode) {
       case DrawingMode.line:
-        return 'Draw Line';
+        return AppLocalizations.of(context)!.drawLine;
       case DrawingMode.rectangle:
-        return 'Draw Rectangle';
+        return AppLocalizations.of(context)!.drawRectangle;
       case DrawingMode.none:
         return 'Drawing';
     }
@@ -321,8 +322,8 @@ class DrawingToolbar extends StatelessWidget {
 
     if (!connectionProvider.deviceInfo.isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Not connected to device'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.deviceNotConnected),
           backgroundColor: Colors.red,
         ),
       );
@@ -342,8 +343,8 @@ class DrawingToolbar extends StatelessWidget {
 
     if (localDrawings.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No local drawings to share'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.noLocalDrawings),
           backgroundColor: Colors.orange,
         ),
       );
@@ -384,8 +385,8 @@ class DrawingToolbar extends StatelessWidget {
             // Option: Send to Public Channel
             ListTile(
               leading: const Icon(Icons.public, color: Colors.blue),
-              title: const Text('Public Channel'),
-              subtitle: const Text('Broadcast to all nearby nodes (ephemeral)'),
+              title: Text(AppLocalizations.of(context)!.publicChannel),
+              subtitle: Text(AppLocalizations.of(context)!.broadcastToAll),
               onTap: () async {
                 debugPrint('📤 [DrawingToolbar] Public Channel tapped');
                 // Share BEFORE popping the navigator
@@ -406,7 +407,7 @@ class DrawingToolbar extends StatelessWidget {
                 (room) => ListTile(
                   leading: const Icon(Icons.meeting_room, color: Colors.green),
                   title: Text(room.advName),
-                  subtitle: const Text('Stored permanently in room'),
+                  subtitle: Text(AppLocalizations.of(context)!.storedPermanently),
                   onTap: () async {
                     debugPrint('📤 [DrawingToolbar] Room ${room.advName} tapped');
                     // Share BEFORE popping the navigator

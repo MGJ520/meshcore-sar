@@ -157,5 +157,79 @@
 
   "locationBroadcast": "Emitiranje lokacije: {latitude}, {longitude}",
 
-  "defaultPinInfo": "Zadani PIN za uređaje bez zaslona je 123456. Problemi s uparivanjem? Zaboravite bluetooth uređaj u postavkama sustava."
+  "defaultPinInfo": "Zadani PIN za uređaje bez zaslona je 123456. Problemi s uparivanjem? Zaboravite bluetooth uređaj u postavkama sustava.",
+
+  "noMessagesYet": "Još nema poruka",
+
+  "pullDownToSync": "Povucite prema dolje za sinkronizaciju",
+
+  "deleteContact": "Izbriši kontakt",
+
+  "delete": "Izbriši",
+
+  "viewOnMap": "Prikaži na karti",
+
+  "refresh": "Osvježi",
+
+  "sendDirectMessage": "Pošalji izravnu poruku",
+
+  "resetPath": "Resetiraj put (preusmjeri)",
+
+  "publicKeyCopied": "Javni ključ kopiran u međuspremnik",
+
+  "copiedToClipboard": "{label} kopirano u međuspremnik",
+
+  "pleaseEnterPassword": "Molimo unesite lozinku",
+
+  "failedToSyncContacts": "Neuspjela sinkronizacija kontakata: {error}",
+
+  "loggedInSuccessfully": "Uspješno prijavljen! Čekanje na poruke sobe...",
+
+  "loginFailed": "Prijava neuspjela - netočna lozinka",
+
+  "loggingIn": "Prijavljivanje u {roomName}...",
+
+  "failedToSendLogin": "Neuspjelo slanje prijave: {error}",
+
+  "lowLocationAccuracy": "Niska točnost lokacije",
+
+  "continue_": "Nastavi",
+
+  "sendSarMarker": "Pošalji SAR marker",
+
+  "deleteDrawing": "Izbriši crtež",
+
+  "drawLine": "Nacrtaj liniju",
+
+  "drawLineDesc": "Nacrtaj slobodnu liniju na karti",
+
+  "drawRectangle": "Nacrtaj pravokutnik",
+
+  "drawRectangleDesc": "Nacrtaj pravokutno područje na karti",
+
+  "shareDrawings": "Podijeli crteže",
+
+  "clearAllDrawings": "Očisti sve crteže",
+
+  "clearAll": "Očisti sve",
+
+  "noLocalDrawings": "Nema lokalnih crteža za dijeljenje",
+
+  "publicChannel": "Javni kanal",
+
+  "broadcastToAll": "Emitiraj svim obližnjim čvorovima (privremeno)",
+
+  "storedPermanently": "Trajno pohranjeno u sobi",
+
+  "notConnectedToDevice": "Nije povezano s uređajem",
+
+  "directMessage": "Izravna poruka",
+
+  "directMessageSentTo": "Izravna poruka poslana {contactName}",
+
+  "failedToSend": "Neuspjelo slanje: {error}",
+
+  "directMessageInfo": "Ova poruka će biti poslana izravno {contactName}. Također će se prikazati u glavnom feedu poruka.",
+
+  "typeYourMessage": "Upišite svoju poruku..."
 }

@@ -278,4 +278,130 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get defaultPinInfo =>
       'The default pin for devices without a screen is 123456. Trouble pairing? Forget the bluetooth device in system settings.';
+
+  @override
+  String get noMessagesYet => 'No messages yet';
+
+  @override
+  String get pullDownToSync => 'Pull down to sync messages';
+
+  @override
+  String get deleteContact => 'Delete Contact';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get viewOnMap => 'View on Map';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get sendDirectMessage => 'Send Direct Message';
+
+  @override
+  String get resetPath => 'Reset Path (Re-route)';
+
+  @override
+  String get publicKeyCopied => 'Public key copied to clipboard';
+
+  @override
+  String copiedToClipboard(String label) {
+    return '$label copied to clipboard';
+  }
+
+  @override
+  String get pleaseEnterPassword => 'Please enter a password';
+
+  @override
+  String failedToSyncContacts(String error) {
+    return 'Failed to sync contacts: $error';
+  }
+
+  @override
+  String get loggedInSuccessfully =>
+      'Logged in successfully! Waiting for room messages...';
+
+  @override
+  String get loginFailed => 'Login failed - incorrect password';
+
+  @override
+  String loggingIn(String roomName) {
+    return 'Logging in to $roomName...';
+  }
+
+  @override
+  String failedToSendLogin(String error) {
+    return 'Failed to send login: $error';
+  }
+
+  @override
+  String get lowLocationAccuracy => 'Low Location Accuracy';
+
+  @override
+  String get continue_ => 'Continue';
+
+  @override
+  String get sendSarMarker => 'Send SAR marker';
+
+  @override
+  String get deleteDrawing => 'Delete Drawing';
+
+  @override
+  String get drawLine => 'Draw Line';
+
+  @override
+  String get drawLineDesc => 'Draw a freehand line on the map';
+
+  @override
+  String get drawRectangle => 'Draw Rectangle';
+
+  @override
+  String get drawRectangleDesc => 'Draw a rectangular area on the map';
+
+  @override
+  String get shareDrawings => 'Share Drawings';
+
+  @override
+  String get clearAllDrawings => 'Clear All Drawings';
+
+  @override
+  String get clearAll => 'Clear All';
+
+  @override
+  String get noLocalDrawings => 'No local drawings to share';
+
+  @override
+  String get publicChannel => 'Public Channel';
+
+  @override
+  String get broadcastToAll => 'Broadcast to all nearby nodes (ephemeral)';
+
+  @override
+  String get storedPermanently => 'Stored permanently in room';
+
+  @override
+  String get notConnectedToDevice => 'Not connected to device';
+
+  @override
+  String get directMessage => 'Direct Message';
+
+  @override
+  String directMessageSentTo(String contactName) {
+    return 'Direct message sent to $contactName';
+  }
+
+  @override
+  String failedToSend(String error) {
+    return 'Failed to send: $error';
+  }
+
+  @override
+  String directMessageInfo(String contactName) {
+    return 'This message will be sent directly to $contactName. It will also appear in the main messages feed.';
+  }
+
+  @override
+  String get typeYourMessage => 'Type your message...';
 }

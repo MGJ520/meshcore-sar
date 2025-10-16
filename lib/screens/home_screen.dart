@@ -15,6 +15,7 @@ import 'settings_screen.dart';
 import 'device_config_screen.dart';
 import 'packet_log_screen.dart';
 import '../utils/toast_logger.dart';
+import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
@@ -77,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (!connectionProvider.deviceInfo.isConnected) {
       if (context.mounted) {
-        ToastLogger.error(context, 'Device not connected');
+        ToastLogger.error(context, AppLocalizations.of(context)!.deviceNotConnected);
       }
       return;
     }
@@ -89,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (context.mounted) {
           ToastLogger.error(
             context,
-            'Location services are disabled. Please enable them in Settings.',
+            AppLocalizations.of(context)!.locationServicesDisabled,
           );
         }
         return;
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (context.mounted) {
-            ToastLogger.error(context, 'Location permission denied');
+            ToastLogger.error(context, AppLocalizations.of(context)!.locationPermissionDenied);
           }
           return;
         }
@@ -111,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (context.mounted) {
           ToastLogger.error(
             context,
-            'Location permission permanently denied. Please enable in Settings.',
+            AppLocalizations.of(context)!.locationPermissionPermanentlyDenied,
           );
         }
         return;
@@ -129,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen>
       } catch (e) {
         print('❌ Failed to get GPS position: $e');
         if (context.mounted) {
-          ToastLogger.error(context, 'Failed to get GPS location');
+          ToastLogger.error(context, AppLocalizations.of(context)!.failedToGetGpsLocation);
         }
         return;
       }
@@ -149,13 +150,16 @@ class _HomeScreenState extends State<HomeScreen>
       if (context.mounted) {
         ToastLogger.success(
           context,
-          'Advertised at ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
+          AppLocalizations.of(context)!.advertisedAtLocation(
+            position.latitude.toStringAsFixed(6),
+            position.longitude.toStringAsFixed(6),
+          ),
         );
       }
     } catch (e) {
       print('❌ Failed to advertise device: $e');
       if (context.mounted) {
-        ToastLogger.error(context, 'Failed to advertise: $e');
+        ToastLogger.error(context, AppLocalizations.of(context)!.failedToAdvertise(e.toString()));
       }
     }
   }
@@ -203,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Column(
                       children: [
                         Text(
-                          'MeshCore',
+                          AppLocalizations.of(context)!.appTitle,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 18,
@@ -211,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ),
                         Text(
-                          'Scanning for devices...',
+                          AppLocalizations.of(context)!.scanningForDevices,
                           style: TextStyle(
                             color: Theme.of(
                               context,
@@ -253,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'The default pin for devices without a screen is 123456. Trouble pairing? Forget the bluetooth device in system settings.',
+                      AppLocalizations.of(context)!.defaultPinInfo,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                         fontSize: 13,
@@ -288,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No devices found',
+                            AppLocalizations.of(context)!.noDevicesFound,
                             style: TextStyle(
                               color: Theme.of(
                                 context,
@@ -303,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen>
                               connectionProvider.startScan();
                             },
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Scan Again'),
+                            label: Text(AppLocalizations.of(context)!.scanAgain),
                           ),
                         ],
                       ),
@@ -358,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen>
                           subtitle: Row(
                             children: [
                               Text(
-                                'Tap to connect',
+                                AppLocalizations.of(context)!.tapToConnect,
                                 style: TextStyle(
                                   color: Theme.of(
                                     context,
@@ -450,7 +454,7 @@ class _HomeScreenState extends State<HomeScreen>
                           await provider.disconnect();
                         },
                         icon: const Icon(Icons.power_settings_new),
-                        tooltip: 'Disconnect',
+                        tooltip: AppLocalizations.of(context)!.disconnect,
                         color: Colors.red.shade700,
                       );
                     }
@@ -461,11 +465,11 @@ class _HomeScreenState extends State<HomeScreen>
                   icon: const Icon(Icons.more_vert),
                   itemBuilder: (context) => [
                     PopupMenuItem(
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.map),
-                          SizedBox(width: 8),
-                          Text('Map Management'),
+                          const Icon(Icons.map),
+                          const SizedBox(width: 8),
+                          Text(AppLocalizations.of(context)!.mapManagement),
                         ],
                       ),
                       onTap: () {
@@ -483,11 +487,11 @@ class _HomeScreenState extends State<HomeScreen>
                       },
                     ),
                     PopupMenuItem(
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.settings),
-                          SizedBox(width: 8),
-                          Text('Settings'),
+                          const Icon(Icons.settings),
+                          const SizedBox(width: 8),
+                          Text(AppLocalizations.of(context)!.settings),
                         ],
                       ),
                       onTap: () {
@@ -551,16 +555,16 @@ class _HomeScreenState extends State<HomeScreen>
                           Icons.message,
                           unreadCount,
                         ),
-                        text: 'Messages',
+                        text: AppLocalizations.of(context)!.messages,
                       ),
                       Tab(
                         icon: _buildTabIconWithBadge(
                           Icons.contacts,
                           newContactsCount,
                         ),
-                        text: 'Contacts',
+                        text: AppLocalizations.of(context)!.contacts,
                       ),
-                      const Tab(icon: Icon(Icons.map), text: 'Map'),
+                      Tab(icon: const Icon(Icons.map), text: AppLocalizations.of(context)!.map),
                     ],
                   ),
                 );
@@ -583,10 +587,10 @@ class _HomeScreenState extends State<HomeScreen>
           // Disconnected state: show connect button
           return Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'MeshCore',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  AppLocalizations.of(context)!.appTitle,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
               ElevatedButton.icon(
@@ -608,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen>
                 label: Text(
                   provider.isReconnecting
                       ? '${provider.reconnectionAttempt}/${provider.maxReconnectionAttempts}'
-                      : 'Connect',
+                      : AppLocalizations.of(context)!.connect,
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -624,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen>
                 IconButton(
                   onPressed: () => provider.cancelReconnection(),
                   icon: const Icon(Icons.close, size: 20),
-                  tooltip: 'Cancel reconnection',
+                  tooltip: AppLocalizations.of(context)!.cancelReconnection,
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.red.shade700,
                     foregroundColor: Colors.white,
@@ -650,7 +654,7 @@ class _HomeScreenState extends State<HomeScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          deviceInfo.selfName ?? 'MeshCore',
+                          deviceInfo.selfName ?? AppLocalizations.of(context)!.appTitle,
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -838,8 +842,8 @@ class _HomeScreenState extends State<HomeScreen>
                   Expanded(
                     child: Text(
                       isConnected
-                          ? deviceInfo.displayName ?? 'Connected'
-                          : 'Not Connected',
+                          ? deviceInfo.displayName ?? AppLocalizations.of(context)!.connect
+                          : AppLocalizations.of(context)!.deviceNotConnected,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -881,7 +885,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ? null
                           : () => _showConnectionDialog(context),
                       icon: const Icon(Icons.bluetooth_searching, size: 18),
-                      label: const Text('Connect'),
+                      label: Text(AppLocalizations.of(context)!.connect),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
@@ -896,7 +900,7 @@ class _HomeScreenState extends State<HomeScreen>
                               await provider.disconnect();
                             },
                       icon: const Icon(Icons.bluetooth_disabled, size: 18),
-                      label: const Text('Disconnect'),
+                      label: Text(AppLocalizations.of(context)!.disconnect),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                       ),

@@ -11,6 +11,7 @@ import '../../providers/map_provider.dart';
 import 'direct_message_sheet.dart';
 import 'room_login_sheet.dart';
 import '../../utils/toast_logger.dart';
+import '../../l10n/app_localizations.dart';
 
 class ContactTile extends StatelessWidget {
   final Contact contact;
@@ -359,7 +360,7 @@ class ContactTile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Contact'),
+        title: Text(AppLocalizations.of(context)!.deleteContact),
         content: Text(
           'Are you sure you want to delete "${contact.displayName}"?\n\n'
           'This will remove the contact from both the app and the companion radio device.',
@@ -367,7 +368,7 @@ class ContactTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -376,7 +377,7 @@ class ContactTile extends StatelessWidget {
               await _deleteContact(context, contact);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -504,9 +505,9 @@ class ContactTile extends StatelessWidget {
                           onTap: () {
                             Clipboard.setData(ClipboardData(text: contact.publicKeyHex));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Public key copied to clipboard'),
-                                duration: Duration(seconds: 2),
+                              SnackBar(
+                                content: Text(AppLocalizations.of(context)!.publicKeyCopied),
+                                duration: const Duration(seconds: 2),
                               ),
                             );
                           },
@@ -587,7 +588,7 @@ class ContactTile extends StatelessWidget {
                             DefaultTabController.of(context).animateTo(2);
                           },
                           icon: const Icon(Icons.map, size: 18),
-                          label: const Text('View on Map'),
+                          label: Text(AppLocalizations.of(context)!.viewOnMap),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           ),
@@ -645,7 +646,7 @@ class ContactTile extends StatelessWidget {
                             ToastLogger.info(context, 'Requesting telemetry from ${contact.displayName}...');
                           },
                           icon: const Icon(Icons.refresh, size: 18),
-                          label: const Text('Refresh'),
+                          label: Text(AppLocalizations.of(context)!.refresh),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           ),
@@ -688,7 +689,7 @@ class ContactTile extends StatelessWidget {
                           _showDirectMessageDialog(context, contact);
                         },
                         icon: const Icon(Icons.message),
-                        label: const Text('Send Direct Message'),
+                        label: Text(AppLocalizations.of(context)!.sendDirectMessage),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           backgroundColor: _getTypeColor(contact.type, context),
@@ -705,7 +706,7 @@ class ContactTile extends StatelessWidget {
                           ToastLogger.info(context, 'Path reset for ${contact.displayName}. Next message will find a new route.');
                         },
                         icon: const Icon(Icons.route),
-                        label: const Text('Reset Path (Re-route)'),
+                        label: Text(AppLocalizations.of(context)!.resetPath),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: BorderSide(color: _getTypeColor(contact.type, context)),
@@ -742,7 +743,7 @@ class ContactTile extends StatelessWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => _showDeleteConfirmation(context, contact),
                         icon: const Icon(Icons.delete_outline),
-                        label: const Text('Delete Contact'),
+                        label: Text(AppLocalizations.of(context)!.deleteContact),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: const BorderSide(color: Colors.red),
@@ -803,7 +804,7 @@ class ContactTile extends StatelessWidget {
               Clipboard.setData(ClipboardData(text: value));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('$label copied to clipboard'),
+                  content: Text(AppLocalizations.of(context)!.copiedToClipboard(label)),
                   duration: const Duration(seconds: 2),
                 ),
               );

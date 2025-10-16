@@ -590,5 +590,7 @@
   "spreadingFactor": "Faktor razširitve",
   "codingRate": "Razmerje kodiranja",
   "txPowerDbm": "Izhodna moč (dBm)",
-  "maxPowerDbm": "Največ: {power} dBm"
+  "maxPowerDbm": "Največ: {power} dBm",
+
+  "you": "Ti"
 }

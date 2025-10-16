@@ -76,6 +76,9 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^18.0.1
 
+  # Vibration
+  vibration: ^2.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

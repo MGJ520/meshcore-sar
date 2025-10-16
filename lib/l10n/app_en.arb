@@ -1776,5 +1776,10 @@
     "placeholders": {
       "power": { "type": "int" }
     }
+  },
+
+  "you": "You",
+  "@you": {
+    "description": "Label for the current user in message bubbles"
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 import '../providers/connection_provider.dart';
 import '../providers/app_provider.dart';
 import '../providers/messages_provider.dart';
@@ -765,7 +767,30 @@ class _HomeScreenState extends State<HomeScreen>
             // CENTER: Broadcast button
             const SizedBox(width: 8),
             FilledButton(
-              onPressed: () => _advertiseDevice(context),
+              onPressed: () async {
+                // iOS: Use haptic feedback (always works)
+                // Android: Try vibration package for better control
+                try {
+                  if (Theme.of(context).platform == TargetPlatform.iOS) {
+                    // iOS: Try multiple haptic types for reliability
+                    await HapticFeedback.lightImpact();
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    await HapticFeedback.lightImpact();
+                  } else {
+                    // Android vibration
+                    if (await Vibration.hasVibrator() ?? false) {
+                      await Vibration.vibrate(duration: 50);
+                    } else {
+                      await HapticFeedback.mediumImpact();
+                    }
+                  }
+                } catch (e) {
+                  // Fallback if anything fails
+                  print('Haptic feedback error: $e');
+                  await HapticFeedback.vibrate();
+                }
+                _advertiseDevice(context);
+              },
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.blue.shade700,
                 foregroundColor: Colors.white,

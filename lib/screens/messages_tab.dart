@@ -714,7 +714,7 @@ class _MessageBubble extends StatelessWidget {
 
     // Get rich display name (with emoji if available)
     final displayName = isOwnMessage
-        ? 'You'
+        ? AppLocalizations.of(context)!.you
         : message.getRichDisplayName(senderContact);
 
     // For sent direct messages, look up recipient contact

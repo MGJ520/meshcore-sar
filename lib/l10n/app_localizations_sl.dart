@@ -1037,4 +1037,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String maxPowerDbm(int power) {
     return 'Največ: $power dBm';
   }
+
+  @override
+  String get you => 'Ti';
 }

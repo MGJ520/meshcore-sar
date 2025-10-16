@@ -1898,6 +1898,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Max: {power} dBm'**
   String maxPowerDbm(int power);
+
+  /// Label for the current user in message bubbles
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get you;
 }
 
 class _AppLocalizationsDelegate

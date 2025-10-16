@@ -6,6 +6,7 @@ import 'contacts_provider.dart';
 import 'messages_provider.dart';
 import 'drawing_provider.dart';
 import '../services/tile_cache_service.dart';
+import '../services/location_tracking_service.dart';
 import '../models/contact.dart';
 import '../utils/drawing_message_parser.dart';
 
@@ -16,6 +17,7 @@ class AppProvider with ChangeNotifier {
   final MessagesProvider messagesProvider;
   final DrawingProvider drawingProvider;
   final TileCacheService tileCacheService;
+  final LocationTrackingService locationTrackingService = LocationTrackingService();
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -29,6 +31,7 @@ class AppProvider with ChangeNotifier {
   }) {
     _setupCallbacks();
     _initializeTileCache();
+    _initializeLocationTracking();
     _isInitialized = true;
   }
 
@@ -42,8 +45,39 @@ class AppProvider with ChangeNotifier {
     }
   }
 
+  /// Initialize location tracking service
+  Future<void> _initializeLocationTracking() async {
+    try {
+      // Initialize location tracking with BLE service
+      await locationTrackingService.initialize(connectionProvider.bleService);
+
+      // Setup callbacks
+      locationTrackingService.onPositionUpdate = (position) {
+        debugPrint('📍 [AppProvider] Position updated: ${position.latitude}, ${position.longitude}');
+      };
+
+      locationTrackingService.onBroadcastSent = (position) {
+        debugPrint('📡 [AppProvider] Position broadcast to mesh network');
+      };
+
+      locationTrackingService.onError = (error) {
+        debugPrint('❌ [AppProvider] Location tracking error: $error');
+      };
+
+      locationTrackingService.onTrackingStateChanged = (isTracking) {
+        debugPrint('🔄 [AppProvider] Location tracking state: ${isTracking ? "started" : "stopped"}');
+      };
+
+      debugPrint('✅ [AppProvider] Location tracking service initialized');
+    } catch (e) {
+      debugPrint('❌ [AppProvider] Error initializing location tracking: $e');
+    }
+  }
+
   /// Setup callbacks between providers
   void _setupCallbacks() {
+    // Monitor connection state changes to start/stop location tracking
+    connectionProvider.addListener(_handleConnectionStateChange);
     // When a contact is received from BLE
     connectionProvider.onContactReceived = (contact) {
       // Pass device public key to filter out our own contact
@@ -336,6 +370,46 @@ class AppProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('❌ [AppProvider] Message sync error: $e');
       return 0;
+    }
+  }
+
+  /// Handle connection state changes to manage location tracking
+  void _handleConnectionStateChange() {
+    final isConnected = connectionProvider.deviceInfo.isConnected;
+    final wasTracking = locationTrackingService.isTracking;
+
+    if (isConnected && !wasTracking) {
+      // Connection established - start location tracking
+      debugPrint('🔵 [AppProvider] BLE connected - starting location tracking');
+      _startLocationTracking();
+    } else if (!isConnected && wasTracking) {
+      // Connection lost - stop location tracking
+      debugPrint('🔴 [AppProvider] BLE disconnected - stopping location tracking');
+      _stopLocationTracking();
+    }
+  }
+
+  /// Start location tracking
+  Future<void> _startLocationTracking() async {
+    try {
+      final started = await locationTrackingService.startTracking();
+      if (started) {
+        debugPrint('✅ [AppProvider] Location tracking started successfully');
+      } else {
+        debugPrint('⚠️ [AppProvider] Failed to start location tracking');
+      }
+    } catch (e) {
+      debugPrint('❌ [AppProvider] Error starting location tracking: $e');
+    }
+  }
+
+  /// Stop location tracking
+  Future<void> _stopLocationTracking() async {
+    try {
+      await locationTrackingService.stopTracking();
+      debugPrint('✅ [AppProvider] Location tracking stopped');
+    } catch (e) {
+      debugPrint('❌ [AppProvider] Error stopping location tracking: $e');
     }
   }
 

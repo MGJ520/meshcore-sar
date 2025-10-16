@@ -53,7 +53,7 @@ class LocationTrackingService {
   double maxDistanceMeters = 100.0;
 
   /// Minimum time interval in seconds between broadcasts
-  int minTimeIntervalSeconds = 155;
+  int minTimeIntervalSeconds = 30;
 
   /// GPS update distance filter for position stream
   double gpsUpdateDistance = 10.0;
@@ -380,6 +380,18 @@ class LocationTrackingService {
       return;
     }
 
+    // CRITICAL: Enforce minimum time between broadcasts to prevent mesh flooding
+    // This protects the mesh network from being overwhelmed by position updates
+    if (_lastBroadcastTime != null) {
+      final timeSinceLastBroadcast = DateTime.now().difference(_lastBroadcastTime!);
+      if (timeSinceLastBroadcast.inSeconds < minTimeIntervalSeconds) {
+        debugPrint(
+          '⏸️ [LocationTracking] Skipping broadcast: only ${timeSinceLastBroadcast.inSeconds}s since last broadcast (minimum: ${minTimeIntervalSeconds}s)',
+        );
+        return;
+      }
+    }
+
     try {
       debugPrint('📤 [LocationTracking] Broadcasting position to mesh network');
 
@@ -389,10 +401,10 @@ class LocationTrackingService {
         longitude: position.longitude,
       );
 
-      // Send advertisement to mesh network
+      // Send advertisement to mesh network (only ONE advert per position update)
       await _bleService!.sendSelfAdvert(floodMode: true);
 
-      // Update broadcast tracking
+      // Update broadcast tracking IMMEDIATELY to prevent duplicate broadcasts
       _lastBroadcastPosition = position;
       _lastBroadcastTime = DateTime.now();
 
@@ -402,6 +414,7 @@ class LocationTrackingService {
       await prefs.setDouble(_prefKeyLastLon, position.longitude);
 
       debugPrint('✅ [LocationTracking] Position broadcast successful');
+      debugPrint('   Next broadcast allowed in ${minTimeIntervalSeconds}s');
       onBroadcastSent?.call(position);
     } catch (e) {
       debugPrint('❌ [LocationTracking] Failed to broadcast position: $e');
@@ -412,6 +425,9 @@ class LocationTrackingService {
   /// Manually broadcast current location immediately
   ///
   /// Useful for "Send Location Now" button functionality.
+  /// Note: Manual broadcasts bypass automatic throttling and can be sent anytime.
+  /// However, they still update the last broadcast time to maintain proper spacing
+  /// for subsequent automatic broadcasts.
   Future<bool> broadcastLocationNow() async {
     if (!_isInitialized || _bleService == null) {
       onError?.call('Location tracking service not initialized');
@@ -431,7 +447,9 @@ class LocationTrackingService {
         return false;
       }
 
-      // Broadcast regardless of thresholds
+      debugPrint('📤 [LocationTracking] Manual broadcast requested');
+
+      // Broadcast regardless of automatic throttling thresholds
       await _bleService!.setAdvertLatLon(
         latitude: position.latitude,
         longitude: position.longitude,
@@ -439,11 +457,12 @@ class LocationTrackingService {
 
       await _bleService!.sendSelfAdvert(floodMode: true);
 
-      // Update broadcast tracking
+      // Update broadcast tracking to maintain proper spacing for automatic broadcasts
       _lastBroadcastPosition = position;
       _lastBroadcastTime = DateTime.now();
 
       debugPrint('✅ [LocationTracking] Manual broadcast successful');
+      debugPrint('   Automatic broadcasts will resume after ${minTimeIntervalSeconds}s');
       onBroadcastSent?.call(position);
 
       return true;

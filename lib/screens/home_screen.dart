@@ -579,184 +579,169 @@ class _HomeScreenState extends State<HomeScreen>
           '🎨 [UI] Building status bar - isConnected: $isConnected, state: ${deviceInfo.connectionState}',
         );
 
+        if (!isConnected) {
+          // Disconnected state: show connect button
+          return Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'MeshCore',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: provider.isReconnecting
+                    ? null
+                    : () => _showConnectionDialog(context),
+                icon: provider.isReconnecting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.black54,
+                          ),
+                        ),
+                      )
+                    : const Icon(Icons.bluetooth, size: 18),
+                label: Text(
+                  provider.isReconnecting
+                      ? '${provider.reconnectionAttempt}/${provider.maxReconnectionAttempts}'
+                      : 'Connect',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black87,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+              if (provider.isReconnecting) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => provider.cancelReconnection(),
+                  icon: const Icon(Icons.close, size: 20),
+                  tooltip: 'Cancel reconnection',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.red.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ],
+            ],
+          );
+        }
+
+        // Connected state: LEFT | CENTER | RIGHT layout
         return Row(
           children: [
-            // LEFT SECTION: Name + BT/Battery status + Settings cog
+            // LEFT: Name + BT/Battery + Cog
             Expanded(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Name and status group
                   Flexible(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          isConnected && deviceInfo.selfName != null
-                              ? deviceInfo.selfName!
-                              : 'MeshCore',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          deviceInfo.selfName ?? 'MeshCore',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (isConnected)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // BLE connection strength indicator with RSSI
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.bluetooth_connected,
+                              color: deviceInfo.signalRssi != null
+                                  ? _getSignalColor(deviceInfo.signalRssi!)
+                                  : Colors.grey,
+                              size: 13,
+                            ),
+                            if (deviceInfo.signalRssi != null) ...[
+                              const SizedBox(width: 3),
+                              Text(
+                                '${deviceInfo.signalRssi}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _getSignalColor(deviceInfo.signalRssi!),
+                                ),
+                              ),
+                            ],
+                            if (deviceInfo.batteryPercent != null) ...[
+                              const SizedBox(width: 8),
                               Icon(
-                                Icons.bluetooth_connected,
-                                color: deviceInfo.signalRssi != null
-                                    ? _getSignalColor(deviceInfo.signalRssi!)
-                                    : Colors.grey,
-                                size: 14,
+                                _getBatteryIcon(deviceInfo.batteryPercent!),
+                                color: _getBatteryColor(deviceInfo.batteryPercent!),
+                                size: 13,
                               ),
                               const SizedBox(width: 3),
-                              if (deviceInfo.signalRssi != null)
-                                Flexible(
-                                  child: Text(
-                                    '${deviceInfo.signalRssi}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: _getSignalColor(deviceInfo.signalRssi!),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              const SizedBox(width: 8),
-                              // Battery indicator
-                              if (deviceInfo.batteryPercent != null) ...[
-                                Icon(
-                                  _getBatteryIcon(deviceInfo.batteryPercent!),
+                              Text(
+                                '${deviceInfo.batteryPercent!.round()}%',
+                                style: TextStyle(
+                                  fontSize: 11,
                                   color: _getBatteryColor(deviceInfo.batteryPercent!),
-                                  size: 14,
                                 ),
-                                const SizedBox(width: 3),
-                                Flexible(
-                                  child: Text(
-                                    '${deviceInfo.batteryPercent!.round()}%',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: _getBatteryColor(
-                                        deviceInfo.batteryPercent!,
-                                      ),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ],
-                          )
-                        else if (provider.isReconnecting)
-                          Text(
-                            'Reconnecting...',
-                            style: TextStyle(fontSize: 12, color: Colors.orange[600]),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  // Settings cog - part of left group
-                  if (isConnected) ...[
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DeviceConfigScreen(),
-                          ),
-                        );
-                      },
-                      onLongPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                PacketLogScreen(bleService: provider.bleService),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.settings, size: 20),
-                      ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DeviceConfigScreen(),
+                        ),
+                      );
+                    },
+                    onLongPress: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              PacketLogScreen(bleService: provider.bleService),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.settings, size: 18),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
 
-            // CENTER SECTION: Broadcast button (when connected)
-            if (isConnected) ...[
-              FilledButton(
-                onPressed: () => _advertiseDevice(context),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.blue.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(10),
-                  minimumSize: const Size(40, 40),
-                  shape: const CircleBorder(),
-                ),
-                child: const Icon(Icons.campaign, size: 20),
+            // CENTER: Broadcast button
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () => _advertiseDevice(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.blue.shade700,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(10),
+                minimumSize: const Size(40, 40),
+                shape: const CircleBorder(),
               ),
-            ],
+              child: const Icon(Icons.campaign, size: 20),
+            ),
+            const SizedBox(width: 8),
 
-            // RIGHT SECTION: Connect button OR RX/TX indicators
-            if (!isConnected)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: provider.isReconnecting
-                        ? null // Disable button during reconnection
-                        : () => _showConnectionDialog(context),
-                    icon: provider.isReconnecting
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.black54,
-                              ),
-                            ),
-                          )
-                        : const Icon(Icons.bluetooth, size: 18),
-                    label: Text(
-                      provider.isReconnecting
-                          ? '${provider.reconnectionAttempt}/${provider.maxReconnectionAttempts}'
-                          : 'Connect',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black87,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                  ),
-                  // Cancel button during reconnection
-                  if (provider.isReconnecting) ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () => provider.cancelReconnection(),
-                      icon: const Icon(Icons.close, size: 20),
-                      tooltip: 'Cancel reconnection',
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.red.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(8),
-                      ),
-                    ),
-                  ],
-                ],
-              )
-            else if (_showRxTxIndicators)
+            // RIGHT: RX/TX indicators
+            if (_showRxTxIndicators)
               GestureDetector(
                 onLongPress: () {
                   Navigator.push(
@@ -769,15 +754,14 @@ class _HomeScreenState extends State<HomeScreen>
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // RX indicator
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: provider.rxActivity
@@ -785,24 +769,23 @@ class _HomeScreenState extends State<HomeScreen>
                                 : Colors.grey.withOpacity(0.3),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
                           'RX:${provider.rxPacketCount}',
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Colors.grey,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    // TX indicator
+                    const SizedBox(height: 3),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: provider.txActivity
@@ -810,11 +793,11 @@ class _HomeScreenState extends State<HomeScreen>
                                 : Colors.grey.withOpacity(0.3),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
                           'TX:${provider.txPacketCount}',
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Colors.grey,
                           ),
                         ),
@@ -822,7 +805,9 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ],
                 ),
-              ),
+              )
+            else
+              const SizedBox(width: 52), // Placeholder to maintain layout balance
           ],
         );
       },

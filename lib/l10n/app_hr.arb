@@ -1,0 +1,161 @@
+{
+  "@@locale": "hr",
+
+  "appTitle": "MeshCore SAR",
+
+  "messages": "Poruke",
+
+  "contacts": "Kontakti",
+
+  "map": "Karta",
+
+  "settings": "Postavke",
+
+  "connect": "Poveži",
+
+  "disconnect": "Prekini",
+
+  "scanningForDevices": "Skeniranje uređaja...",
+
+  "noDevicesFound": "Nisu pronađeni uređaji",
+
+  "scanAgain": "Skeniraj ponovno",
+
+  "tapToConnect": "Dodirnite za povezivanje",
+
+  "deviceNotConnected": "Uređaj nije povezan",
+
+  "locationPermissionDenied": "Dopuštenje za lokaciju odbijeno",
+
+  "locationPermissionPermanentlyDenied": "Dopuštenje za lokaciju trajno odbijeno. Molimo omogućite u Postavkama.",
+
+  "locationServicesDisabled": "Usluge lokacije su onemogućene. Molimo omogućite ih u Postavkama.",
+
+  "failedToGetGpsLocation": "Neuspjelo dobivanje GPS lokacije",
+
+  "advertisedAtLocation": "Objavljeno na {latitude}, {longitude}",
+
+  "failedToAdvertise": "Neuspjela objava: {error}",
+
+  "reconnecting": "Ponovno povezivanje... ({attempt}/{max})",
+
+  "cancelReconnection": "Otkaži ponovno povezivanje",
+
+  "mapManagement": "Upravljanje kartom",
+
+  "general": "Općenito",
+
+  "theme": "Tema",
+
+  "chooseTheme": "Odaberite temu",
+
+  "light": "Svijetla",
+
+  "dark": "Tamna",
+
+  "blueLightTheme": "Plava svijetla tema",
+
+  "blueDarkTheme": "Plava tamna tema",
+
+  "sarRed": "SAR crvena",
+
+  "alertEmergencyMode": "Način upozorenja/hitna situacija",
+
+  "sarGreen": "SAR zelena",
+
+  "safeAllClearMode": "Način sigurno/sve jasno",
+
+  "autoSystem": "Automatski (Sustav)",
+
+  "followSystemTheme": "Slijedi sistemsku temu",
+
+  "showRxTxIndicators": "Prikaži RX/TX indikatore",
+
+  "displayPacketActivity": "Prikaži indikatore aktivnosti paketa u gornjoj traci",
+
+  "language": "Jezik",
+
+  "chooseLanguage": "Odaberite jezik",
+
+  "english": "Engleski",
+
+  "slovenian": "Slovenski",
+
+  "croatian": "Hrvatski",
+
+  "locationBroadcasting": "Emitiranje lokacije",
+
+  "autoLocationTracking": "Automatsko praćenje lokacije",
+
+  "automaticallyBroadcastPosition": "Automatski emitiraj ažuriranja pozicije",
+
+  "configureTracking": "Konfiguriraj praćenje",
+
+  "distanceAndTimeThresholds": "Pragovi udaljenosti i vremena",
+
+  "locationTrackingConfiguration": "Konfiguracija praćenja lokacije",
+
+  "configureWhenLocationBroadcasts": "Konfigurirajte kada se emitiranja lokacije šalju u mesh mrežu",
+
+  "minimumDistance": "Minimalna udaljenost",
+
+  "broadcastAfterMoving": "Emitiraj tek nakon pomicanja {distance} metara",
+
+  "maximumDistance": "Maksimalna udaljenost",
+
+  "alwaysBroadcastAfterMoving": "Uvijek emitiraj nakon pomicanja {distance} metara",
+
+  "minimumTimeInterval": "Minimalni vremenski interval",
+
+  "alwaysBroadcastEvery": "Uvijek emitiraj svakih {duration}",
+
+  "save": "Spremi",
+
+  "cancel": "Otkaži",
+
+  "close": "Zatvori",
+
+  "about": "O aplikaciji",
+
+  "appVersion": "Verzija aplikacije",
+
+  "appName": "Ime aplikacije",
+
+  "aboutMeshCoreSar": "O MeshCore SAR",
+
+  "aboutDescription": "Aplikacija za potragu i spašavanje dizajnirana za timove za hitne slučajeve. Značajke uključuju:\n\n• BLE mesh mrežu za komunikaciju uređaj-uređaj\n• Offline karte s više slojeva\n• Praćenje članova tima u stvarnom vremenu\n• SAR taktički markeri (pronađena osoba, požar, zbirno mjesto)\n• Upravljanje kontaktima i razmjena poruka\n• GPS praćenje s kompasnim smjerom\n• Predmemoriranje karata za offline upotrebu",
+
+  "technologiesUsed": "Korištene tehnologije:",
+
+  "technologiesList": "• Flutter za višeplatformski razvoj\n• BLE (Bluetooth Low Energy) za mesh mrežu\n• OpenStreetMap za kartografiju\n• Provider za upravljanje stanjem\n• SharedPreferences za lokalno pohranu",
+
+  "developer": "Programer",
+
+  "packageName": "Ime paketa",
+
+  "sampleData": "Primjer podataka",
+
+  "sampleDataDescription": "Učitajte ili očistite primjere kontakata, poruka kanala i SAR markera za testiranje",
+
+  "loadSampleData": "Učitaj primjer podataka",
+
+  "clearAllData": "Očisti sve podatke",
+
+  "clearAllDataConfirmTitle": "Očisti sve podatke",
+
+  "clearAllDataConfirmMessage": "Ovo će očistiti sve kontakte i SAR markere. Jeste li sigurni?",
+
+  "clear": "Očisti",
+
+  "loadedSampleData": "Učitano {teamCount} članova tima, {channelCount} kanala, {sarCount} SAR markera, {messageCount} poruka",
+
+  "failedToLoadSampleData": "Neuspjelo učitavanje primjera podataka: {error}",
+
+  "allDataCleared": "Svi podaci očišćeni",
+
+  "failedToStartBackgroundTracking": "Neuspjelo pokretanje praćenja u pozadini. Provjerite dopuštenja i BLE vezu.",
+
+  "locationBroadcast": "Emitiranje lokacije: {latitude}, {longitude}",
+
+  "defaultPinInfo": "Zadani PIN za uređaje bez zaslona je 123456. Problemi s uparivanjem? Zaboravite bluetooth uređaj u postavkama sustava."
+}

@@ -1,0 +1,461 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "MeshCore SAR",
+  "@appTitle": {
+    "description": "The application title"
+  },
+
+  "messages": "Messages",
+  "@messages": {
+    "description": "Messages tab label"
+  },
+
+  "contacts": "Contacts",
+  "@contacts": {
+    "description": "Contacts tab label"
+  },
+
+  "map": "Map",
+  "@map": {
+    "description": "Map tab label"
+  },
+
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings screen title"
+  },
+
+  "connect": "Connect",
+  "@connect": {
+    "description": "Connect button label"
+  },
+
+  "disconnect": "Disconnect",
+  "@disconnect": {
+    "description": "Disconnect button label"
+  },
+
+  "scanningForDevices": "Scanning for devices...",
+  "@scanningForDevices": {
+    "description": "Text shown when scanning for BLE devices"
+  },
+
+  "noDevicesFound": "No devices found",
+  "@noDevicesFound": {
+    "description": "Text shown when no BLE devices are found"
+  },
+
+  "scanAgain": "Scan Again",
+  "@scanAgain": {
+    "description": "Button to restart BLE scanning"
+  },
+
+  "tapToConnect": "Tap to connect",
+  "@tapToConnect": {
+    "description": "Subtitle text for device in scan list"
+  },
+
+  "deviceNotConnected": "Device not connected",
+  "@deviceNotConnected": {
+    "description": "Error message when device is not connected"
+  },
+
+  "locationPermissionDenied": "Location permission denied",
+  "@locationPermissionDenied": {
+    "description": "Error when location permission is denied"
+  },
+
+  "locationPermissionPermanentlyDenied": "Location permission permanently denied. Please enable in Settings.",
+  "@locationPermissionPermanentlyDenied": {
+    "description": "Error when location permission is permanently denied"
+  },
+
+  "locationServicesDisabled": "Location services are disabled. Please enable them in Settings.",
+  "@locationServicesDisabled": {
+    "description": "Error when location services are disabled"
+  },
+
+  "failedToGetGpsLocation": "Failed to get GPS location",
+  "@failedToGetGpsLocation": {
+    "description": "Error when GPS location cannot be obtained"
+  },
+
+  "advertisedAtLocation": "Advertised at {latitude}, {longitude}",
+  "@advertisedAtLocation": {
+    "description": "Success message showing advertised location",
+    "placeholders": {
+      "latitude": {
+        "type": "String"
+      },
+      "longitude": {
+        "type": "String"
+      }
+    }
+  },
+
+  "failedToAdvertise": "Failed to advertise: {error}",
+  "@failedToAdvertise": {
+    "description": "Error message for failed advertisement",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "reconnecting": "Reconnecting... ({attempt}/{max})",
+  "@reconnecting": {
+    "description": "Text shown during reconnection attempts",
+    "placeholders": {
+      "attempt": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+
+  "cancelReconnection": "Cancel reconnection",
+  "@cancelReconnection": {
+    "description": "Tooltip for cancel reconnection button"
+  },
+
+  "mapManagement": "Map Management",
+  "@mapManagement": {
+    "description": "Menu item for map management"
+  },
+
+  "general": "General",
+  "@general": {
+    "description": "General settings section header"
+  },
+
+  "theme": "Theme",
+  "@theme": {
+    "description": "Theme setting label"
+  },
+
+  "chooseTheme": "Choose Theme",
+  "@chooseTheme": {
+    "description": "Theme selection dialog title"
+  },
+
+  "light": "Light",
+  "@light": {
+    "description": "Light theme option"
+  },
+
+  "dark": "Dark",
+  "@dark": {
+    "description": "Dark theme option"
+  },
+
+  "blueLightTheme": "Blue light theme",
+  "@blueLightTheme": {
+    "description": "Description for blue light theme"
+  },
+
+  "blueDarkTheme": "Blue dark theme",
+  "@blueDarkTheme": {
+    "description": "Description for blue dark theme"
+  },
+
+  "sarRed": "SAR Red",
+  "@sarRed": {
+    "description": "SAR Red theme option"
+  },
+
+  "alertEmergencyMode": "Alert/Emergency mode",
+  "@alertEmergencyMode": {
+    "description": "Description for SAR Red theme"
+  },
+
+  "sarGreen": "SAR Green",
+  "@sarGreen": {
+    "description": "SAR Green theme option"
+  },
+
+  "safeAllClearMode": "Safe/All Clear mode",
+  "@safeAllClearMode": {
+    "description": "Description for SAR Green theme"
+  },
+
+  "autoSystem": "Auto (System)",
+  "@autoSystem": {
+    "description": "Auto/System theme option"
+  },
+
+  "followSystemTheme": "Follow system theme",
+  "@followSystemTheme": {
+    "description": "Description for system theme"
+  },
+
+  "showRxTxIndicators": "Show RX/TX Indicators",
+  "@showRxTxIndicators": {
+    "description": "Setting to show RX/TX indicators"
+  },
+
+  "displayPacketActivity": "Display packet activity indicators in top bar",
+  "@displayPacketActivity": {
+    "description": "Description for RX/TX indicators setting"
+  },
+
+  "language": "Language",
+  "@language": {
+    "description": "Language setting label"
+  },
+
+  "chooseLanguage": "Choose Language",
+  "@chooseLanguage": {
+    "description": "Language selection dialog title"
+  },
+
+  "english": "English",
+  "@english": {
+    "description": "English language option"
+  },
+
+  "slovenian": "Slovenian",
+  "@slovenian": {
+    "description": "Slovenian language option"
+  },
+
+  "croatian": "Croatian",
+  "@croatian": {
+    "description": "Croatian language option"
+  },
+
+  "locationBroadcasting": "Location Broadcasting",
+  "@locationBroadcasting": {
+    "description": "Location settings section header"
+  },
+
+  "autoLocationTracking": "Auto Location Tracking",
+  "@autoLocationTracking": {
+    "description": "Auto location tracking setting"
+  },
+
+  "automaticallyBroadcastPosition": "Automatically broadcast position updates",
+  "@automaticallyBroadcastPosition": {
+    "description": "Description for auto location tracking"
+  },
+
+  "configureTracking": "Configure Tracking",
+  "@configureTracking": {
+    "description": "Configure tracking button label"
+  },
+
+  "distanceAndTimeThresholds": "Distance and time thresholds",
+  "@distanceAndTimeThresholds": {
+    "description": "Description for tracking configuration"
+  },
+
+  "locationTrackingConfiguration": "Location Tracking Configuration",
+  "@locationTrackingConfiguration": {
+    "description": "Tracking configuration dialog title"
+  },
+
+  "configureWhenLocationBroadcasts": "Configure when location broadcasts are sent to the mesh network",
+  "@configureWhenLocationBroadcasts": {
+    "description": "Description for tracking configuration dialog"
+  },
+
+  "minimumDistance": "Minimum Distance",
+  "@minimumDistance": {
+    "description": "Minimum distance setting label"
+  },
+
+  "broadcastAfterMoving": "Broadcast only after moving {distance} meters",
+  "@broadcastAfterMoving": {
+    "description": "Description for minimum distance",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+
+  "maximumDistance": "Maximum Distance",
+  "@maximumDistance": {
+    "description": "Maximum distance setting label"
+  },
+
+  "alwaysBroadcastAfterMoving": "Always broadcast after moving {distance} meters",
+  "@alwaysBroadcastAfterMoving": {
+    "description": "Description for maximum distance",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+
+  "minimumTimeInterval": "Minimum Time Interval",
+  "@minimumTimeInterval": {
+    "description": "Minimum time interval setting label"
+  },
+
+  "alwaysBroadcastEvery": "Always broadcast every {duration}",
+  "@alwaysBroadcastEvery": {
+    "description": "Description for time interval",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Save button label"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button label"
+  },
+
+  "close": "Close",
+  "@close": {
+    "description": "Close button label"
+  },
+
+  "about": "About",
+  "@about": {
+    "description": "About section header"
+  },
+
+  "appVersion": "App Version",
+  "@appVersion": {
+    "description": "App version label"
+  },
+
+  "appName": "App Name",
+  "@appName": {
+    "description": "App name label"
+  },
+
+  "aboutMeshCoreSar": "About MeshCore SAR",
+  "@aboutMeshCoreSar": {
+    "description": "About dialog title"
+  },
+
+  "aboutDescription": "A Search & Rescue application designed for emergency response teams. Features include:\n\n• BLE mesh networking for device-to-device communication\n• Offline maps with multiple layer options\n• Real-time team member tracking\n• SAR tactical markers (found person, fire, staging)\n• Contact management and messaging\n• GPS tracking with compass heading\n• Map tile caching for offline use",
+  "@aboutDescription": {
+    "description": "About dialog description"
+  },
+
+  "technologiesUsed": "Technologies Used:",
+  "@technologiesUsed": {
+    "description": "Technologies used section title"
+  },
+
+  "technologiesList": "• Flutter for cross-platform development\n• BLE (Bluetooth Low Energy) for mesh networking\n• OpenStreetMap for mapping\n• Provider for state management\n• SharedPreferences for local storage",
+  "@technologiesList": {
+    "description": "List of technologies used"
+  },
+
+  "developer": "Developer",
+  "@developer": {
+    "description": "Developer section header"
+  },
+
+  "packageName": "Package Name",
+  "@packageName": {
+    "description": "Package name label"
+  },
+
+  "sampleData": "Sample Data",
+  "@sampleData": {
+    "description": "Sample data section header"
+  },
+
+  "sampleDataDescription": "Load or clear sample contacts, channel messages, and SAR markers for testing",
+  "@sampleDataDescription": {
+    "description": "Sample data section description"
+  },
+
+  "loadSampleData": "Load Sample Data",
+  "@loadSampleData": {
+    "description": "Load sample data button"
+  },
+
+  "clearAllData": "Clear All Data",
+  "@clearAllData": {
+    "description": "Clear all data button"
+  },
+
+  "clearAllDataConfirmTitle": "Clear All Data",
+  "@clearAllDataConfirmTitle": {
+    "description": "Clear data confirmation dialog title"
+  },
+
+  "clearAllDataConfirmMessage": "This will clear all contacts and SAR markers. Are you sure?",
+  "@clearAllDataConfirmMessage": {
+    "description": "Clear data confirmation message"
+  },
+
+  "clear": "Clear",
+  "@clear": {
+    "description": "Clear button label"
+  },
+
+  "loadedSampleData": "Loaded {teamCount} team members, {channelCount} channels, {sarCount} SAR markers, {messageCount} messages",
+  "@loadedSampleData": {
+    "description": "Success message after loading sample data",
+    "placeholders": {
+      "teamCount": {
+        "type": "int"
+      },
+      "channelCount": {
+        "type": "int"
+      },
+      "sarCount": {
+        "type": "int"
+      },
+      "messageCount": {
+        "type": "int"
+      }
+    }
+  },
+
+  "failedToLoadSampleData": "Failed to load sample data: {error}",
+  "@failedToLoadSampleData": {
+    "description": "Error message when sample data fails to load",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "allDataCleared": "All data cleared",
+  "@allDataCleared": {
+    "description": "Success message after clearing all data"
+  },
+
+  "failedToStartBackgroundTracking": "Failed to start background tracking. Check permissions and BLE connection.",
+  "@failedToStartBackgroundTracking": {
+    "description": "Error message when background tracking fails to start"
+  },
+
+  "locationBroadcast": "Location broadcast: {latitude}, {longitude}",
+  "@locationBroadcast": {
+    "description": "Success message for location broadcast",
+    "placeholders": {
+      "latitude": {
+        "type": "String"
+      },
+      "longitude": {
+        "type": "String"
+      }
+    }
+  },
+
+  "defaultPinInfo": "The default pin for devices without a screen is 123456. Trouble pairing? Forget the bluetooth device in system settings.",
+  "@defaultPinInfo": {
+    "description": "Information about default PIN for pairing"
+  }
+}

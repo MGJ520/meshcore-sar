@@ -18,12 +18,16 @@ import '../utils/toast_logger.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
+  final Function(Locale?) onLocaleChanged;
   final AppThemeMode currentTheme;
+  final Locale? currentLocale;
 
   const HomeScreen({
     super.key,
     required this.onThemeChanged,
+    required this.onLocaleChanged,
     required this.currentTheme,
+    required this.currentLocale,
   });
 
   @override
@@ -493,7 +497,9 @@ class _HomeScreenState extends State<HomeScreen>
                             MaterialPageRoute(
                               builder: (context) => SettingsScreen(
                                 onThemeChanged: widget.onThemeChanged,
+                                onLocaleChanged: widget.onLocaleChanged,
                                 currentTheme: widget.currentTheme,
+                                currentLocale: widget.currentLocale,
                               ),
                             ),
                           );
@@ -575,72 +581,131 @@ class _HomeScreenState extends State<HomeScreen>
 
         return Row(
           children: [
+            // LEFT SECTION: Name + BT/Battery status + Settings cog
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'MeshCore',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  if (isConnected)
-                    Row(
+                  // Name and status group
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // BLE connection strength indicator with RSSI
-                        Icon(
-                          Icons.bluetooth_connected,
-                          color: deviceInfo.signalRssi != null
-                              ? _getSignalColor(deviceInfo.signalRssi!)
-                              : Colors.grey,
-                          size: 14,
+                        Text(
+                          isConnected && deviceInfo.selfName != null
+                              ? deviceInfo.selfName!
+                              : 'MeshCore',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 3),
-                        if (deviceInfo.signalRssi != null)
-                          Flexible(
-                            child: Text(
-                              '${deviceInfo.signalRssi}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _getSignalColor(deviceInfo.signalRssi!),
-                                fontWeight: FontWeight.w500,
+                        if (isConnected)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // BLE connection strength indicator with RSSI
+                              Icon(
+                                Icons.bluetooth_connected,
+                                color: deviceInfo.signalRssi != null
+                                    ? _getSignalColor(deviceInfo.signalRssi!)
+                                    : Colors.grey,
+                                size: 14,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        // Battery indicator
-                        if (deviceInfo.batteryPercent != null) ...[
-                          Icon(
-                            _getBatteryIcon(deviceInfo.batteryPercent!),
-                            color: _getBatteryColor(deviceInfo.batteryPercent!),
-                            size: 14,
-                          ),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              '${deviceInfo.batteryPercent!.round()}%',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _getBatteryColor(
-                                  deviceInfo.batteryPercent!,
+                              const SizedBox(width: 3),
+                              if (deviceInfo.signalRssi != null)
+                                Flexible(
+                                  child: Text(
+                                    '${deviceInfo.signalRssi}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _getSignalColor(deviceInfo.signalRssi!),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                              const SizedBox(width: 8),
+                              // Battery indicator
+                              if (deviceInfo.batteryPercent != null) ...[
+                                Icon(
+                                  _getBatteryIcon(deviceInfo.batteryPercent!),
+                                  color: _getBatteryColor(deviceInfo.batteryPercent!),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    '${deviceInfo.batteryPercent!.round()}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _getBatteryColor(
+                                        deviceInfo.batteryPercent!,
+                                      ),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          )
+                        else if (provider.isReconnecting)
+                          Text(
+                            'Reconnecting...',
+                            style: TextStyle(fontSize: 12, color: Colors.orange[600]),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
                       ],
-                    )
-                  else if (provider.isReconnecting)
-                    Text(
-                      'Reconnecting... (${provider.reconnectionAttempt}/${provider.maxReconnectionAttempts})',
-                      style: TextStyle(fontSize: 14, color: Colors.orange[600]),
                     ),
+                  ),
+                  // Settings cog - part of left group
+                  if (isConnected) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DeviceConfigScreen(),
+                          ),
+                        );
+                      },
+                      onLongPress: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PacketLogScreen(bleService: provider.bleService),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.settings, size: 20),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+
+            // CENTER SECTION: Broadcast button (when connected)
+            if (isConnected) ...[
+              FilledButton(
+                onPressed: () => _advertiseDevice(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(10),
+                  minimumSize: const Size(40, 40),
+                  shape: const CircleBorder(),
+                ),
+                child: const Icon(Icons.campaign, size: 20),
+              ),
+            ],
+
+            // RIGHT SECTION: Connect button OR RX/TX indicators
             if (!isConnected)
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -663,7 +728,7 @@ class _HomeScreenState extends State<HomeScreen>
                         : const Icon(Icons.bluetooth, size: 18),
                     label: Text(
                       provider.isReconnecting
-                          ? 'Reconnecting (${provider.reconnectionAttempt}/${provider.maxReconnectionAttempts})'
+                          ? '${provider.reconnectionAttempt}/${provider.maxReconnectionAttempts}'
                           : 'Connect',
                     ),
                     style: ElevatedButton.styleFrom(
@@ -691,123 +756,72 @@ class _HomeScreenState extends State<HomeScreen>
                   ],
                 ],
               )
-            else
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Advertise button (broadcast location)
-                  FilledButton(
-                    onPressed: () => _advertiseDevice(context),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(10),
-                      minimumSize: const Size(40, 40),
-                      shape: const CircleBorder(),
+            else if (_showRxTxIndicators)
+              GestureDetector(
+                onLongPress: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          PacketLogScreen(bleService: provider.bleService),
                     ),
-                    child: const Icon(Icons.campaign, size: 20),
-                  ),
-                  if (_showRxTxIndicators) ...[
-                    const SizedBox(width: 8),
-                    // RX/TX indicators with long press to open packet log
-                    GestureDetector(
-                      onLongPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                PacketLogScreen(bleService: provider.bleService),
+                  );
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // RX indicator
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: provider.rxActivity
+                                ? Colors.green
+                                : Colors.grey.withOpacity(0.3),
                           ),
-                        );
-                      },
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // RX indicator
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: provider.rxActivity
-                                      ? Colors.green
-                                      : Colors.grey.withOpacity(0.3),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'RX:${provider.rxPacketCount}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'RX:${provider.rxPacketCount}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
                           ),
-                          const SizedBox(height: 4),
-                          // TX indicator
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: provider.txActivity
-                                      ? Colors.blue
-                                      : Colors.grey.withOpacity(0.3),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'TX:${provider.txPacketCount}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(height: 4),
+                    // TX indicator
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: provider.txActivity
+                                ? Colors.blue
+                                : Colors.grey.withOpacity(0.3),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'TX:${provider.txPacketCount}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                  // Settings button (tap for device settings, long press for packet logs)
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DeviceConfigScreen(),
-                        ),
-                      );
-                    },
-                    onLongPress: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              PacketLogScreen(bleService: provider.bleService),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.settings, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // Disconnect button (prominent, icon only) - pushed to far right edge
-                ],
+                ),
               ),
           ],
         );

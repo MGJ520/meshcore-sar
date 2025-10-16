@@ -8,17 +8,22 @@ import '../providers/contacts_provider.dart';
 import '../providers/messages_provider.dart';
 import '../providers/app_provider.dart';
 import '../services/location_tracking_service.dart';
+import '../services/locale_preferences.dart';
 import '../utils/sample_data_generator.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
+  final Function(Locale?) onLocaleChanged;
   final AppThemeMode currentTheme;
+  final Locale? currentLocale;
 
   const SettingsScreen({
     super.key,
     required this.onThemeChanged,
+    required this.onLocaleChanged,
     required this.currentTheme,
+    required this.currentLocale,
   });
 
   @override
@@ -27,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late AppThemeMode _selectedTheme;
+  late Locale? _selectedLocale;
   PackageInfo? _packageInfo;
   bool _isLoadingSampleData = false;
   bool _showRxTxIndicators = true;
@@ -36,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _selectedTheme = widget.currentTheme;
+    _selectedLocale = widget.currentLocale;
     _loadPackageInfo();
     _initializeLocationService();
     _loadRxTxPreference();
@@ -133,6 +140,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _saveThemePreference(theme);
       widget.onThemeChanged(theme);
     }
+  }
+
+  Future<void> _saveLocalePreference(Locale? locale) async {
+    await LocalePreferences.setLocale(locale);
+  }
+
+  void _handleLocaleChange(Locale? locale) {
+    setState(() {
+      _selectedLocale = locale;
+    });
+    _saveLocalePreference(locale);
+    widget.onLocaleChanged(locale);
   }
 
   Future<void> _loadSampleData() async {
@@ -321,6 +340,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               });
               await _saveRxTxPreference(value);
             },
+          ),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text('Language'),
+            subtitle: Text(LocalePreferences.getDisplayName(_selectedLocale)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showLanguageDialog(),
           ),
           const Divider(),
 
@@ -748,6 +774,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Navigator.pop(context);
                 },
               ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLanguageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose Language'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<Locale?>(
+                title: const Text('System Default'),
+                subtitle: const Text('Follow system language'),
+                value: null,
+                groupValue: _selectedLocale,
+                onChanged: (value) {
+                  _handleLocaleChange(value);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              ...LocalePreferences.supportedLocales.map((locale) {
+                return RadioListTile<Locale?>(
+                  title: Text(LocalePreferences.getNativeDisplayName(locale)),
+                  value: locale,
+                  groupValue: _selectedLocale,
+                  onChanged: (value) {
+                    _handleLocaleChange(value);
+                    Navigator.pop(context);
+                  },
+                );
+              }),
             ],
           ),
         ),

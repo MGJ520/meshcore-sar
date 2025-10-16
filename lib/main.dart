@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/connection_provider.dart';
@@ -8,8 +9,10 @@ import 'providers/map_provider.dart';
 import 'providers/drawing_provider.dart';
 import 'providers/app_provider.dart';
 import 'services/tile_cache_service.dart';
+import 'services/locale_preferences.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 
 void main() {
   runApp(const MeshCoreSarApp());
@@ -24,6 +27,7 @@ class MeshCoreSarApp extends StatefulWidget {
 
 class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
   AppThemeMode _themeMode = AppThemeMode.system;
+  Locale? _locale;
   bool _isInitialized = false;
 
   @override
@@ -34,6 +38,7 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
 
   Future<void> _initializeApp() async {
     await _loadThemePreference();
+    await _loadLocalePreference();
     setState(() {
       _isInitialized = true;
     });
@@ -47,9 +52,22 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
     });
   }
 
+  Future<void> _loadLocalePreference() async {
+    final locale = await LocalePreferences.getLocale();
+    setState(() {
+      _locale = locale;
+    });
+  }
+
   void _handleThemeChanged(AppThemeMode mode) {
     setState(() {
       _themeMode = mode;
+    });
+  }
+
+  void _handleLocaleChanged(Locale? locale) {
+    setState(() {
+      _locale = locale;
     });
   }
 
@@ -125,9 +143,19 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
             title: 'MeshCore SAR',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.getTheme(_themeMode, systemBrightness),
+            locale: _locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: LocalePreferences.supportedLocales,
             home: HomeScreen(
               onThemeChanged: _handleThemeChanged,
+              onLocaleChanged: _handleLocaleChanged,
               currentTheme: _themeMode,
+              currentLocale: _locale,
             ),
           );
         },

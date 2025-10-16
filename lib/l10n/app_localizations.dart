@@ -1850,6 +1850,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to view on map'**
   String get tapToViewOnMap;
+
+  /// Section title for radio settings
+  ///
+  /// In en, this message translates to:
+  /// **'Radio Settings'**
+  String get radioSettings;
+
+  /// Label for radio frequency field
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency (MHz)'**
+  String get frequencyMHz;
+
+  /// Helper text example for frequency
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., 869.618'**
+  String get frequencyExample;
+
+  /// Label for bandwidth dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Bandwidth'**
+  String get bandwidth;
+
+  /// Label for spreading factor dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Spreading Factor'**
+  String get spreadingFactor;
+
+  /// Label for coding rate dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Coding Rate'**
+  String get codingRate;
+
+  /// Label for TX power field
+  ///
+  /// In en, this message translates to:
+  /// **'TX Power (dBm)'**
+  String get txPowerDbm;
+
+  /// Helper text showing maximum TX power
+  ///
+  /// In en, this message translates to:
+  /// **'Max: {power} dBm'**
+  String maxPowerDbm(int power);
 }
 
 class _AppLocalizationsDelegate

@@ -1733,5 +1733,48 @@
   "tapToViewOnMap": "Tap to view on map",
   "@tapToViewOnMap": {
     "description": "Notification action text"
+  },
+  
+  "radioSettings": "Radio Settings",
+  "@radioSettings": {
+    "description": "Section title for radio settings"
+  },
+
+  "frequencyMHz": "Frequency (MHz)",
+  "@frequencyMHz": {
+    "description": "Label for radio frequency field"
+  },
+
+  "frequencyExample": "e.g., 869.618",
+  "@frequencyExample": {
+    "description": "Helper text example for frequency"
+  },
+
+  "bandwidth": "Bandwidth",
+  "@bandwidth": {
+    "description": "Label for bandwidth dropdown"
+  },
+
+  "spreadingFactor": "Spreading Factor",
+  "@spreadingFactor": {
+    "description": "Label for spreading factor dropdown"
+  },
+
+  "codingRate": "Coding Rate",
+  "@codingRate": {
+    "description": "Label for coding rate dropdown"
+  },
+
+  "txPowerDbm": "TX Power (dBm)",
+  "@txPowerDbm": {
+    "description": "Label for TX power field"
+  },
+
+  "maxPowerDbm": "Max: {power} dBm",
+  "@maxPowerDbm": {
+    "description": "Helper text showing maximum TX power",
+    "placeholders": {
+      "power": { "type": "int" }
+    }
   }
 }

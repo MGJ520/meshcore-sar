@@ -1011,4 +1011,30 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get tapToViewOnMap => 'Dodirnite za prikaz na karti';
+
+  @override
+  String get radioSettings => 'Postavke radija';
+
+  @override
+  String get frequencyMHz => 'Frekvencija (MHz)';
+
+  @override
+  String get frequencyExample => 'npr. 869.618';
+
+  @override
+  String get bandwidth => 'Širina pojasa';
+
+  @override
+  String get spreadingFactor => 'Faktor širenja';
+
+  @override
+  String get codingRate => 'Omjer kodiranja';
+
+  @override
+  String get txPowerDbm => 'TX snaga (dBm)';
+
+  @override
+  String maxPowerDbm(int power) {
+    return 'Maks: $power dBm';
+  }
 }

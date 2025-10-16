@@ -581,5 +581,14 @@
 
   "coordinates": "Koordinate",
 
-  "tapToViewOnMap": "Dodirnite za prikaz na karti"
+  "tapToViewOnMap": "Dodirnite za prikaz na karti",
+
+  "radioSettings": "Postavke radija",
+  "frequencyMHz": "Frekvencija (MHz)",
+  "frequencyExample": "npr. 869.618",
+  "bandwidth": "Širina pojasa",
+  "spreadingFactor": "Faktor širenja",
+  "codingRate": "Omjer kodiranja",
+  "txPowerDbm": "TX snaga (dBm)",
+  "maxPowerDbm": "Maks: {power} dBm"
 }

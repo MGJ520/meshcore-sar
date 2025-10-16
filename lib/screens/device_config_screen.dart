@@ -48,31 +48,44 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       text: deviceInfo.selfName ?? deviceInfo.deviceName ?? '',
     );
     _latController = TextEditingController(
-      text: deviceInfo.advLat != null ? (deviceInfo.advLat! / 1000000).toStringAsFixed(6) : '0.0',
+      text: deviceInfo.advLat != null
+          ? (deviceInfo.advLat! / 1000000).toStringAsFixed(6)
+          : '0.0',
     );
     _lonController = TextEditingController(
-      text: deviceInfo.advLon != null ? (deviceInfo.advLon! / 1000000).toStringAsFixed(6) : '0.0',
+      text: deviceInfo.advLon != null
+          ? (deviceInfo.advLon! / 1000000).toStringAsFixed(6)
+          : '0.0',
     );
     _freqController = TextEditingController(
-      text: deviceInfo.radioFreq != null ? (deviceInfo.radioFreq! / 1000).toStringAsFixed(3) : '869.618',
+      text: deviceInfo.radioFreq != null
+          ? (deviceInfo.radioFreq! / 1000).toStringAsFixed(3)
+          : '869.618',
     );
     _txPowerController = TextEditingController(
       text: deviceInfo.txPower?.toString() ?? '20',
     );
 
-    if (deviceInfo.radioBw != null && deviceInfo.radioBw! >= 0 && deviceInfo.radioBw! <= 9) {
+    if (deviceInfo.radioBw != null &&
+        deviceInfo.radioBw! >= 0 &&
+        deviceInfo.radioBw! <= 9) {
       _selectedBandwidth = _bandwidthFromValue(deviceInfo.radioBw!);
     }
-    if (deviceInfo.radioSf != null && deviceInfo.radioSf! >= 7 && deviceInfo.radioSf! <= 12) {
+    if (deviceInfo.radioSf != null &&
+        deviceInfo.radioSf! >= 7 &&
+        deviceInfo.radioSf! <= 12) {
       _selectedSpreadingFactor = deviceInfo.radioSf!;
     }
-    if (deviceInfo.radioCr != null && deviceInfo.radioCr! >= 5 && deviceInfo.radioCr! <= 8) {
+    if (deviceInfo.radioCr != null &&
+        deviceInfo.radioCr! >= 5 &&
+        deviceInfo.radioCr! <= 8) {
       _selectedCodingRate = deviceInfo.radioCr!;
     }
 
     // Check if telemetry is enabled (check if lat/lon are set and not zero)
-    _telemetryEnabled = (deviceInfo.advLat != null && deviceInfo.advLat! != 0) ||
-                        (deviceInfo.advLon != null && deviceInfo.advLon! != 0);
+    _telemetryEnabled =
+        (deviceInfo.advLat != null && deviceInfo.advLat! != 0) ||
+        (deviceInfo.advLon != null && deviceInfo.advLon! != 0);
   }
 
   @override
@@ -87,17 +100,28 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
 
   String _bandwidthFromValue(int bw) {
     switch (bw) {
-      case 0: return '7.8 kHz';
-      case 1: return '10.4 kHz';
-      case 2: return '15.6 kHz';
-      case 3: return '20.8 kHz';
-      case 4: return '31.25 kHz';
-      case 5: return '41.7 kHz';
-      case 6: return '62.5 kHz';
-      case 7: return '125 kHz';
-      case 8: return '250 kHz';
-      case 9: return '500 kHz';
-      default: return '62.5 kHz';
+      case 0:
+        return '7.8 kHz';
+      case 1:
+        return '10.4 kHz';
+      case 2:
+        return '15.6 kHz';
+      case 3:
+        return '20.8 kHz';
+      case 4:
+        return '31.25 kHz';
+      case 5:
+        return '41.7 kHz';
+      case 6:
+        return '62.5 kHz';
+      case 7:
+        return '125 kHz';
+      case 8:
+        return '250 kHz';
+      case 9:
+        return '500 kHz';
+      default:
+        return '62.5 kHz';
     }
   }
 
@@ -159,10 +183,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
         );
       } else {
         // Clear position
-        await connectionProvider.setAdvertLatLon(
-          latitude: 0.0,
-          longitude: 0.0,
-        );
+        await connectionProvider.setAdvertLatLon(latitude: 0.0, longitude: 0.0);
 
         // Set telemetry modes to "Deny" (mode 0)
         final telemetryModes = 0x00;
@@ -269,7 +290,11 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (!serviceEnabled) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.locationServicesDisabled)),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.locationServicesDisabled,
+              ),
+            ),
           );
         }
         return;
@@ -281,7 +306,11 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
         if (permission == LocationPermission.denied) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(AppLocalizations.of(context)!.locationPermissionDenied)),
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)!.locationPermissionDenied,
+                ),
+              ),
             );
           }
           return;
@@ -291,7 +320,13 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (permission == LocationPermission.deniedForever) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.locationPermissionPermanentlyDenied)),
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.locationPermissionPermanentlyDenied,
+              ),
+            ),
           );
         }
         return;
@@ -312,19 +347,21 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.locationBroadcast(
-              position.latitude.toStringAsFixed(6),
-              position.longitude.toStringAsFixed(6),
-            )),
+            content: Text(
+              AppLocalizations.of(context)!.locationBroadcast(
+                position.latitude.toStringAsFixed(6),
+                position.longitude.toStringAsFixed(6),
+              ),
+            ),
             backgroundColor: Colors.green,
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to get location: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
       }
     }
   }
@@ -352,11 +389,17 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
 
       if (context.mounted) {
         final deviceInfo = connectionProvider.deviceInfo;
-        final lat = deviceInfo.advLat != null ? (deviceInfo.advLat! / 1000000).toStringAsFixed(6) : '0.0';
-        final lon = deviceInfo.advLon != null ? (deviceInfo.advLon! / 1000000).toStringAsFixed(6) : '0.0';
+        final lat = deviceInfo.advLat != null
+            ? (deviceInfo.advLat! / 1000000).toStringAsFixed(6)
+            : '0.0';
+        final lon = deviceInfo.advLon != null
+            ? (deviceInfo.advLon! / 1000000).toStringAsFixed(6)
+            : '0.0';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.advertisedAtLocation(lat, lon)),
+            content: Text(
+              AppLocalizations.of(context)!.advertisedAtLocation(lat, lon),
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -365,7 +408,9 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.failedToAdvertise(e.toString())),
+            content: Text(
+              AppLocalizations.of(context)!.failedToAdvertise(e.toString()),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -383,9 +428,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.settings),
-      ),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.settings)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -408,11 +451,26 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                   _InfoRow('Type', _getDeviceTypeString(deviceInfo.deviceType)),
                   _InfoRow('Model', deviceInfo.manufacturerModel ?? 'Unknown'),
                   _InfoRow('Version', deviceInfo.semanticVersion ?? 'Unknown'),
-                  _InfoRow('Build Date', deviceInfo.firmwareBuildDate ?? 'Unknown'),
-                  _InfoRow('Firmware', 'v${deviceInfo.firmwareVersion?.toString() ?? "?"}'),
-                  _InfoRow('Max Contacts', deviceInfo.maxContacts?.toString() ?? 'Unknown'),
-                  _InfoRow('Max Channels', deviceInfo.maxChannels?.toString() ?? 'Unknown'),
-                  _CopyableInfoRow('Public Key', _getPublicKeyHex(deviceInfo.publicKey)),
+                  _InfoRow(
+                    'Build Date',
+                    deviceInfo.firmwareBuildDate ?? 'Unknown',
+                  ),
+                  _InfoRow(
+                    'Firmware',
+                    'v${deviceInfo.firmwareVersion?.toString() ?? "?"}',
+                  ),
+                  _InfoRow(
+                    'Max Contacts',
+                    deviceInfo.maxContacts?.toString() ?? 'Unknown',
+                  ),
+                  _InfoRow(
+                    'Max Channels',
+                    deviceInfo.maxChannels?.toString() ?? 'Unknown',
+                  ),
+                  _CopyableInfoRow(
+                    'Public Key',
+                    _getPublicKeyHex(deviceInfo.publicKey),
+                  ),
                 ],
               ),
             ),
@@ -439,17 +497,6 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton.outlined(
-                            onPressed: _isBroadcasting ? null : _broadcastNow,
-                            icon: _isBroadcasting
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.sensors),
-                            tooltip: AppLocalizations.of(context)!.settings,
-                          ),
                           const SizedBox(width: 8),
                           IconButton.filled(
                             onPressed: _savePublicInfo,
@@ -554,7 +601,7 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Radio Settings',
+                        AppLocalizations.of(context)!.radioSettings,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -571,21 +618,23 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                   // LoRa Frequency
                   TextField(
                     controller: _freqController,
-                    decoration: const InputDecoration(
-                      labelText: 'Frequency (MHz)',
-                      border: OutlineInputBorder(),
-                      helperText: 'e.g., 869.618',
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.frequencyMHz,
+                      border: const OutlineInputBorder(),
+                      helperText: AppLocalizations.of(context)!.frequencyExample,
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                   const SizedBox(height: 16),
 
                   // Bandwidth
                   DropdownButtonFormField<String>(
                     value: _selectedBandwidth,
-                    decoration: const InputDecoration(
-                      labelText: 'Bandwidth',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.bandwidth,
+                      border: const OutlineInputBorder(),
                     ),
                     items: _bandwidthOptions.map((String value) {
                       return DropdownMenuItem<String>(
@@ -606,11 +655,13 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                   // Spreading Factor
                   DropdownButtonFormField<int>(
                     value: _selectedSpreadingFactor,
-                    decoration: const InputDecoration(
-                      labelText: 'Spreading Factor',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.spreadingFactor,
+                      border: const OutlineInputBorder(),
                     ),
-                    items: List.generate(6, (index) => index + 7).map((int value) {
+                    items: List.generate(6, (index) => index + 7).map((
+                      int value,
+                    ) {
                       return DropdownMenuItem<int>(
                         value: value,
                         child: Text(value.toString()),
@@ -629,11 +680,13 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                   // Coding Rate
                   DropdownButtonFormField<int>(
                     value: _selectedCodingRate,
-                    decoration: const InputDecoration(
-                      labelText: 'Coding Rate',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.codingRate,
+                      border: const OutlineInputBorder(),
                     ),
-                    items: List.generate(4, (index) => index + 5).map((int value) {
+                    items: List.generate(4, (index) => index + 5).map((
+                      int value,
+                    ) {
                       return DropdownMenuItem<int>(
                         value: value,
                         child: Text(value.toString()),
@@ -653,9 +706,9 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
                   TextField(
                     controller: _txPowerController,
                     decoration: InputDecoration(
-                      labelText: 'TX Power (dBm)',
+                      labelText: AppLocalizations.of(context)!.txPowerDbm,
                       border: const OutlineInputBorder(),
-                      helperText: 'Max: ${deviceInfo.maxTxPower ?? 22} dBm',
+                      helperText: AppLocalizations.of(context)!.maxPowerDbm(deviceInfo.maxTxPower ?? 22),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -673,11 +726,16 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
   String _getDeviceTypeString(int? deviceType) {
     if (deviceType == null) return 'Unknown';
     switch (deviceType) {
-      case 0: return 'None/Unknown';
-      case 1: return 'Chat Node';
-      case 2: return 'Repeater';
-      case 3: return 'Room/Channel';
-      default: return 'Type $deviceType';
+      case 0:
+        return 'None/Unknown';
+      case 1:
+        return 'Chat Node';
+      case 2:
+        return 'Repeater';
+      case 3:
+        return 'Room/Channel';
+      default:
+        return 'Type $deviceType';
     }
   }
 
@@ -713,9 +771,7 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],

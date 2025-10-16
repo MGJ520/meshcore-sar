@@ -1009,4 +1009,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapToViewOnMap => 'Tap to view on map';
+
+  @override
+  String get radioSettings => 'Radio Settings';
+
+  @override
+  String get frequencyMHz => 'Frequency (MHz)';
+
+  @override
+  String get frequencyExample => 'e.g., 869.618';
+
+  @override
+  String get bandwidth => 'Bandwidth';
+
+  @override
+  String get spreadingFactor => 'Spreading Factor';
+
+  @override
+  String get codingRate => 'Coding Rate';
+
+  @override
+  String get txPowerDbm => 'TX Power (dBm)';
+
+  @override
+  String maxPowerDbm(int power) {
+    return 'Max: $power dBm';
+  }
 }

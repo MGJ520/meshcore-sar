@@ -888,4 +888,106 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get sarAlert => 'SAR ALARM';
+
+  @override
+  String get messageSentToPublicChannel => 'Sporočilo poslano na javni kanal';
+
+  @override
+  String get pleaseSelectRoomToSendSar =>
+      'Prosimo, izberite sobo za pošiljanje SAR označevalca';
+
+  @override
+  String failedToSendSarMarker(String error) {
+    return 'Pošiljanje SAR označevalca ni uspelo: $error';
+  }
+
+  @override
+  String sarMarkerSentTo(String roomName) {
+    return 'SAR označevalec poslan v $roomName';
+  }
+
+  @override
+  String get notConnectedCannotSync =>
+      'Ni povezano - sporočil ni mogoče sinhronizirati';
+
+  @override
+  String syncedMessageCount(int count) {
+    return 'Sinhronizirano $count sporočil';
+  }
+
+  @override
+  String get noNewMessages => 'Ni novih sporočil';
+
+  @override
+  String syncFailed(String error) {
+    return 'Sinhronizacija ni uspela: $error';
+  }
+
+  @override
+  String get failedToResendMessage => 'Ponovno pošiljanje sporočila ni uspelo';
+
+  @override
+  String get retryingMessage => 'Ponovni poskus pošiljanja sporočila...';
+
+  @override
+  String retryFailed(String error) {
+    return 'Ponovni poskus ni uspel: $error';
+  }
+
+  @override
+  String get textCopiedToClipboard => 'Besedilo kopirano v odložišče';
+
+  @override
+  String get cannotReplySenderMissing =>
+      'Ni mogoče odgovoriti: informacije o pošiljatelju manjkajo';
+
+  @override
+  String get cannotReplyContactNotFound =>
+      'Ni mogoče odgovoriti: stik ni najden';
+
+  @override
+  String get messageDeleted => 'Sporočilo izbrisano';
+
+  @override
+  String get refreshedContacts => 'Stiki osveženi';
+
+  @override
+  String get justNow => 'Pravkar';
+
+  @override
+  String minutesAgo(int minutes) {
+    return 'pred ${minutes}m';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return 'pred ${hours}h';
+  }
+
+  @override
+  String daysAgo(int days) {
+    return 'pred ${days}d';
+  }
+
+  @override
+  String secondsAgo(int seconds) {
+    return 'pred ${seconds}s';
+  }
+
+  @override
+  String get sending => 'Pošiljanje...';
+
+  @override
+  String get sent => 'Poslano';
+
+  @override
+  String get delivered => 'Dostavljeno';
+
+  @override
+  String deliveredWithTime(int time) {
+    return 'Dostavljeno (${time}ms)';
+  }
+
+  @override
+  String get failed => 'Neuspešno';
 }

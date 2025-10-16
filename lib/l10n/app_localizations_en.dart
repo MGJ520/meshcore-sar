@@ -888,4 +888,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sarAlert => 'SAR ALERT';
+
+  @override
+  String get messageSentToPublicChannel => 'Message sent to public channel';
+
+  @override
+  String get pleaseSelectRoomToSendSar =>
+      'Please select a room to send SAR marker';
+
+  @override
+  String failedToSendSarMarker(String error) {
+    return 'Failed to send SAR marker: $error';
+  }
+
+  @override
+  String sarMarkerSentTo(String roomName) {
+    return 'SAR marker sent to $roomName';
+  }
+
+  @override
+  String get notConnectedCannotSync => 'Not connected - cannot sync messages';
+
+  @override
+  String syncedMessageCount(int count) {
+    return 'Synced $count message(s)';
+  }
+
+  @override
+  String get noNewMessages => 'No new messages';
+
+  @override
+  String syncFailed(String error) {
+    return 'Sync failed: $error';
+  }
+
+  @override
+  String get failedToResendMessage => 'Failed to resend message';
+
+  @override
+  String get retryingMessage => 'Retrying message...';
+
+  @override
+  String retryFailed(String error) {
+    return 'Retry failed: $error';
+  }
+
+  @override
+  String get textCopiedToClipboard => 'Text copied to clipboard';
+
+  @override
+  String get cannotReplySenderMissing =>
+      'Cannot reply: sender information missing';
+
+  @override
+  String get cannotReplyContactNotFound => 'Cannot reply: contact not found';
+
+  @override
+  String get messageDeleted => 'Message deleted';
+
+  @override
+  String get refreshedContacts => 'Refreshed contacts';
+
+  @override
+  String get justNow => 'Just now';
+
+  @override
+  String minutesAgo(int minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String daysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String secondsAgo(int seconds) {
+    return '${seconds}s ago';
+  }
+
+  @override
+  String get sending => 'Sending...';
+
+  @override
+  String get sent => 'Sent';
+
+  @override
+  String get delivered => 'Delivered';
+
+  @override
+  String deliveredWithTime(int time) {
+    return 'Delivered (${time}ms)';
+  }
+
+  @override
+  String get failed => 'Failed';
 }

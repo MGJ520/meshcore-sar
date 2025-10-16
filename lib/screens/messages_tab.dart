@@ -14,6 +14,7 @@ import '../widgets/contacts/direct_message_sheet.dart';
 import '../utils/toast_logger.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/sar_marker_extensions.dart';
+import '../utils/message_extensions.dart';
 
 class MessagesTab extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -919,7 +920,7 @@ class _MessageBubble extends StatelessWidget {
                 ],
                 const Spacer(),
                 Text(
-                  message.timeAgo,
+                  message.getLocalizedTimeAgo(context),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: isSarMarker
                         ? FontWeight.w600
@@ -997,7 +998,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                   const SizedBox(width: 3),
                   Text(
-                    message.deliveryStatusText,
+                    message.getLocalizedDeliveryStatus(context),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: _getDeliveryStatusColor(message.deliveryStatus),
                       fontStyle: FontStyle.italic,
@@ -1239,7 +1240,7 @@ class _SystemMessageBubble extends StatelessWidget {
           Icon(_getLevelIcon(level), size: 14, color: levelColor),
           const SizedBox(width: 6),
           Text(
-            message.timeAgo,
+            message.getLocalizedTimeAgo(context),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Theme.of(
                 context,

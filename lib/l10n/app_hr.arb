@@ -535,5 +535,37 @@
 
   "deliveredWithTime": "Dostavljeno ({time}ms)",
 
-  "failed": "Neuspjelo"
+  "failed": "Neuspjelo",
+
+  "messageSentToPublicChannel": "Poruka poslana na javni kanal",
+
+  "pleaseSelectRoomToSendSar": "Molimo odaberite sobu za slanje SAR markera",
+
+  "failedToSendSarMarker": "Neuspjelo slanje SAR markera: {error}",
+
+  "sarMarkerSentTo": "SAR marker poslan u {roomName}",
+
+  "notConnectedCannotSync": "Nije povezano - ne može se sinkronizirati poruke",
+
+  "syncedMessageCount": "Sinkronizirano {count} poruka",
+
+  "noNewMessages": "Nema novih poruka",
+
+  "syncFailed": "Sinkronizacija nije uspjela: {error}",
+
+  "failedToResendMessage": "Neuspjelo ponovno slanje poruke",
+
+  "retryingMessage": "Ponovni pokušaj slanja poruke...",
+
+  "retryFailed": "Ponovni pokušaj nije uspio: {error}",
+
+  "textCopiedToClipboard": "Tekst kopiran u međuspremnik",
+
+  "cannotReplySenderMissing": "Ne mogu odgovoriti: informacije o pošiljatelju nedostaju",
+
+  "cannotReplyContactNotFound": "Ne mogu odgovoriti: kontakt nije pronađen",
+
+  "messageDeleted": "Poruka izbrisana",
+
+  "refreshedContacts": "Kontakti osvježeni"
 }

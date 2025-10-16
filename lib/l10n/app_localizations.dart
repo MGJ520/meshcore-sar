@@ -1652,6 +1652,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'SAR ALERT'**
   String get sarAlert;
+
+  /// Success message when message is sent to public channel
+  ///
+  /// In en, this message translates to:
+  /// **'Message sent to public channel'**
+  String get messageSentToPublicChannel;
+
+  /// Error when no room is selected for SAR marker
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a room to send SAR marker'**
+  String get pleaseSelectRoomToSendSar;
+
+  /// Error message when SAR marker fails to send
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send SAR marker: {error}'**
+  String failedToSendSarMarker(String error);
+
+  /// Success message when SAR marker is sent to room
+  ///
+  /// In en, this message translates to:
+  /// **'SAR marker sent to {roomName}'**
+  String sarMarkerSentTo(String roomName);
+
+  /// Warning when trying to sync messages while not connected
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected - cannot sync messages'**
+  String get notConnectedCannotSync;
+
+  /// Success message showing number of synced messages
+  ///
+  /// In en, this message translates to:
+  /// **'Synced {count} message(s)'**
+  String syncedMessageCount(int count);
+
+  /// Info message when no new messages to sync
+  ///
+  /// In en, this message translates to:
+  /// **'No new messages'**
+  String get noNewMessages;
+
+  /// Error message when sync fails
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed: {error}'**
+  String syncFailed(String error);
+
+  /// Error when message retry fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to resend message'**
+  String get failedToResendMessage;
+
+  /// Info message when retrying a failed message
+  ///
+  /// In en, this message translates to:
+  /// **'Retrying message...'**
+  String get retryingMessage;
+
+  /// Error message when retry fails
+  ///
+  /// In en, this message translates to:
+  /// **'Retry failed: {error}'**
+  String retryFailed(String error);
+
+  /// Success message when text is copied
+  ///
+  /// In en, this message translates to:
+  /// **'Text copied to clipboard'**
+  String get textCopiedToClipboard;
+
+  /// Error when sender info is missing for reply
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reply: sender information missing'**
+  String get cannotReplySenderMissing;
+
+  /// Error when contact not found for reply
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reply: contact not found'**
+  String get cannotReplyContactNotFound;
+
+  /// Info message when message is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Message deleted'**
+  String get messageDeleted;
+
+  /// Success message when contacts are refreshed
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshed contacts'**
+  String get refreshedContacts;
+
+  /// Time indicator for very recent activity
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get justNow;
+
+  /// Time indicator for minutes ago
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String minutesAgo(int minutes);
+
+  /// Time indicator for hours ago
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String hoursAgo(int hours);
+
+  /// Time indicator for days ago
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String daysAgo(int days);
+
+  /// Time indicator for seconds ago
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s ago'**
+  String secondsAgo(int seconds);
+
+  /// Delivery status: sending
+  ///
+  /// In en, this message translates to:
+  /// **'Sending...'**
+  String get sending;
+
+  /// Delivery status: sent
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get sent;
+
+  /// Delivery status: delivered
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get delivered;
+
+  /// Delivery status with round-trip time
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered ({time}ms)'**
+  String deliveredWithTime(int time);
+
+  /// Delivery status: failed
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get failed;
 }
 
 class _AppLocalizationsDelegate

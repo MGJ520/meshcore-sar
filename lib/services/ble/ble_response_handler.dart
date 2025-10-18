@@ -439,6 +439,40 @@ class BleResponseHandler {
       final rawPacketData = data.sublist(2);
       print('    Raw packet data: ${rawPacketData.length} bytes');
 
+      // Decode packet header and path for display
+      if (rawPacketData.length >= 2) {
+        final header = rawPacketData[0];
+        final payloadType = (header >> 2) & 0x0F;
+        final pathLen = rawPacketData[1];
+
+        print('    Packet type: 0x${payloadType.toRadixString(16).padLeft(2, '0')}');
+
+        if (pathLen > 0 && rawPacketData.length >= 2 + pathLen) {
+          final path = rawPacketData.sublist(2, 2 + pathLen);
+          final pathStr = path.map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' → ');
+          print('    Path ($pathLen hops): $pathStr');
+
+          // Highlight multi-hop packets
+          if (pathLen > 1) {
+            print('    🔄 MULTI-HOP PACKET! Original sender: 0x${path[0].toRadixString(16).padLeft(2, '0')}');
+          }
+
+          // Check if our node hash is in the path
+          if (_ourNodeHash != null && path.contains(_ourNodeHash!)) {
+            print('    ✅✅✅ ECHO DETECTED! Path contains our hash (0x${_ourNodeHash!.toRadixString(16).padLeft(2, '0')}) ✅✅✅');
+            if (path[0] == _ourNodeHash) {
+              print('    👉 WE are the original sender!');
+            } else {
+              print('    👉 Original sender: 0x${path[0].toRadixString(16).padLeft(2, '0')}, WE sent it to the network');
+            }
+          } else {
+            print('    ℹ️  Does NOT contain our hash (not our message)');
+          }
+        } else {
+          print('    Path length: $pathLen');
+        }
+      }
+
       // Calculate entropy
       final uniqueBytes = rawPacketData.toSet().length;
       final entropy = uniqueBytes / rawPacketData.length;
@@ -509,15 +543,28 @@ class BleResponseHandler {
   /// Check if received packet is an echo of a sent message
   void _checkForEcho(Uint8List rawPacket, int snrRaw, int rssiDbm) {
     try {
+      print('  🔍 [Echo] _checkForEcho called, packet size: ${rawPacket.length} bytes');
+
       // Need at least header + path_len
-      if (rawPacket.length < 2) return;
+      if (rawPacket.length < 2) {
+        print('  ⚠️ [Echo] Packet too short');
+        return;
+      }
 
       final header = rawPacket[0];
       final payloadType = (header >> 2) & 0x0F;
-      if (payloadType != 0x05) return; // Only track GRP_TXT
+      print('  🔍 [Echo] Payload type: 0x${payloadType.toRadixString(16).padLeft(2, '0')}');
+      if (payloadType != 0x05) {
+        print('  ⚠️ [Echo] Not GRP_TXT, ignoring');
+        return; // Only track GRP_TXT
+      }
 
       final pathLen = rawPacket[1];
-      if (pathLen == 0 || rawPacket.length < 2 + pathLen) return;
+      print('  🔍 [Echo] Path length: $pathLen');
+      if (pathLen == 0 || rawPacket.length < 2 + pathLen) {
+        print('  ⚠️ [Echo] Invalid path length');
+        return;
+      }
 
       // Extract path for unique echo tracking
       final path = rawPacket.sublist(2, 2 + pathLen);
@@ -584,7 +631,7 @@ class BleResponseHandler {
 
       // Store by message ID temporarily
       _sentMessageTrackers[messageId] = tracker;
-      print('  📤 [Echo] Tracking message $messageId (will match any GRP_TXT within 2000ms)');
+      print('  📤 [Echo] Tracking message $messageId (will match any GRP_TXT within 10000ms)');
       print('  📊 [Echo] Total trackers: ${_sentMessageTrackers.length}');
 
       // Cleanup if too many trackers
@@ -619,20 +666,27 @@ class BleResponseHandler {
   /// [3+] = rest of path + encrypted payload
   void _associatePacketWithSentMessage(Uint8List rawPacket) {
     try {
+      print('  🔍 [Echo] _associatePacketWithSentMessage called, packet size: ${rawPacket.length}');
+
       // Need at least 3 bytes: header + path_len + first path byte
       if (rawPacket.length < 3) {
+        print('  ⚠️ [Echo] Packet too short for association');
         return;
       }
 
       // Check if this is a GRP_TXT packet (payload type = 0x05)
       final header = rawPacket[0];
       final payloadType = (header >> 2) & 0x0F;
+      print('  🔍 [Echo] Association check - Payload type: 0x${payloadType.toRadixString(16).padLeft(2, '0')}');
       if (payloadType != 0x05) { // Not a group message
+        print('  ⚠️ [Echo] Not GRP_TXT, skipping association');
         return;
       }
 
       final pathLen = rawPacket[1];
+      print('  🔍 [Echo] Path length for association: $pathLen');
       if (pathLen == 0) {
+        print('  ⚠️ [Echo] Path length is 0, skipping');
         return;
       }
 
@@ -657,13 +711,13 @@ class BleResponseHandler {
       // Hash only the encrypted payload to identify the same message
       final payloadHash = _simplePacketHash(encryptedPayload);
 
-      // Find pending trackers (within 2000ms window)
+      // Find pending trackers (within 10000ms window)
       for (final entry in _sentMessageTrackers.entries.toList()) {
         final tracker = entry.value;
         if (tracker.packetHashHex != 'pending') continue;
 
         final timeSinceSent = now.difference(tracker.sentTime);
-        if (timeSinceSent.inMilliseconds > 2000) continue; // Outside window
+        if (timeSinceSent.inMilliseconds > 10000) continue; // Outside window
 
         // This is the FIRST packet we see after sending - associate it!
         // Remove old entry by message ID
@@ -700,7 +754,16 @@ class BleResponseHandler {
 
   /// Remove expired trackers
   void _cleanupExpiredTrackers() {
-    _sentMessageTrackers.removeWhere((key, tracker) => tracker.isExpired);
+    final expiredCount = _sentMessageTrackers.values.where((t) => t.isExpired).length;
+    if (expiredCount > 0) {
+      print('  🧹 [Echo] Cleaning up $expiredCount expired tracker(s)');
+    }
+    _sentMessageTrackers.removeWhere((key, tracker) {
+      if (tracker.isExpired && tracker.packetHashHex == 'pending') {
+        print('  ⏱️ [Echo] Tracker expired without capturing: ${tracker.messageId}');
+      }
+      return tracker.isExpired;
+    });
   }
 
   /// Remove oldest trackers when limit exceeded

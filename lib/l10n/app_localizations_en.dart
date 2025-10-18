@@ -145,6 +145,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get croatian => 'Croatian';
 
   @override
+  String get german => 'German';
+
+  @override
+  String get spanish => 'Spanish';
+
+  @override
+  String get french => 'French';
+
+  @override
+  String get italian => 'Italian';
+
+  @override
   String get locationBroadcasting => 'Location Broadcasting';
 
   @override
@@ -384,6 +396,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storedPermanently => 'Stored permanently in room';
+
+  @override
+  String drawingsSentToPublicChannel(int count, String plural) {
+    return 'Sent $count map drawing$plural to Public Channel';
+  }
+
+  @override
+  String drawingsSharedToPublicChannel(int success, int total) {
+    return 'Shared $success/$total drawings to Public Channel';
+  }
 
   @override
   String get notConnectedToDevice => 'Not connected to device';
@@ -998,6 +1020,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failed => 'Failed';
+
+  @override
+  String get broadcast => 'Broadcast';
 
   @override
   String get sarMarkerFoundPerson => 'Found Person';

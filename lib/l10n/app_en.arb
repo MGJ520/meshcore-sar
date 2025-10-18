@@ -232,6 +232,26 @@
     "description": "Croatian language option"
   },
 
+  "german": "German",
+  "@german": {
+    "description": "German language option"
+  },
+
+  "spanish": "Spanish",
+  "@spanish": {
+    "description": "Spanish language option"
+  },
+
+  "french": "French",
+  "@french": {
+    "description": "French language option"
+  },
+
+  "italian": "Italian",
+  "@italian": {
+    "description": "Italian language option"
+  },
+
   "locationBroadcasting": "Location Broadcasting",
   "@locationBroadcasting": {
     "description": "Location settings section header"
@@ -637,6 +657,24 @@
   "storedPermanently": "Stored permanently in room",
   "@storedPermanently": {
     "description": "Description for room storage permanence"
+  },
+
+  "drawingsSentToPublicChannel": "Sent {count} map drawing{plural} to Public Channel",
+  "@drawingsSentToPublicChannel": {
+    "description": "System message when drawings are sent to public channel",
+    "placeholders": {
+      "count": {"type": "int"},
+      "plural": {"type": "String"}
+    }
+  },
+
+  "drawingsSharedToPublicChannel": "Shared {success}/{total} drawings to Public Channel",
+  "@drawingsSharedToPublicChannel": {
+    "description": "Snackbar message showing success count for drawings shared to public channel",
+    "placeholders": {
+      "success": {"type": "int"},
+      "total": {"type": "int"}
+    }
   },
 
   "notConnectedToDevice": "Not connected to device",
@@ -1713,6 +1751,11 @@
   "failed": "Failed",
   "@failed": {
     "description": "Delivery status: failed"
+  },
+
+  "broadcast": "Broadcast",
+  "@broadcast": {
+    "description": "Delivery status for channel messages (no echoes yet)"
   },
 
   "sarMarkerFoundPerson": "Found Person",

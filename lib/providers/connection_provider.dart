@@ -133,6 +133,8 @@ class ConnectionProvider with ChangeNotifier {
   Function(String messageId, int expectedAckTag, int suggestedTimeoutMs)?
   onMessageSent;
   Function(int ackCode, int roundTripTimeMs)? onMessageDelivered;
+  Function(String messageId, int echoCount, int snrRaw, int rssiDbm)?
+  onMessageEchoDetected;
   Function(Uint8List publicKeyPrefix, Uint8List statusData)? onStatusResponse;
 
   // Track pending send operations for auto-recovery
@@ -379,6 +381,13 @@ class ConnectionProvider with ChangeNotifier {
         '📥 [Provider] Message delivered - ACK code: $ackCode, RTT: ${roundTripTimeMs}ms',
       );
       onMessageDelivered?.call(ackCode, roundTripTimeMs);
+    };
+
+    _bleService.onMessageEchoDetected = (messageId, echoCount, snrRaw, rssiDbm) {
+      print(
+        '🔊 [Provider] Echo detected - Message: $messageId, Count: $echoCount',
+      );
+      onMessageEchoDetected?.call(messageId, echoCount, snrRaw, rssiDbm);
     };
 
     _bleService.onStatusResponse = (publicKeyPrefix, statusData) {
@@ -774,7 +783,15 @@ class ConnectionProvider with ChangeNotifier {
     }
 
     try {
+      debugPrint('📨 [ConnectionProvider] sendChannelMessage called:');
+      debugPrint('  Channel: $channelIdx');
+      debugPrint('  Text: $text');
+      debugPrint('  MessageID: $messageId');
+
       await _bleService.sendChannelMessage(channelIdx: channelIdx, text: text);
+
+      debugPrint('✅ [ConnectionProvider] BLE send completed');
+      debugPrint('  Checking messageId: ${messageId != null ? "Present ($messageId)" : "NULL"}');
 
       // Channel messages are ephemeral (not persisted) - mark as "sent" immediately
       // They don't have ACK/TAG mechanism like direct messages
@@ -782,6 +799,12 @@ class ConnectionProvider with ChangeNotifier {
         print('✅ [ConnectionProvider] Channel message sent successfully');
         print('  Message ID: $messageId');
         print('  onMessageSent callback exists: ${onMessageSent != null}');
+
+        // Track for echo detection
+        // The BLE handler will capture the packet via LOG_RX_DATA and associate it
+        debugPrint('  Calling trackSentChannelMessage...');
+        _bleService.trackSentChannelMessage(messageId);
+        debugPrint('  trackSentChannelMessage completed');
 
         // Small delay to ensure the message is in the MessagesProvider list
         // before we try to mark it as sent

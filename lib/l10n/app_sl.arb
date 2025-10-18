@@ -85,6 +85,14 @@
 
   "croatian": "Hrvaščina",
 
+  "german": "Nemščina",
+
+  "spanish": "Španščina",
+
+  "french": "Francoščina",
+
+  "italian": "Italijanščina",
+
   "locationBroadcasting": "Oddajanje lokacije",
 
   "autoLocationTracking": "Samodejno sledenje lokaciji",
@@ -223,6 +231,10 @@
 
   "storedPermanently": "Trajno shranjeno v sobi",
 
+  "drawingsSentToPublicChannel": "Poslano {count} risb{plural} na javni kanal",
+
+  "drawingsSharedToPublicChannel": "Deljeno {success}/{total} risb na javni kanal",
+
   "notConnectedToDevice": "Ni povezano z napravo",
 
   "directMessage": "Neposredno sporočilo",
@@ -285,7 +297,7 @@
 
   "direct": "Neposredno",
 
-  "flood": "Poplava",
+  "flood": "Razpršitev",
 
   "admin": "Administrator",
 
@@ -297,13 +309,13 @@
 
   "pingingDirect": "Pinganje {name} (neposredno preko poti)...",
 
-  "pingingFlood": "Pinganje {name} (poplava - brez poti)...",
+  "pingingFlood": "Pinganje {name} (razpršitev - brez poti)...",
 
-  "directPingTimeout": "Časovna omejitev neposrednega pinga - ponovni poskus {name} s poplavo...",
+  "directPingTimeout": "Časovna omejitev neposrednega pinga - ponovni poskus {name} z razprševanjem...",
 
   "pingSuccessful": "Ping uspešen do {name}{fallback}",
 
-  "viaFloodingFallback": " (preko rezervnega poplavljanja)",
+  "viaFloodingFallback": " (preko rezervnega razprševanja)",
 
   "pingFailed": "Ping neuspešen do {name} - odgovor ni prejet",
 
@@ -542,6 +554,8 @@
   "deliveredWithTime": "Dostavljeno ({time}ms)",
 
   "failed": "Neuspešno",
+
+  "broadcast": "Oddajano",
 
   "messageSentToPublicChannel": "Sporočilo poslano na javni kanal",
 

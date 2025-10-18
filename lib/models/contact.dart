@@ -214,10 +214,14 @@ class Contact {
     return advName.substring(emoji.length).trim();
   }
 
+  /// Check if this contact is the Public Channel (all-zeros public key)
+  bool get isPublicChannel =>
+      publicKeyHex == '0000000000000000000000000000000000000000000000000000000000000000';
+
   /// Get localized display name (for Public Channel and other special contacts)
   String getLocalizedDisplayName(BuildContext context) {
     // Check if this is the Public Channel (all-zeros public key)
-    if (publicKeyHex == '0000000000000000000000000000000000000000000000000000000000000000') {
+    if (isPublicChannel) {
       return AppLocalizations.of(context)!.publicChannel;
     }
     // For all other contacts, use the regular display name
@@ -226,24 +230,28 @@ class Contact {
 
   /// Check if contact has a learned routing path
   /// When true, messages will use direct routing. When false, messages will use flood mode.
-  bool get hasPath => outPathLen > 0 && outPathLen <= 64;
+  /// outPathLen: -1 = unknown/not learned, 0 = direct (zero hops), 1+ = multi-hop path
+  bool get hasPath => outPathLen >= 0 && outPathLen <= 64;
 
   /// Get path description for UI display
   String get pathDescription {
     if (!hasPath) {
+      // -1 (0xFF) indicates path not learned yet
       return 'No path (flood mode)';
     }
 
-    // outPathLen includes the number of hops in the path
-    final hops = outPathLen;
-    if (hops == 1) {
+    // outPathLen = 0 means direct connection with zero hops
+    // outPathLen >= 1 means path with N hops
+    if (outPathLen == 0) {
       return 'Direct (0 hops)';
-    } else if (hops <= 3) {
-      return 'Good path (${hops - 1} hop${hops - 1 > 1 ? 's' : ''})';
-    } else if (hops <= 5) {
-      return 'Medium path (${hops - 1} hops)';
+    } else if (outPathLen == 1) {
+      return 'Direct (1 hop)';
+    } else if (outPathLen <= 3) {
+      return 'Good path ($outPathLen hops)';
+    } else if (outPathLen <= 5) {
+      return 'Medium path ($outPathLen hops)';
     } else {
-      return 'Long path (${hops - 1} hops)';
+      return 'Long path ($outPathLen hops)';
     }
   }
 
@@ -251,11 +259,11 @@ class Contact {
   /// -1 means no path (will use flood mode)
   int get pathQuality {
     if (!hasPath) return -1;
-    if (outPathLen == 1) return 5; // Direct connection (0 hops)
-    if (outPathLen <= 2) return 4; // 1 hop
-    if (outPathLen <= 3) return 3; // 2 hops
-    if (outPathLen <= 4) return 2; // 3 hops
-    if (outPathLen <= 5) return 1; // 4 hops
+    if (outPathLen == 0) return 5; // Direct connection (0 hops)
+    if (outPathLen == 1) return 4; // 1 hop
+    if (outPathLen <= 2) return 3; // 2 hops
+    if (outPathLen <= 3) return 2; // 3 hops
+    if (outPathLen <= 4) return 1; // 4 hops
     return 0; // 5+ hops
   }
 

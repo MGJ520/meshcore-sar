@@ -719,7 +719,7 @@ class ContactTile extends StatelessWidget {
                     ),
                   ],
                   // Room Login button for room contacts (except Public Channel)
-                  if (contact.type == ContactType.room && contact.advName != 'Public Channel') ...[
+                  if (contact.type == ContactType.room && !contact.isPublicChannel) ...[
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -739,7 +739,7 @@ class ContactTile extends StatelessWidget {
                     ),
                   ],
                   // Delete Contact button (for all contact types except Public Channel)
-                  if (contact.advName != 'Public Channel') ...[
+                  if (!contact.isPublicChannel) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,

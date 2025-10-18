@@ -10,6 +10,10 @@ class LocalePreferences {
     Locale('en'), // English
     Locale('sl'), // Slovenian
     Locale('hr'), // Croatian
+    Locale('de'), // German
+    Locale('es'), // Spanish
+    Locale('fr'), // French
+    Locale('it'), // Italian
   ];
 
   /// Get the saved locale or return null to use system locale
@@ -49,6 +53,14 @@ class LocalePreferences {
         return 'Slovenščina';
       case 'hr':
         return 'Hrvatski';
+      case 'de':
+        return 'Deutsch';
+      case 'es':
+        return 'Español';
+      case 'fr':
+        return 'Français';
+      case 'it':
+        return 'Italiano';
       default:
         return locale.languageCode;
     }
@@ -63,6 +75,14 @@ class LocalePreferences {
         return 'Slovenščina';
       case 'hr':
         return 'Hrvatski';
+      case 'de':
+        return 'Deutsch';
+      case 'es':
+        return 'Español';
+      case 'fr':
+        return 'Français';
+      case 'it':
+        return 'Italiano';
       default:
         return locale.languageCode;
     }

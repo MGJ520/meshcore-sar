@@ -8,6 +8,17 @@ extension MessageLocalization on Message {
   String getLocalizedDeliveryStatus(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // For channel messages, show echo count instead of delivery status
+    if (isChannelMessage && deliveryStatus == MessageDeliveryStatus.sent) {
+      if (echoCount == 0) {
+        return l10n.broadcast; // "Broadcast (no echoes yet)"
+      } else if (echoCount == 1) {
+        return 'Rebroadcast by 1 node';
+      } else {
+        return 'Rebroadcast by $echoCount nodes';
+      }
+    }
+
     switch (deliveryStatus) {
       case MessageDeliveryStatus.sending:
         return l10n.sending;

@@ -145,6 +145,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get croatian => 'Hrvaščina';
 
   @override
+  String get german => 'Nemščina';
+
+  @override
+  String get spanish => 'Španščina';
+
+  @override
+  String get french => 'Francoščina';
+
+  @override
+  String get italian => 'Italijanščina';
+
+  @override
   String get locationBroadcasting => 'Oddajanje lokacije';
 
   @override
@@ -386,6 +398,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get storedPermanently => 'Trajno shranjeno v sobi';
 
   @override
+  String drawingsSentToPublicChannel(int count, String plural) {
+    return 'Poslano $count risb$plural na javni kanal';
+  }
+
+  @override
+  String drawingsSharedToPublicChannel(int success, int total) {
+    return 'Deljeno $success/$total risb na javni kanal';
+  }
+
+  @override
   String get notConnectedToDevice => 'Ni povezano z napravo';
 
   @override
@@ -494,7 +516,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get direct => 'Neposredno';
 
   @override
-  String get flood => 'Poplava';
+  String get flood => 'Razpršitev';
 
   @override
   String get admin => 'Administrator';
@@ -515,12 +537,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String pingingFlood(String name) {
-    return 'Pinganje $name (poplava - brez poti)...';
+    return 'Pinganje $name (razpršitev - brez poti)...';
   }
 
   @override
   String directPingTimeout(String name) {
-    return 'Časovna omejitev neposrednega pinga - ponovni poskus $name s poplavo...';
+    return 'Časovna omejitev neposrednega pinga - ponovni poskus $name z razprševanjem...';
   }
 
   @override
@@ -529,7 +551,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get viaFloodingFallback => ' (preko rezervnega poplavljanja)';
+  String get viaFloodingFallback => ' (preko rezervnega razprševanja)';
 
   @override
   String pingFailed(String name) {
@@ -1000,6 +1022,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get failed => 'Neuspešno';
+
+  @override
+  String get broadcast => 'Oddajano';
 
   @override
   String get sarMarkerFoundPerson => 'Najdena oseba';

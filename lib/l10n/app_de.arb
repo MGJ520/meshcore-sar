@@ -232,6 +232,26 @@
     "description": "Kroatische Sprachoption"
   },
 
+  "german": "Deutsch",
+  "@german": {
+    "description": "Deutsche Sprachoption"
+  },
+
+  "spanish": "Spanisch",
+  "@spanish": {
+    "description": "Spanische Sprachoption"
+  },
+
+  "french": "Französisch",
+  "@french": {
+    "description": "Französische Sprachoption"
+  },
+
+  "italian": "Italienisch",
+  "@italian": {
+    "description": "Italienische Sprachoption"
+  },
+
   "locationBroadcasting": "Standortübertragung",
   "@locationBroadcasting": {
     "description": "Überschrift des Standorteinstellungsbereichs"
@@ -637,6 +657,24 @@
   "storedPermanently": "Dauerhaft im Raum gespeichert",
   "@storedPermanently": {
     "description": "Beschreibung für dauerhafte Raumspeicherung"
+  },
+
+  "drawingsSentToPublicChannel": "{count} Kartenzeichnung{plural} an öffentlichen Kanal gesendet",
+  "@drawingsSentToPublicChannel": {
+    "description": "Systemnachricht, wenn Zeichnungen an den öffentlichen Kanal gesendet werden",
+    "placeholders": {
+      "count": {"type": "int"},
+      "plural": {"type": "String"}
+    }
+  },
+
+  "drawingsSharedToPublicChannel": "{success}/{total} Zeichnungen mit öffentlichem Kanal geteilt",
+  "@drawingsSharedToPublicChannel": {
+    "description": "Snackbar-Nachricht, die die Erfolgsanzahl für geteilte Zeichnungen im öffentlichen Kanal anzeigt",
+    "placeholders": {
+      "success": {"type": "int"},
+      "total": {"type": "int"}
+    }
   },
 
   "notConnectedToDevice": "Nicht mit Gerät verbunden",
@@ -1713,6 +1751,11 @@
   "failed": "Fehlgeschlagen",
   "@failed": {
     "description": "Zustellungsstatus: fehlgeschlagen"
+  },
+
+  "broadcast": "Broadcast",
+  "@broadcast": {
+    "description": "Zustellstatus für Kanalnachrichten (noch keine Echos)"
   },
 
   "sarMarkerFoundPerson": "Person gefunden",

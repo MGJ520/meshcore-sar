@@ -72,6 +72,10 @@ class Message {
   // Read status tracking
   final bool isRead; // Whether message has been read by user
 
+  // Echo detection for public channel messages
+  final int echoCount; // Number of times message was detected being rebroadcast
+  final DateTime? firstEchoAt; // When first echo was detected
+
   Message({
     required this.id,
     required this.messageType,
@@ -97,6 +101,8 @@ class Message {
     this.lastRetryAt,
     this.usedFloodFallback = false,
     this.isRead = false,
+    this.echoCount = 0,
+    this.firstEchoAt,
   });
 
   /// Get sender public key as hex string
@@ -176,8 +182,26 @@ class Message {
     );
   }
 
+  /// Get echo status text for channel messages
+  String get echoStatusText {
+    if (!isChannelMessage) return '';
+
+    if (echoCount == 0) {
+      return 'Broadcast (no echoes)';
+    } else if (echoCount == 1) {
+      return 'Rebroadcast by 1 node';
+    } else {
+      return 'Rebroadcast by $echoCount nodes';
+    }
+  }
+
   /// Get friendly delivery status description
   String get deliveryStatusText {
+    // For channel messages, show echo status instead
+    if (isChannelMessage && isSentMessage) {
+      return echoStatusText;
+    }
+
     switch (deliveryStatus) {
       case MessageDeliveryStatus.sending:
         if (retryAttempt > 0) {
@@ -263,6 +287,8 @@ class Message {
     DateTime? lastRetryAt,
     bool? usedFloodFallback,
     bool? isRead,
+    int? echoCount,
+    DateTime? firstEchoAt,
   }) {
     return Message(
       id: id ?? this.id,
@@ -289,6 +315,8 @@ class Message {
       lastRetryAt: lastRetryAt ?? this.lastRetryAt,
       usedFloodFallback: usedFloodFallback ?? this.usedFloodFallback,
       isRead: isRead ?? this.isRead,
+      echoCount: echoCount ?? this.echoCount,
+      firstEchoAt: firstEchoAt ?? this.firstEchoAt,
     );
   }
 

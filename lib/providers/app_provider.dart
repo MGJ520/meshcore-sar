@@ -208,6 +208,12 @@ class AppProvider with ChangeNotifier {
       messagesProvider.markMessageDelivered(ackCode, roundTripTimeMs);
     };
 
+    // When an echo is detected for a public channel message (PUSH_CODE_LOG_RX_DATA matched)
+    connectionProvider.onMessageEchoDetected = (messageId, echoCount, snrRaw, rssiDbm) {
+      debugPrint('🔊 [AppProvider] Echo detected - Message: $messageId, Count: $echoCount');
+      messagesProvider.handleMessageEcho(messageId, echoCount, snrRaw, rssiDbm);
+    };
+
     // Wire up MessagesProvider's sendMessageCallback for retry logic
     messagesProvider.sendMessageCallback = ({
       required contactPublicKey,
@@ -284,7 +290,7 @@ class AppProvider with ChangeNotifier {
     try {
       // Get all room contacts (excluding Public Channel)
       final rooms = contactsProvider.rooms
-          .where((room) => room.advName != 'Public Channel')
+          .where((room) => !room.isPublicChannel)
           .toList();
 
       if (rooms.isEmpty) {

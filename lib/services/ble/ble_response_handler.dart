@@ -6,6 +6,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../models/contact.dart';
 import '../../models/message.dart';
 import '../../models/ble_packet_log.dart';
+import '../../models/sent_message_tracker.dart';
 import '../buffer_reader.dart';
 import '../meshcore_constants.dart';
 import '../meshcore_opcode_names.dart';
@@ -33,6 +34,7 @@ typedef OnBatteryAndStorageCallback = void Function(int millivolts, int? usedKb,
 typedef OnErrorCallback = void Function(String error, {int? errorCode});
 typedef OnContactNotFoundCallback = void Function(Uint8List? contactPublicKey);
 typedef OnChannelInfoCallback = void Function(int channelIdx, String channelName);
+typedef OnMessageEchoDetectedCallback = void Function(String messageId, int echoCount, int snrRaw, int rssiDbm);
 
 /// Processes incoming responses from the BLE device
 class BleResponseHandler {
@@ -44,6 +46,11 @@ class BleResponseHandler {
 
   // Reference to command queue for completing pending commands
   BleCommandQueue? _commandQueue;
+
+  // Echo detection for public channel messages
+  final Map<String, SentMessageTracker> _sentMessageTrackers = {};
+  static const int _maxTrackers = 100;
+  static const Duration _trackerTTL = Duration(minutes: 5);
 
   // Callbacks
   OnContactCallback? onContactReceived;
@@ -66,6 +73,7 @@ class BleResponseHandler {
   OnErrorCallback? onError;
   OnContactNotFoundCallback? onContactNotFound;
   OnChannelInfoCallback? onChannelInfoReceived;
+  OnMessageEchoDetectedCallback? onMessageEchoDetected;
   VoidCallback? onRxActivity;
 
   // Track the last command that was sent, so we can retry if it fails with ERR_CODE_NOT_FOUND
@@ -436,6 +444,12 @@ class BleResponseHandler {
       final entropy = uniqueBytes / rawPacketData.length;
       final isLikelyEncrypted = entropy > 0.7;
 
+      // First, try to associate this packet with a recently sent message (within 2s)
+      _associatePacketWithSentMessage(rawPacketData);
+
+      // Then, check if this packet matches any sent message (echo detection)
+      _checkForEcho(rawPacketData, snrRaw, rssiDbm);
+
       // Create decoded info for packet log (includes SNR and RSSI)
       final logRxDataInfo = LogRxDataInfo(
         entropy: entropy,
@@ -463,6 +477,246 @@ class BleResponseHandler {
     } catch (e) {
       print('  ❌ [LogRxData] Parsing error: $e');
     }
+  }
+
+  /// Simple hash function for packet identification (replaces SHA256)
+  String _simplePacketHash(Uint8List packet) {
+    // Use a simple hash based on packet length and first/last bytes
+    // This is sufficient for short-lived echo detection (5 min TTL)
+    if (packet.isEmpty) return '0';
+
+    int hash = packet.length;
+    // Mix in bytes from start, middle, and end
+    for (int i = 0; i < packet.length && i < 8; i++) {
+      hash = ((hash << 5) - hash) + packet[i];
+      hash = hash & 0xFFFFFFFF; // Keep 32-bit
+    }
+    if (packet.length > 16) {
+      for (int i = packet.length ~/ 2; i < packet.length ~/ 2 + 8 && i < packet.length; i++) {
+        hash = ((hash << 5) - hash) + packet[i];
+        hash = hash & 0xFFFFFFFF;
+      }
+    }
+    if (packet.length > 8) {
+      for (int i = packet.length - 8; i < packet.length; i++) {
+        hash = ((hash << 5) - hash) + packet[i];
+        hash = hash & 0xFFFFFFFF;
+      }
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
+  }
+
+  /// Check if received packet is an echo of a sent message
+  void _checkForEcho(Uint8List rawPacket, int snrRaw, int rssiDbm) {
+    try {
+      // Need at least header + path_len
+      if (rawPacket.length < 2) return;
+
+      final header = rawPacket[0];
+      final payloadType = (header >> 2) & 0x0F;
+      if (payloadType != 0x05) return; // Only track GRP_TXT
+
+      final pathLen = rawPacket[1];
+      if (pathLen == 0 || rawPacket.length < 2 + pathLen) return;
+
+      // Extract path for unique echo tracking
+      final path = rawPacket.sublist(2, 2 + pathLen);
+      final pathSignature = path.map((b) => b.toRadixString(16).padLeft(2, '0')).join(':');
+
+      // Check if our node hash is in the path (meaning this is our message being rebroadcast)
+      final containsOurHash = _ourNodeHash != null && path.contains(_ourNodeHash!);
+      if (!containsOurHash) {
+        // This packet doesn't have our hash in the path, so it's not our message
+        return;
+      }
+
+      // Extract encrypted payload
+      final payloadStart = 2 + pathLen;
+      final encryptedPayload = rawPacket.sublist(payloadStart);
+      final payloadHash = _simplePacketHash(encryptedPayload);
+
+      // Check if we have a matching sent message (by payload hash)
+      final tracker = _sentMessageTrackers[payloadHash];
+      if (tracker != null && !tracker.isExpired) {
+        // Check if this is a NEW path (different from already seen paths)
+        if (!tracker.uniqueEchoPaths.contains(pathSignature)) {
+          // New echo detected via different path!
+          tracker.uniqueEchoPaths.add(pathSignature);
+          tracker.echoCount++;
+          tracker.echoTimestamps.add(DateTime.now());
+
+          print('  🔊 [Echo] New echo detected!');
+          print('     Message: ${tracker.messageId}');
+          print('     Path: $pathSignature');
+          print('     Total echoes: ${tracker.echoCount}');
+          print('     Unique paths: ${tracker.uniqueEchoPaths.length}');
+
+          // Notify callback
+          onMessageEchoDetected?.call(tracker.messageId, tracker.echoCount, snrRaw, rssiDbm);
+        } else {
+          print('  ♻️ [Echo] Duplicate path (already counted): $pathSignature');
+        }
+      }
+
+      // Cleanup expired trackers
+      _cleanupExpiredTrackers();
+    } catch (e) {
+      print('  ⚠️ [Echo] Error checking for echo: $e');
+    }
+  }
+
+  /// Track a sent public channel message for echo detection
+  ///
+  /// NEW STRATEGY: Since firmware doesn't log our own transmissions,
+  /// we track ANY GRP_TXT packets that arrive shortly after sending.
+  /// The first packet with matching encrypted payload is likely our message,
+  /// and subsequent packets with the same payload are echoes.
+  void trackSentMessage(String messageId, Uint8List? rawPacket) {
+    try {
+      final now = DateTime.now();
+      final tracker = SentMessageTracker(
+        messageId: messageId,
+        packetHashHex: 'pending', // Will be filled when we capture ANY packet
+        rawPacket: null,
+        sentTime: now,
+        expiryTime: now.add(_trackerTTL),
+      );
+
+      // Store by message ID temporarily
+      _sentMessageTrackers[messageId] = tracker;
+      print('  📤 [Echo] Tracking message $messageId (will match any GRP_TXT within 2000ms)');
+      print('  📊 [Echo] Total trackers: ${_sentMessageTrackers.length}');
+
+      // Cleanup if too many trackers
+      if (_sentMessageTrackers.length > _maxTrackers) {
+        _cleanupOldestTrackers();
+      }
+    } catch (e) {
+      print('  ⚠️ [Echo] Error tracking sent message: $e');
+    }
+  }
+
+  // Store our node hash (first byte of our public key) for sender identification
+  int? _ourNodeHash;
+
+  /// Set our node hash for packet identification
+  void setOurNodeHash(int nodeHash) {
+    _ourNodeHash = nodeHash;
+    print('  🔑 [Echo] Our node hash set to: 0x${nodeHash.toRadixString(16).padLeft(2, '0')}');
+    print('  ℹ️  [Echo] Will track packets containing our hash in the path');
+  }
+
+  /// Associate a captured packet with a sent message
+  ///
+  /// NEW STRATEGY: Firmware doesn't log our own transmissions, only echoes!
+  /// So we capture the FIRST GRP_TXT packet after sending (likely an echo),
+  /// then count additional instances of the same packet payload.
+  ///
+  /// Packet structure for GRP_TXT:
+  /// [0] = header (route type + payload type + version)
+  /// [1] = path_len
+  /// [2] = path[0] = sender's node hash
+  /// [3+] = rest of path + encrypted payload
+  void _associatePacketWithSentMessage(Uint8List rawPacket) {
+    try {
+      // Need at least 3 bytes: header + path_len + first path byte
+      if (rawPacket.length < 3) {
+        return;
+      }
+
+      // Check if this is a GRP_TXT packet (payload type = 0x05)
+      final header = rawPacket[0];
+      final payloadType = (header >> 2) & 0x0F;
+      if (payloadType != 0x05) { // Not a group message
+        return;
+      }
+
+      final pathLen = rawPacket[1];
+      if (pathLen == 0) {
+        return;
+      }
+
+      final now = DateTime.now();
+
+      // Extract the path from the packet for unique echo tracking
+      final path = rawPacket.sublist(2, 2 + pathLen);
+      final pathSignature = path.map((b) => b.toRadixString(16).padLeft(2, '0')).join(':');
+
+      // Check if our node hash is in the path (meaning this is our message being rebroadcast)
+      final containsOurHash = _ourNodeHash != null && path.contains(_ourNodeHash!);
+      if (!containsOurHash) {
+        // This packet doesn't have our hash in the path, so it's not our message
+        return;
+      }
+
+      print('  ✅ [Echo] Packet contains our hash (0x${_ourNodeHash!.toRadixString(16).padLeft(2, '0')}) in path: $pathSignature');
+
+      // Extract encrypted payload (everything after path)
+      final payloadStart = 2 + pathLen;
+      final encryptedPayload = rawPacket.sublist(payloadStart);
+      // Hash only the encrypted payload to identify the same message
+      final payloadHash = _simplePacketHash(encryptedPayload);
+
+      // Find pending trackers (within 2000ms window)
+      for (final entry in _sentMessageTrackers.entries.toList()) {
+        final tracker = entry.value;
+        if (tracker.packetHashHex != 'pending') continue;
+
+        final timeSinceSent = now.difference(tracker.sentTime);
+        if (timeSinceSent.inMilliseconds > 2000) continue; // Outside window
+
+        // This is the FIRST packet we see after sending - associate it!
+        // Remove old entry by message ID
+        _sentMessageTrackers.remove(entry.key);
+
+        // Create updated tracker stored by payload hash
+        final updatedTracker = SentMessageTracker(
+          messageId: tracker.messageId,
+          packetHashHex: payloadHash, // Use payload hash to identify message
+          rawPacket: rawPacket,
+          sentTime: tracker.sentTime,
+          expiryTime: tracker.expiryTime,
+          echoCount: 1, // This first packet counts as an echo
+          uniqueEchoPaths: {pathSignature}, // Track unique paths
+          echoTimestamps: [now],
+        );
+
+        _sentMessageTrackers[payloadHash] = updatedTracker;
+        print('  📦 [Echo] Captured packet for tracking!');
+        print('     Message ID: ${tracker.messageId}');
+        print('     Path: $pathSignature');
+        print('     Time delta: ${timeSinceSent.inMilliseconds}ms');
+        print('     Payload hash: $payloadHash');
+        print('     Echo count: 1 (first detection)');
+
+        // Notify immediately that we have 1 echo
+        onMessageEchoDetected?.call(tracker.messageId, 1, 0, 0);
+        break; // Only associate with first pending tracker
+      }
+    } catch (e) {
+      print('  ⚠️ [Echo] Error associating packet: $e');
+    }
+  }
+
+  /// Remove expired trackers
+  void _cleanupExpiredTrackers() {
+    _sentMessageTrackers.removeWhere((key, tracker) => tracker.isExpired);
+  }
+
+  /// Remove oldest trackers when limit exceeded
+  void _cleanupOldestTrackers() {
+    if (_sentMessageTrackers.length <= _maxTrackers) return;
+
+    // Sort by sent time and remove oldest
+    final sortedEntries = _sentMessageTrackers.entries.toList()
+      ..sort((a, b) => a.value.sentTime.compareTo(b.value.sentTime));
+
+    final toRemove = sortedEntries.take(_sentMessageTrackers.length - _maxTrackers);
+    for (final entry in toRemove) {
+      _sentMessageTrackers.remove(entry.key);
+    }
+
+    print('  🧹 [Echo] Cleaned up ${toRemove.length} old trackers');
   }
 
   /// Handle NewAdvert push

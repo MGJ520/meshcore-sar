@@ -26,6 +26,7 @@ typedef OnAdvertReceivedCallback = void Function(Uint8List publicKey);
 typedef OnPathUpdatedCallback = void Function(Uint8List publicKey);
 typedef OnMessageSentCallback = void Function(int expectedAckTag, int suggestedTimeoutMs, bool isFloodMode);
 typedef OnMessageDeliveredCallback = void Function(int ackCode, int roundTripTimeMs);
+typedef OnMessageEchoDetectedCallback = void Function(String messageId, int echoCount, int snrRaw, int rssiDbm);
 typedef OnStatusResponseCallback = void Function(Uint8List publicKeyPrefix, Uint8List statusData);
 typedef OnBinaryResponseCallback = void Function(Uint8List publicKeyPrefix, int tag, Uint8List responseData);
 typedef OnBatteryAndStorageCallback = void Function(int millivolts, int? usedKb, int? totalKb);
@@ -61,6 +62,7 @@ class MeshCoreBleService {
   OnPathUpdatedCallback? onPathUpdated;
   OnMessageSentCallback? onMessageSent;
   OnMessageDeliveredCallback? onMessageDelivered;
+  OnMessageEchoDetectedCallback? onMessageEchoDetected;
   OnStatusResponseCallback? onStatusResponse;
   OnBinaryResponseCallback? onBinaryResponse;
   OnBatteryAndStorageCallback? onBatteryAndStorage;
@@ -116,6 +118,13 @@ class MeshCoreBleService {
       onTelemetryReceived?.call(publicKey, lppData);
     };
     _responseHandler.onSelfInfoReceived = (selfInfo) {
+      // Extract our node hash (first byte of public key) for echo detection
+      if (selfInfo['publicKey'] != null) {
+        final publicKey = selfInfo['publicKey'] as Uint8List;
+        if (publicKey.isNotEmpty) {
+          _responseHandler.setOurNodeHash(publicKey[0]);
+        }
+      }
       onSelfInfoReceived?.call(selfInfo);
     };
     _responseHandler.onDeviceInfoReceived = (deviceInfo) {
@@ -144,6 +153,9 @@ class MeshCoreBleService {
     };
     _responseHandler.onMessageDelivered = (ackCode, roundTripTimeMs) {
       onMessageDelivered?.call(ackCode, roundTripTimeMs);
+    };
+    _responseHandler.onMessageEchoDetected = (messageId, echoCount, snrRaw, rssiDbm) {
+      onMessageEchoDetected?.call(messageId, echoCount, snrRaw, rssiDbm);
     };
     _responseHandler.onStatusResponse = (publicKeyPrefix, statusData) {
       onStatusResponse?.call(publicKeyPrefix, statusData);
@@ -297,6 +309,12 @@ class MeshCoreBleService {
   }
 
   /// Send flood-mode text message to channel
+  /// Track a sent channel message for echo detection
+  void trackSentChannelMessage(String messageId) {
+    debugPrint('🔵 [MeshCoreBleService] trackSentChannelMessage called for: $messageId');
+    _responseHandler.trackSentMessage(messageId, null);
+  }
+
   Future<void> sendChannelMessage({
     required int channelIdx,
     required String text,

@@ -360,6 +360,30 @@ abstract class AppLocalizations {
   /// **'Croatian'**
   String get croatian;
 
+  /// German language option
+  ///
+  /// In en, this message translates to:
+  /// **'German'**
+  String get german;
+
+  /// Spanish language option
+  ///
+  /// In en, this message translates to:
+  /// **'Spanish'**
+  String get spanish;
+
+  /// French language option
+  ///
+  /// In en, this message translates to:
+  /// **'French'**
+  String get french;
+
+  /// Italian language option
+  ///
+  /// In en, this message translates to:
+  /// **'Italian'**
+  String get italian;
+
   /// Location settings section header
   ///
   /// In en, this message translates to:
@@ -778,6 +802,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stored permanently in room'**
   String get storedPermanently;
+
+  /// System message when drawings are sent to public channel
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {count} map drawing{plural} to Public Channel'**
+  String drawingsSentToPublicChannel(int count, String plural);
+
+  /// Snackbar message showing success count for drawings shared to public channel
+  ///
+  /// In en, this message translates to:
+  /// **'Shared {success}/{total} drawings to Public Channel'**
+  String drawingsSharedToPublicChannel(int success, int total);
 
   /// Error message when device is not connected for direct messaging
   ///
@@ -1834,6 +1870,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed'**
   String get failed;
+
+  /// Delivery status for channel messages (no echoes yet)
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast'**
+  String get broadcast;
 
   /// SAR marker type: found person
   ///

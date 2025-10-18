@@ -602,6 +602,36 @@ class MessagesProvider with ChangeNotifier {
     }
   }
 
+  /// Handle echo detection for public channel messages
+  void handleMessageEcho(String messageId, int echoCount, int snrRaw, int rssiDbm) {
+    print('🔊 [MessagesProvider] handleMessageEcho called');
+    print('  Message ID: $messageId');
+    print('  Echo count: $echoCount');
+    print('  SNR: ${(snrRaw.toSigned(8) / 4.0).toStringAsFixed(2)} dB');
+    print('  RSSI: ${rssiDbm.toSigned(8)} dBm');
+
+    // Find the message
+    final index = _messages.indexWhere((m) => m.id == messageId);
+    if (index != -1) {
+      final message = _messages[index];
+      print('  ✅ Found message: ${message.text.substring(0, message.text.length > 30 ? 30 : message.text.length)}...');
+
+      // Update echo count
+      final updatedMessage = message.copyWith(
+        echoCount: echoCount,
+        firstEchoAt: message.firstEchoAt ?? DateTime.now(),
+      );
+      _messages[index] = updatedMessage;
+
+      print('  Updated echo count to: $echoCount');
+      _persistMessages();
+      notifyListeners();
+      print('  ✅ Echo update complete, UI notified');
+    } else {
+      print('  ⚠️ Message not found in messages list');
+    }
+  }
+
   /// Update message status to delivered with RTT
   void markMessageDelivered(int ackCode, int roundTripTimeMs) {
     print('🔍 [MessagesProvider] markMessageDelivered called with ACK: $ackCode, RTT: ${roundTripTimeMs}ms');

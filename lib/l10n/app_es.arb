@@ -232,6 +232,26 @@
     "description": "Opción de idioma croata"
   },
 
+  "german": "Alemán",
+  "@german": {
+    "description": "Opción de idioma alemán"
+  },
+
+  "spanish": "Español",
+  "@spanish": {
+    "description": "Opción de idioma español"
+  },
+
+  "french": "Francés",
+  "@french": {
+    "description": "Opción de idioma francés"
+  },
+
+  "italian": "Italiano",
+  "@italian": {
+    "description": "Opción de idioma italiano"
+  },
+
   "locationBroadcasting": "Difusión de ubicación",
   "@locationBroadcasting": {
     "description": "Encabezado de la sección de configuración de ubicación"
@@ -637,6 +657,24 @@
   "storedPermanently": "Almacenado permanentemente en la sala",
   "@storedPermanently": {
     "description": "Descripción de la permanencia del almacenamiento en la sala"
+  },
+
+  "drawingsSentToPublicChannel": "{count} dibujo{plural} de mapa enviado al Canal Público",
+  "@drawingsSentToPublicChannel": {
+    "description": "Mensaje del sistema cuando se envían dibujos al canal público",
+    "placeholders": {
+      "count": {"type": "int"},
+      "plural": {"type": "String"}
+    }
+  },
+
+  "drawingsSharedToPublicChannel": "{success}/{total} dibujos compartidos al Canal Público",
+  "@drawingsSharedToPublicChannel": {
+    "description": "Mensaje de snackbar mostrando el recuento de éxitos para dibujos compartidos al canal público",
+    "placeholders": {
+      "success": {"type": "int"},
+      "total": {"type": "int"}
+    }
   },
 
   "notConnectedToDevice": "No conectado al dispositivo",
@@ -1713,6 +1751,11 @@
   "failed": "Fallido",
   "@failed": {
     "description": "Estado de entrega: fallido"
+  },
+
+  "broadcast": "Difusión",
+  "@broadcast": {
+    "description": "Estado de entrega para mensajes de canal (sin ecos aún)"
   },
 
   "sarMarkerFoundPerson": "Persona encontrada",

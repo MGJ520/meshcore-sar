@@ -482,15 +482,16 @@ class DrawingToolbar extends StatelessWidget {
 
     // Add informational message to chat
     final messagesProvider = Provider.of<MessagesProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     messagesProvider.logSystemMessage(
-      text: '📤 Sent ${drawings.length} map drawing${drawings.length > 1 ? 's' : ''} to Public Channel',
+      text: '📤 ${l10n.drawingsSentToPublicChannel(drawings.length, drawings.length > 1 ? 's' : '')}',
       level: 'info',
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Shared $successCount/${drawings.length} drawings to Public Channel',
+          l10n.drawingsSharedToPublicChannel(successCount, drawings.length),
         ),
         backgroundColor: successCount == drawings.length
             ? Colors.green

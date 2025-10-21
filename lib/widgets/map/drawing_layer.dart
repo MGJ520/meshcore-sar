@@ -8,11 +8,13 @@ import '../../l10n/app_localizations.dart';
 class DrawingLayer extends StatelessWidget {
   final List<MapDrawing> drawings;
   final MapDrawing? previewDrawing;
+  final bool isSimpleMode;
 
   const DrawingLayer({
     super.key,
     required this.drawings,
     this.previewDrawing,
+    this.isSimpleMode = false,
   });
 
   @override
@@ -45,8 +47,9 @@ class DrawingLayer extends StatelessWidget {
       opacity = 0.6;
       strokeWidth = 4.0;
     } else if (drawing.isReceived) {
-      // Received drawing from another node (thinner, more transparent)
-      opacity = 0.7;
+      // Received drawing from another node
+      // In simple mode: solid (opacity 1.0), in normal mode: translucent (0.7)
+      opacity = isSimpleMode ? 1.0 : 0.7;
       strokeWidth = 3.0;
     } else {
       // Local drawing (solid line, normal thickness)
@@ -82,13 +85,17 @@ class DrawingLayer extends StatelessWidget {
 class DrawingMarkersLayer extends StatelessWidget {
   final List<MapDrawing> drawings;
   final Function(String drawingId)? onDeleteDrawing;
+  final Function(MapDrawing drawing)? onTapDrawing;
   final bool showDeleteButtons;
+  final bool isSimpleMode;
 
   const DrawingMarkersLayer({
     super.key,
     required this.drawings,
     this.onDeleteDrawing,
+    this.onTapDrawing,
     this.showDeleteButtons = false,
+    this.isSimpleMode = false,
   });
 
   @override
@@ -134,49 +141,64 @@ class DrawingMarkersLayer extends StatelessWidget {
               ),
             ),
           );
-        } else if (drawing.isReceived && drawing.senderName != null) {
-          // Show sender badge for received drawings (when not in drawing mode)
+        } else if (drawing.isReceived && drawing.senderName != null && !isSimpleMode) {
+          // Show sender badge for received drawings (when not in drawing mode and not in simple mode)
+          // Make it tappable if message ID is available
           markers.add(
             Marker(
               point: centerPoint,
               width: 120,
               height: 30,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: drawing.color.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        drawing.senderName!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+              child: GestureDetector(
+                onTap: drawing.messageId != null && onTapDrawing != null
+                    ? () => onTapDrawing!(drawing)
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: drawing.color.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          drawing.senderName!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      // Add indicator that this is tappable
+                      if (drawing.messageId != null && onTapDrawing != null) ...[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),

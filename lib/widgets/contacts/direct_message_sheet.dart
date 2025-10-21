@@ -1,12 +1,14 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../models/contact.dart';
 import '../../models/message.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/messages_provider.dart';
+import '../../providers/app_provider.dart';
 import '../../utils/toast_logger.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -174,6 +176,9 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final appProvider = context.watch<AppProvider>();
+    final isSimpleMode = appProvider.isSimpleMode;
+    final contactLocation = widget.contact.displayLocation;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
@@ -222,34 +227,89 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
             ),
           ),
 
-          // Info banner
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context)!.directMessageInfo(widget.contact.displayName),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      fontSize: 13,
+          // Mini map in simple mode (scrollable content)
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  if (isSimpleMode && contactLocation != null) ...[
+                    GestureDetector(
+                      onTap: () {
+                        // Hide keyboard when tapping on map
+                        _focusNode.unfocus();
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        height: 200,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colorScheme.outline),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: FlutterMap(
+                          options: MapOptions(
+                            initialCenter: LatLng(
+                              contactLocation.latitude,
+                              contactLocation.longitude,
+                            ),
+                            initialZoom: 13.0,
+                            interactionOptions: const InteractionOptions(
+                              flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                            ),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.meshcore.sar',
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: LatLng(
+                                    contactLocation.latitude,
+                                    contactLocation.longitude,
+                                  ),
+                                  width: 40,
+                                  height: 40,
+                                  child: Icon(
+                                    Icons.location_on,
+                                    color: colorScheme.primary,
+                                    size: 40,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(height: 8),
+                    // Location coordinates
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.gps_fixed, size: 14, color: colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${contactLocation.latitude.toStringAsFixed(5)}, ${contactLocation.longitude.toStringAsFixed(5)}',
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          const Spacer(),
 
           // Message input
           Container(
@@ -321,7 +381,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
                     OutlinedButton.icon(
                       onPressed: _insertCurrentLocation,
                       icon: const Icon(Icons.my_location, size: 18),
-                      label: const Text('Location'),
+                      label: Text(AppLocalizations.of(context)!.myLocation),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         side: BorderSide(color: colorScheme.outline),

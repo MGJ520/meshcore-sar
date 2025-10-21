@@ -124,7 +124,7 @@ class CompassSarList extends StatelessWidget {
                 color: markerColor,
                 size: 24,
               ),
-              title: Text(marker.type.displayName),
+              title: Text(marker.displayName),
               subtitle: Text(
                 '${_bearingToCardinal(bearing)} • ${_formatDistance(distance)} • ${marker.timeAgo}',
                 style: Theme.of(context).textTheme.bodySmall,

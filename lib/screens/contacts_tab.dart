@@ -8,7 +8,9 @@ import '../providers/app_provider.dart';
 import '../widgets/contacts/contact_tile.dart';
 
 class ContactsTab extends StatefulWidget {
-  const ContactsTab({super.key});
+  final VoidCallback? onNavigateToMap;
+
+  const ContactsTab({super.key, this.onNavigateToMap});
 
   @override
   State<ContactsTab> createState() => _ContactsTabState();
@@ -87,6 +89,9 @@ class _ContactsTabState extends State<ContactsTab> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final appProvider = context.watch<AppProvider>();
+    final isSimpleMode = appProvider.isSimpleMode;
+
     return Consumer<ContactsProvider>(
       builder: (context, contactsProvider, child) {
         final chatContacts = contactsProvider.chatContacts;
@@ -143,6 +148,7 @@ class _ContactsTabState extends State<ContactsTab> {
                     currentPosition: _currentPosition,
                     calculateDistance: _calculateDistanceInMeters,
                     formatDistance: _formatDistance,
+                    onNavigateToMap: widget.onNavigateToMap,
                   ),
                 ),
                 const Divider(height: 32),
@@ -161,6 +167,7 @@ class _ContactsTabState extends State<ContactsTab> {
                     currentPosition: _currentPosition,
                     calculateDistance: _calculateDistanceInMeters,
                     formatDistance: _formatDistance,
+                    onNavigateToMap: widget.onNavigateToMap,
                   ),
                 ),
                 const Divider(height: 32),
@@ -179,13 +186,14 @@ class _ContactsTabState extends State<ContactsTab> {
                     currentPosition: _currentPosition,
                     calculateDistance: _calculateDistanceInMeters,
                     formatDistance: _formatDistance,
+                    onNavigateToMap: widget.onNavigateToMap,
                   ),
                 ),
                 const Divider(height: 32),
               ],
 
-              // Channels
-              if (channels.isNotEmpty) ...[
+              // Channels (hidden in simple mode)
+              if (!isSimpleMode && channels.isNotEmpty) ...[
                 _SectionHeader(
                   title: l10n.channels,
                   count: channels.length,
@@ -197,6 +205,7 @@ class _ContactsTabState extends State<ContactsTab> {
                     currentPosition: _currentPosition,
                     calculateDistance: _calculateDistanceInMeters,
                     formatDistance: _formatDistance,
+                    onNavigateToMap: widget.onNavigateToMap,
                   ),
                 ),
               ],

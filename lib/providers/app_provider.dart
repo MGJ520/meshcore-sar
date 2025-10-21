@@ -24,6 +24,9 @@ class AppProvider with ChangeNotifier {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
+  bool _isSimpleMode = false;
+  bool get isSimpleMode => _isSimpleMode;
+
   AppProvider({
     required this.connectionProvider,
     required this.contactsProvider,
@@ -35,7 +38,31 @@ class AppProvider with ChangeNotifier {
     _setupCallbacks();
     _initializeTileCache();
     _initializeLocationTracking();
+    _loadSimpleMode();
     _isInitialized = true;
+  }
+
+  /// Load simple mode setting from shared preferences
+  Future<void> _loadSimpleMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isSimpleMode = prefs.getBool('simple_mode') ?? false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading simple mode setting: $e');
+    }
+  }
+
+  /// Toggle simple mode on/off
+  Future<void> toggleSimpleMode(bool enabled) async {
+    try {
+      _isSimpleMode = enabled;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('simple_mode', enabled);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving simple mode setting: $e');
+    }
   }
 
   /// Initialize tile cache service
@@ -116,19 +143,17 @@ class AppProvider with ChangeNotifier {
         final drawing = DrawingMessageParser.parseDrawingMessage(
           message.text,
           senderName: senderName,
+          messageId: message.id, // Pass message ID for navigation linking
         );
         if (drawing != null) {
           debugPrint('🎨 [AppProvider] Drawing parsed successfully: ${drawing.type.name} from ${drawing.senderName ?? "unknown"}');
+          debugPrint('   Drawing linked to message ID: ${message.id}');
           drawingProvider.addReceivedDrawing(drawing);
 
-          // Add informational message to chat
-          final drawingTypeStr = drawing.type.name.substring(0, 1).toUpperCase() +
-                                 drawing.type.name.substring(1);
-          final infoMessage = message.copyWith(
-            text: '📍 Received map drawing ($drawingTypeStr) from ${drawing.senderName ?? "unknown"}',
-          );
+          // Add the original drawing message to chat (not a modified info message)
+          // This allows users to click on the drawing message to navigate to it
           messagesProvider.addMessage(
-            infoMessage,
+            message,
             contactLookup: (name) => '',
           );
         } else {
@@ -238,12 +263,11 @@ class AppProvider with ChangeNotifier {
 
     try {
       // Initialize contacts provider with device public key to exclude self
+      // If already initialized (from early load), this will just filter out self-contact
       // This must happen before getContacts to ensure proper filtering
-      if (!contactsProvider.isInitialized) {
-        await contactsProvider.initialize(
-          devicePublicKey: connectionProvider.deviceInfo.publicKey,
-        );
-      }
+      await contactsProvider.initialize(
+        devicePublicKey: connectionProvider.deviceInfo.publicKey,
+      );
 
       // Note: Device clock is automatically synced during connection in MeshCoreBleService
       // No need to sync it again here
@@ -257,9 +281,12 @@ class AppProvider with ChangeNotifier {
       // Small delay to ensure contacts are fully loaded
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Sync all channels to get channel names
-      debugPrint('📻 [AppProvider] Syncing channels...');
-      await connectionProvider.syncChannels();
+      // Sync channels to get channel names
+      // In simple mode: only sync first 5 channels for faster startup
+      // In normal mode: sync all channels (up to device max)
+      final channelsToSync = _isSimpleMode ? 5 : null;
+      debugPrint('📻 [AppProvider] Syncing channels${_isSimpleMode ? ' (simple mode: max 5)' : ''}...');
+      await connectionProvider.syncChannels(maxChannels: channelsToSync);
       debugPrint('✅ [AppProvider] Channel sync complete');
 
       // Configure the default public channel (channel 0)

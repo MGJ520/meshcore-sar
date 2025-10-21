@@ -8,6 +8,7 @@ import '../../models/room_login_state.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/contacts_provider.dart';
 import '../../providers/map_provider.dart';
+import '../../providers/app_provider.dart';
 import 'direct_message_sheet.dart';
 import 'room_login_sheet.dart';
 import '../../utils/toast_logger.dart';
@@ -18,6 +19,7 @@ class ContactTile extends StatelessWidget {
   final Position? currentPosition;
   final double Function(double, double, double, double)? calculateDistance;
   final String Function(double)? formatDistance;
+  final VoidCallback? onNavigateToMap;
 
   const ContactTile({
     super.key,
@@ -25,10 +27,14 @@ class ContactTile extends StatelessWidget {
     this.currentPosition,
     this.calculateDistance,
     this.formatDistance,
+    this.onNavigateToMap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final appProvider = context.watch<AppProvider>();
+    final isSimpleMode = appProvider.isSimpleMode;
+
     final hasTelemetry = contact.telemetry != null && contact.telemetry!.isRecent;
     final battery = contact.displayBattery;
     final location = contact.displayLocation;
@@ -113,8 +119,8 @@ class ContactTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Battery indicator
-            if (battery != null) ...[
+            // Battery indicator - hidden in simple mode
+            if (!isSimpleMode && battery != null) ...[
               const SizedBox(width: 4),
               Icon(
                 _getBatteryIcon(battery),
@@ -130,8 +136,8 @@ class ContactTile extends StatelessWidget {
                 ),
               ),
             ],
-            // Connection type indicator (direct/flood) - shown for all contact types
-            if (contact.type != ContactType.channel) ...[
+            // Connection type indicator (direct/flood) - hidden in simple mode
+            if (!isSimpleMode && contact.type != ContactType.channel) ...[
               const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -168,129 +174,186 @@ class ContactTile extends StatelessWidget {
             ],
           ],
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            // Room login status badges
-            if (roomLoginState != null && roomLoginState.isLoggedIn) ...[
-              Row(
+        subtitle: isSimpleMode
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (roomLoginState.isAdmin)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.red, width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.admin_panel_settings, size: 10, color: Colors.red),
-                          const SizedBox(width: 2),
-                          Text(
-                            AppLocalizations.of(context)!.admin,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (roomLoginState.isAdmin) const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.green, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 4),
+                  // Simple mode: Only show location and distance
+                  if (location != null) ...[
+                    Row(
                       children: [
-                        const Icon(Icons.check_circle, size: 10, color: Colors.green),
-                        const SizedBox(width: 2),
-                        Text(
-                          AppLocalizations.of(context)!.loggedIn,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        const Icon(Icons.location_on, size: 12, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'GPS: ${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
+                            style: Theme.of(context).textTheme.labelSmall,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-            ],
-            // Last seen + GPS info combined
-            Row(
-              children: [
-                Icon(
-                  Icons.access_time,
-                  size: 12,
-                  color: contact.isRecentlySeen ? Colors.green : Colors.grey,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  contact.timeSinceLastSeen,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-                if (location != null) ...[
-                  const SizedBox(width: 8),
-                  const Text('•', style: TextStyle(color: Colors.grey)),
-                  const SizedBox(width: 8),
-                  if (hasTelemetry)
-                    const Icon(Icons.sensors, size: 12, color: Colors.green)
-                  else
-                    const Icon(Icons.sensors_off, size: 12, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'GPS: ${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}',
-                      style: Theme.of(context).textTheme.labelSmall,
-                      overflow: TextOverflow.ellipsis,
+                    if (distanceText != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.straighten, size: 12, color: Colors.blue),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${AppLocalizations.of(context)!.distance}: $distanceText',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ] else
+                    Text(
+                      AppLocalizations.of(context)!.noGpsData,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
-                ] else ...[
-                  const SizedBox(width: 8),
-                  const Text('•', style: TextStyle(color: Colors.grey)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.sensors_off, size: 12, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    AppLocalizations.of(context)!.noGpsData,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
                 ],
-              ],
-            ),
-            // Distance info (new row)
-            if (distanceText != null) ...[
-              const SizedBox(height: 4),
-              Row(
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.straighten, size: 12, color: Colors.blue),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${AppLocalizations.of(context)!.distance}: $distanceText',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w500,
+                  const SizedBox(height: 4),
+                  // Room login status badges
+                  if (roomLoginState != null && roomLoginState.isLoggedIn) ...[
+                    Row(
+                      children: [
+                        if (roomLoginState.isAdmin)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.red, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.admin_panel_settings, size: 10, color: Colors.red),
+                                const SizedBox(width: 2),
+                                Text(
+                                  AppLocalizations.of(context)!.admin,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (roomLoginState.isAdmin) const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.green, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle, size: 10, color: Colors.green),
+                              const SizedBox(width: 2),
+                              Text(
+                                AppLocalizations.of(context)!.loggedIn,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 4),
+                  ],
+                  // Last seen + GPS info combined
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: contact.isRecentlySeen ? Colors.green : Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        contact.timeSinceLastSeen,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      if (location != null) ...[
+                        const SizedBox(width: 8),
+                        const Text('•', style: TextStyle(color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        if (hasTelemetry)
+                          const Icon(Icons.sensors, size: 12, color: Colors.green)
+                        else
+                          const Icon(Icons.sensors_off, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'GPS: ${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
+                            style: Theme.of(context).textTheme.labelSmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ] else ...[
+                        const SizedBox(width: 8),
+                        const Text('•', style: TextStyle(color: Colors.grey)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.sensors_off, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          AppLocalizations.of(context)!.noGpsData,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ],
                   ),
+                  // Distance info (new row)
+                  if (distanceText != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.straighten, size: 12, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${AppLocalizations.of(context)!.distance}: $distanceText',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
-            ],
-          ],
-        ),
         trailing: null,
-        onTap: () => _showContactDetails(context, contact),
+        onTap: () {
+          // In simple mode, tap directly opens message sheet for chat contacts
+          if (isSimpleMode && contact.type == ContactType.chat) {
+            _showDirectMessageDialog(context, contact);
+          } else if (isSimpleMode && contact.type == ContactType.repeater) {
+            // In simple mode, tapping a repeater jumps to the map
+            _jumpToMapForRepeater(context, contact);
+          } else if (isSimpleMode && contact.type == ContactType.room && !contact.isPublicChannel) {
+            _showRoomLoginDialog(context, contact);
+          } else {
+            _showContactDetails(context, contact);
+          }
+        },
         onLongPress: () async {
           final connectionProvider = context.read<ConnectionProvider>();
 
@@ -358,6 +421,29 @@ class ContactTile extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => RoomLoginSheet(contact: contact),
     );
+  }
+
+  void _jumpToMapForRepeater(BuildContext context, Contact contact) {
+    final location = contact.displayLocation;
+    if (location != null) {
+      final mapProvider = context.read<MapProvider>();
+
+      // Navigate to map location
+      mapProvider.navigateToLocation(
+        location: LatLng(location.latitude, location.longitude),
+        zoom: 15.0,
+        animate: true,
+      );
+
+      // Switch to map tab using callback
+      onNavigateToMap?.call();
+    } else {
+      // No location available, just show toast
+      ToastLogger.info(
+        context,
+        'Repeater ${contact.displayName} has no location data',
+      );
+    }
   }
 
   void _showDeleteConfirmation(BuildContext context, Contact contact) {
@@ -587,8 +673,8 @@ class ContactTile extends StatelessWidget {
                             );
                             Navigator.pop(context);
 
-                            // Switch to map tab (assuming it's index 2)
-                            DefaultTabController.of(context).animateTo(2);
+                            // Switch to map tab using callback
+                            onNavigateToMap?.call();
                           },
                           icon: const Icon(Icons.map, size: 18),
                           label: Text(AppLocalizations.of(context)!.viewOnMap),

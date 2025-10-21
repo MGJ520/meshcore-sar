@@ -20,6 +20,8 @@ class DrawingProvider with ChangeNotifier {
   // Drawing state
   DrawingMode _drawingMode = DrawingMode.none;
   Color _selectedColor = DrawingColors.palette[0];
+  bool _showReceivedDrawings = true;
+  bool _showSarMarkers = true;
 
   // Completed drawings
   final List<MapDrawing> _drawings = [];
@@ -32,7 +34,11 @@ class DrawingProvider with ChangeNotifier {
   // Getters
   DrawingMode get drawingMode => _drawingMode;
   Color get selectedColor => _selectedColor;
-  List<MapDrawing> get drawings => List.unmodifiable(_drawings);
+  bool get showReceivedDrawings => _showReceivedDrawings;
+  bool get showSarMarkers => _showSarMarkers;
+  List<MapDrawing> get drawings => _showReceivedDrawings
+      ? List.unmodifiable(_drawings)
+      : List.unmodifiable(_drawings.where((d) => !d.isReceived).toList());
   MapDrawing? get currentDrawing => _currentDrawing;
   List<LatLng> get currentLinePoints => List.unmodifiable(_currentLinePoints);
   LatLng? get rectangleStartPoint => _rectangleStartPoint;
@@ -56,6 +62,18 @@ class DrawingProvider with ChangeNotifier {
   /// Set selected color
   void setColor(Color color) {
     _selectedColor = color;
+    notifyListeners();
+  }
+
+  /// Toggle visibility of received drawings
+  void toggleReceivedDrawings() {
+    _showReceivedDrawings = !_showReceivedDrawings;
+    notifyListeners();
+  }
+
+  /// Toggle visibility of SAR markers
+  void toggleSarMarkers() {
+    _showSarMarkers = !_showSarMarkers;
     notifyListeners();
   }
 

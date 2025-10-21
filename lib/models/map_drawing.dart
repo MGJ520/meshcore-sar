@@ -71,6 +71,7 @@ abstract class MapDrawing {
   final DateTime createdAt;
   final String? senderName; // Name of sender (null if local drawing)
   final bool isReceived; // True if drawing was received from another node
+  final String? messageId; // ID of the source message (for navigation)
 
   MapDrawing({
     required this.id,
@@ -79,6 +80,7 @@ abstract class MapDrawing {
     required this.createdAt,
     this.senderName,
     this.isReceived = false,
+    this.messageId,
   });
 
   /// Convert to JSON for persistence
@@ -90,8 +92,12 @@ abstract class MapDrawing {
   Map<String, dynamic> toNetworkJson();
 
   /// Parse network JSON (compact format)
-  /// senderName will be populated from packet metadata
-  static MapDrawing? fromNetworkJson(Map<String, dynamic> json, {String? senderName}) {
+  /// senderName and messageId will be populated from packet metadata
+  static MapDrawing? fromNetworkJson(
+    Map<String, dynamic> json, {
+    String? senderName,
+    String? messageId,
+  }) {
     final typeNum = json['t'] as int?;
     if (typeNum == null || typeNum < 0 || typeNum >= DrawingShapeType.values.length) {
       return null;
@@ -102,9 +108,17 @@ abstract class MapDrawing {
 
       switch (type) {
         case DrawingShapeType.line:
-          return LineDrawing.fromNetworkJson(json, senderName: senderName);
+          return LineDrawing.fromNetworkJson(
+            json,
+            senderName: senderName,
+            messageId: messageId,
+          );
         case DrawingShapeType.rectangle:
-          return RectangleDrawing.fromNetworkJson(json, senderName: senderName);
+          return RectangleDrawing.fromNetworkJson(
+            json,
+            senderName: senderName,
+            messageId: messageId,
+          );
       }
     } catch (e) {
       return null;
@@ -144,6 +158,7 @@ class LineDrawing extends MapDrawing {
     required this.points,
     super.senderName,
     super.isReceived,
+    super.messageId,
   }) : super(type: DrawingShapeType.line);
 
   @override
@@ -184,7 +199,11 @@ class LineDrawing extends MapDrawing {
     );
   }
 
-  static LineDrawing fromNetworkJson(Map<String, dynamic> json, {String? senderName}) {
+  static LineDrawing fromNetworkJson(
+    Map<String, dynamic> json, {
+    String? senderName,
+    String? messageId,
+  }) {
     // Parse ultra-compact format
     final pointsFlat = (json['p'] as List<dynamic>).cast<double>();
     final points = <LatLng>[];
@@ -199,6 +218,7 @@ class LineDrawing extends MapDrawing {
       points: points,
       senderName: senderName,
       isReceived: true,
+      messageId: messageId, // Link to source message
     );
   }
 
@@ -226,6 +246,7 @@ class RectangleDrawing extends MapDrawing {
     required this.bottomRight,
     super.senderName,
     super.isReceived,
+    super.messageId,
   }) : super(type: DrawingShapeType.rectangle);
 
   /// Get all corner points for rendering
@@ -276,7 +297,11 @@ class RectangleDrawing extends MapDrawing {
     );
   }
 
-  static RectangleDrawing fromNetworkJson(Map<String, dynamic> json, {String? senderName}) {
+  static RectangleDrawing fromNetworkJson(
+    Map<String, dynamic> json, {
+    String? senderName,
+    String? messageId,
+  }) {
     // Parse ultra-compact format
     final bounds = (json['b'] as List<dynamic>).cast<double>();
 
@@ -288,6 +313,7 @@ class RectangleDrawing extends MapDrawing {
       bottomRight: LatLng(bounds[2], bounds[3]),
       senderName: senderName,
       isReceived: true,
+      messageId: messageId, // Link to source message
     );
   }
 

@@ -17,10 +17,49 @@ class ContactsProvider with ChangeNotifier {
 
   bool get isInitialized => _isInitialized;
 
+  /// Initialize and load persisted contacts at app startup
+  /// This loads contacts without filtering, allowing offline viewing
+  Future<void> initializeEarly() async {
+    if (_isInitialized) return;
+
+    try {
+      debugPrint('📦 [ContactsProvider] Early loading persisted contacts (no filtering)...');
+      final storedContacts = await _storageService.loadContacts();
+
+      // Add stored contacts (excluding any with all-zeros public key)
+      const publicChannelKey = '0000000000000000000000000000000000000000000000000000000000000000';
+      for (final contact in storedContacts) {
+        // Skip any contacts with all-zeros public key (shouldn't happen, but safety check)
+        if (contact.publicKeyHex == publicChannelKey) {
+          continue;
+        }
+        _contacts[contact.publicKeyHex] = contact;
+      }
+
+      _isInitialized = true;
+      debugPrint('✅ [ContactsProvider] Early loaded ${storedContacts.length} persisted contacts');
+
+      // Ensure public channel exists after loading
+      _ensurePublicChannelExists();
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ [ContactsProvider] Error in early initialization: $e');
+      _isInitialized = true; // Mark as initialized even on error
+      _ensurePublicChannelExists();
+    }
+  }
+
   /// Initialize and load persisted contacts
   /// [devicePublicKey] - device's own public key to exclude from loaded contacts
   Future<void> initialize({Uint8List? devicePublicKey}) async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      // If already initialized (from early load), just filter out self-contact
+      if (devicePublicKey != null) {
+        _removeSelfContact(devicePublicKey);
+      }
+      return;
+    }
 
     try {
       debugPrint('📦 [ContactsProvider] Loading persisted contacts...');
@@ -49,6 +88,18 @@ class ContactsProvider with ChangeNotifier {
       debugPrint('❌ [ContactsProvider] Error initializing: $e');
       _isInitialized = true; // Mark as initialized even on error
       _ensurePublicChannelExists();
+    }
+  }
+
+  /// Remove self-contact from loaded contacts (called after BLE connection established)
+  void _removeSelfContact(Uint8List devicePublicKey) {
+    final selfKeyHex = devicePublicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
+    if (_contacts.containsKey(selfKeyHex)) {
+      final selfContact = _contacts[selfKeyHex]!;
+      debugPrint('🗑️ [ContactsProvider] Removing self-contact: ${selfContact.advName}');
+      _contacts.remove(selfKeyHex);
+      _persistContacts();
+      notifyListeners();
     }
   }
 

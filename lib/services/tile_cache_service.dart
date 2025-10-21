@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
-import 'package:flutter_map_tile_caching/custom_backend_api.dart';
 import 'package:vector_map_tiles_mbtiles/vector_map_tiles_mbtiles.dart';
 import 'package:mbtiles/mbtiles.dart';
 import '../models/map_layer.dart';
@@ -170,6 +169,91 @@ class TileCacheService {
     } catch (e) {
       debugPrint('Error creating vector tile provider: $e');
       return null;
+    }
+  }
+
+  /// Export the current tile cache store to an archive file
+  ///
+  /// [outputPath] - Full path where the archive should be saved (e.g., '/path/to/export.fmtc')
+  ///
+  /// Returns the number of tiles exported
+  Future<int> exportStore(String outputPath) async {
+    if (!_isInitialized) {
+      throw StateError(
+        'TileCacheService not initialized. Call initialize() first.',
+      );
+    }
+
+    try {
+      final external = FMTCRoot.external(pathToArchive: outputPath);
+      final result = await external.export(storeNames: [_storeName]);
+
+      debugPrint('Export completed: $result tiles exported to $outputPath');
+      return result;
+    } catch (e) {
+      debugPrint('Error exporting store: $e');
+      rethrow;
+    }
+  }
+
+  /// Import a tile cache store from an archive file
+  ///
+  /// [filePath] - Path to the .fmtc archive file to import
+  /// [storeNames] - Optional list of store names to import (null = import all)
+  /// [strategy] - Conflict resolution strategy (default: merge)
+  ///
+  /// Returns a map with import statistics (e.g., tile count, stores imported)
+  Future<Map<String, dynamic>> importStore(
+    String filePath, {
+    List<String>? storeNames,
+    ImportConflictStrategy strategy = ImportConflictStrategy.merge,
+  }) async {
+    if (!_isInitialized) {
+      throw StateError(
+        'TileCacheService not initialized. Call initialize() first.',
+      );
+    }
+
+    try {
+      final external = FMTCRoot.external(pathToArchive: filePath);
+      final result = external.import(storeNames: storeNames, strategy: strategy);
+
+      // Wait for the import to complete and get tile count
+      final tileCount = await result.complete;
+
+      // Wait for store states
+      final storesToStates = await result.storesToStates;
+
+      debugPrint('Import completed: $tileCount tiles imported, ${storesToStates.length} stores');
+
+      // Count successful stores (those that weren't skipped)
+      final successfulCount = storesToStates.values.where((state) => state.name != null).length;
+
+      return {
+        'successfulStores': successfulCount,
+        'tileCount': tileCount,
+        'storesToStates': storesToStates,
+      };
+    } catch (e) {
+      debugPrint('Error importing store: $e');
+      rethrow;
+    }
+  }
+
+  /// List all stores available in an archive file without importing
+  ///
+  /// [filePath] - Path to the .fmtc archive file to inspect
+  ///
+  /// Returns a list of store names contained in the archive
+  Future<List<String>> listArchiveStores(String filePath) async {
+    try {
+      final external = FMTCRoot.external(pathToArchive: filePath);
+      final stores = await external.listStores;
+      debugPrint('Archive contains ${stores.length} stores: $stores');
+      return stores;
+    } catch (e) {
+      debugPrint('Error listing archive stores: $e');
+      rethrow;
     }
   }
 

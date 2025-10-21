@@ -330,6 +330,18 @@ abstract class AppLocalizations {
   /// **'Display packet activity indicators in top bar'**
   String get displayPacketActivity;
 
+  /// Setting to enable simple mode
+  ///
+  /// In en, this message translates to:
+  /// **'Simple Mode'**
+  String get simpleMode;
+
+  /// Description for simple mode setting
+  ///
+  /// In en, this message translates to:
+  /// **'Hide non-essential information in messages and contacts'**
+  String get simpleModeDescription;
+
   /// Language setting label
   ///
   /// In en, this message translates to:
@@ -656,7 +668,7 @@ abstract class AppLocalizations {
   /// Action to send direct message to contact
   ///
   /// In en, this message translates to:
-  /// **'Send Direct Message'**
+  /// **'Send'**
   String get sendDirectMessage;
 
   /// Action to reset contact path for re-routing
@@ -772,6 +784,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear All Drawings'**
   String get clearAllDrawings;
+
+  /// Toggle to show/hide received drawings from other team members
+  ///
+  /// In en, this message translates to:
+  /// **'Show Received Drawings'**
+  String get showReceivedDrawings;
+
+  /// Subtitle when received drawings are visible
+  ///
+  /// In en, this message translates to:
+  /// **'Showing all drawings'**
+  String get showingAllDrawings;
+
+  /// Subtitle when received drawings are hidden
+  ///
+  /// In en, this message translates to:
+  /// **'Showing only your drawings'**
+  String get showingOnlyYourDrawings;
+
+  /// Toggle to show/hide SAR markers on map
+  ///
+  /// In en, this message translates to:
+  /// **'Show SAR Markers'**
+  String get showSarMarkers;
+
+  /// Subtitle when SAR markers are visible
+  ///
+  /// In en, this message translates to:
+  /// **'Showing SAR markers'**
+  String get showingSarMarkers;
+
+  /// Subtitle when SAR markers are hidden
+  ///
+  /// In en, this message translates to:
+  /// **'Hiding SAR markers'**
+  String get hidingSarMarkers;
 
   /// Clear all button label
   ///
@@ -898,6 +946,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location'**
   String get location;
+
+  /// Button label to insert current GPS location
+  ///
+  /// In en, this message translates to:
+  /// **'My Location'**
+  String get myLocation;
 
   /// Badge showing location is from map tap
   ///
@@ -1246,6 +1300,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accuracy'**
   String get accuracy;
+
+  /// Bearing label in compass
+  ///
+  /// In en, this message translates to:
+  /// **'Bearing'**
+  String get bearing;
+
+  /// Direction label in compass
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get direction;
 
   /// Title for filter markers dialog
   ///
@@ -1673,6 +1739,24 @@ abstract class AppLocalizations {
   /// **'ESRI Satellite'**
   String get esriSatellite;
 
+  /// Google Hybrid layer name (satellite + labels)
+  ///
+  /// In en, this message translates to:
+  /// **'Google Hybrid'**
+  String get googleHybrid;
+
+  /// Google Roadmap layer name (street map)
+  ///
+  /// In en, this message translates to:
+  /// **'Google Roadmap'**
+  String get googleRoadmap;
+
+  /// Google Terrain layer name (topographic)
+  ///
+  /// In en, this message translates to:
+  /// **'Google Terrain'**
+  String get googleTerrain;
+
   /// Tooltip for download visible area button
   ///
   /// In en, this message translates to:
@@ -1804,6 +1888,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Message deleted'**
   String get messageDeleted;
+
+  /// Option to copy message text to clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Copy text'**
+  String get copyText;
+
+  /// Dialog title for deleting a message
+  ///
+  /// In en, this message translates to:
+  /// **'Delete message'**
+  String get deleteMessage;
+
+  /// Confirmation text for message deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this message?'**
+  String get deleteMessageConfirmation;
 
   /// Success message when contacts are refreshed
   ///
@@ -2038,6 +2140,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to delete offline map'**
   String get failedToDeleteMbtiles;
+
+  /// Title for import/export section
+  ///
+  /// In en, this message translates to:
+  /// **'Import/Export Cached Tiles'**
+  String get importExportCachedTiles;
+
+  /// Description for import/export functionality
+  ///
+  /// In en, this message translates to:
+  /// **'Backup, share, and restore downloaded map tiles between devices'**
+  String get importExportDescription;
+
+  /// Button to export tiles to archive file
+  ///
+  /// In en, this message translates to:
+  /// **'Export Tiles to File'**
+  String get exportTilesToFile;
+
+  /// Button to import tiles from archive file
+  ///
+  /// In en, this message translates to:
+  /// **'Import Tiles from File'**
+  String get importTilesFromFile;
+
+  /// Title for export file picker
+  ///
+  /// In en, this message translates to:
+  /// **'Select Export Location'**
+  String get selectExportLocation;
+
+  /// Title for import file picker
+  ///
+  /// In en, this message translates to:
+  /// **'Select Tile Archive'**
+  String get selectImportFile;
+
+  /// Status message during export
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting tiles...'**
+  String get exportingTiles;
+
+  /// Status message during import
+  ///
+  /// In en, this message translates to:
+  /// **'Importing tiles...'**
+  String get importingTiles;
+
+  /// Success message after export
+  ///
+  /// In en, this message translates to:
+  /// **'Exported {count} tiles successfully'**
+  String exportSuccess(int count);
+
+  /// Success message after import
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} stores successfully'**
+  String importSuccess(int count);
+
+  /// Error message when export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String exportFailed(String error);
+
+  /// Error message when import fails
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String importFailed(String error);
+
+  /// Note about export functionality
+  ///
+  /// In en, this message translates to:
+  /// **'Creates a compressed archive (.fmtc) file that can be shared and imported on other devices.'**
+  String get exportNote;
+
+  /// Note about import functionality
+  ///
+  /// In en, this message translates to:
+  /// **'Imports map tiles from a previously exported archive file. Tiles will be merged with existing cache.'**
+  String get importNote;
+
+  /// Message when cache is empty
+  ///
+  /// In en, this message translates to:
+  /// **'No tiles available to export'**
+  String get noTilesToExport;
+
+  /// Information about archive contents
+  ///
+  /// In en, this message translates to:
+  /// **'Archive contains {count} stores'**
+  String archiveContainsStores(int count);
 
   /// Label for vector tile type
   ///
@@ -2296,6 +2494,318 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to get location: {error}'**
   String failedToGetLocation(String error);
+
+  /// SAR templates menu title
+  ///
+  /// In en, this message translates to:
+  /// **'SAR Templates'**
+  String get sarTemplates;
+
+  /// Subtitle for SAR templates settings
+  ///
+  /// In en, this message translates to:
+  /// **'Manage cursor on target templates'**
+  String get manageSarTemplates;
+
+  /// Button to add new SAR template
+  ///
+  /// In en, this message translates to:
+  /// **'Add Template'**
+  String get addTemplate;
+
+  /// Dialog title for editing template
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Template'**
+  String get editTemplate;
+
+  /// Action to delete template
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Template'**
+  String get deleteTemplate;
+
+  /// Label for template name field
+  ///
+  /// In en, this message translates to:
+  /// **'Template Name'**
+  String get templateName;
+
+  /// Hint text for template name
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Found Person'**
+  String get templateNameHint;
+
+  /// Label for template emoji field
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji'**
+  String get templateEmoji;
+
+  /// Validation error when emoji field is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji is required'**
+  String get emojiRequired;
+
+  /// Validation error when name field is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get nameRequired;
+
+  /// Label for template description field
+  ///
+  /// In en, this message translates to:
+  /// **'Description (Optional)'**
+  String get templateDescription;
+
+  /// Hint text for template description
+  ///
+  /// In en, this message translates to:
+  /// **'Add additional context...'**
+  String get templateDescriptionHint;
+
+  /// Label for template color picker
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get templateColor;
+
+  /// Label for format preview
+  ///
+  /// In en, this message translates to:
+  /// **'Preview (SAR Message Format)'**
+  String get previewFormat;
+
+  /// Button to import templates from clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importFromClipboard;
+
+  /// Button to export templates to clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportToClipboard;
+
+  /// Confirmation message for template deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Delete template \'{name}\'?'**
+  String deleteTemplateConfirmation(String name);
+
+  /// Success message when template is added
+  ///
+  /// In en, this message translates to:
+  /// **'Template added'**
+  String get templateAdded;
+
+  /// Success message when template is updated
+  ///
+  /// In en, this message translates to:
+  /// **'Template updated'**
+  String get templateUpdated;
+
+  /// Success message when template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Template deleted'**
+  String get templateDeleted;
+
+  /// Success message after importing templates
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No templates imported} =1{Imported 1 template} other{Imported {count} templates}}'**
+  String templatesImported(int count);
+
+  /// Success message after exporting templates
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Exported 1 template to clipboard} other{Exported {count} templates to clipboard}}'**
+  String templatesExported(int count);
+
+  /// Action to reset templates to defaults
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to Defaults'**
+  String get resetToDefaults;
+
+  /// Confirmation message for reset to defaults
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete all custom templates and restore the 4 default templates. Continue?'**
+  String get resetToDefaultsConfirmation;
+
+  /// Reset button label
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// Success message after reset
+  ///
+  /// In en, this message translates to:
+  /// **'Templates reset to defaults'**
+  String get resetComplete;
+
+  /// Message when no templates exist
+  ///
+  /// In en, this message translates to:
+  /// **'No templates available'**
+  String get noTemplates;
+
+  /// Helper text when no templates exist
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to create your first template'**
+  String get tapAddToCreate;
+
+  /// OK button label
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// Permissions section header
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions'**
+  String get permissionsSection;
+
+  /// Location permission label
+  ///
+  /// In en, this message translates to:
+  /// **'Location Permission'**
+  String get locationPermission;
+
+  /// Loading state indicator
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get checking;
+
+  /// Location permission status: granted always
+  ///
+  /// In en, this message translates to:
+  /// **'Granted (Always)'**
+  String get locationPermissionGrantedAlways;
+
+  /// Location permission status: granted while in use
+  ///
+  /// In en, this message translates to:
+  /// **'Granted (While In Use)'**
+  String get locationPermissionGrantedWhileInUse;
+
+  /// Location permission status: denied, user can request
+  ///
+  /// In en, this message translates to:
+  /// **'Denied - Tap to request'**
+  String get locationPermissionDeniedTapToRequest;
+
+  /// Location permission status: permanently denied
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently Denied - Open Settings'**
+  String get locationPermissionPermanentlyDeniedOpenSettings;
+
+  /// Content for location permission dialog when permanently denied
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is permanently denied. Please enable it in your device settings to use GPS tracking and location sharing features.'**
+  String get locationPermissionDialogContent;
+
+  /// Button to open device settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
+  /// Success message when location permission is granted
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission granted!'**
+  String get locationPermissionGranted;
+
+  /// Info message about location permission requirement
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required for GPS tracking and location sharing.'**
+  String get locationPermissionRequiredForGps;
+
+  /// Info message when permission is already granted
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is already granted.'**
+  String get locationPermissionAlreadyGranted;
+
+  /// SAR Navy Blue theme name
+  ///
+  /// In en, this message translates to:
+  /// **'SAR Navy Blue'**
+  String get sarNavyBlue;
+
+  /// Description for SAR Navy Blue theme
+  ///
+  /// In en, this message translates to:
+  /// **'Professional/Operations Mode'**
+  String get sarNavyBlueDescription;
+
+  /// Title for recipient selector sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Select Recipient'**
+  String get selectRecipient;
+
+  /// Subtitle for public channel option
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast to all nearby'**
+  String get broadcastToAllNearby;
+
+  /// Placeholder text for recipient search field
+  ///
+  /// In en, this message translates to:
+  /// **'Search recipients...'**
+  String get searchRecipients;
+
+  /// Message when no contacts match search
+  ///
+  /// In en, this message translates to:
+  /// **'No contacts found'**
+  String get noContactsFound;
+
+  /// Message when no rooms match search
+  ///
+  /// In en, this message translates to:
+  /// **'No rooms found'**
+  String get noRoomsFound;
+
+  /// Message when no contacts or rooms exist
+  ///
+  /// In en, this message translates to:
+  /// **'No contacts or rooms available'**
+  String get noContactsOrRoomsAvailable;
+
+  /// Info message when only public channel is available
+  ///
+  /// In en, this message translates to:
+  /// **'Messages will be sent to public channel'**
+  String get messagesWillBeSentToPublicChannel;
+
+  /// Notification title for new message
+  ///
+  /// In en, this message translates to:
+  /// **'New message'**
+  String get newMessage;
+
+  /// Channel label in notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Channel'**
+  String get channel;
 }
 
 class _AppLocalizationsDelegate

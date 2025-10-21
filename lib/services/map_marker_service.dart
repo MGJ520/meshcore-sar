@@ -184,7 +184,7 @@ class MapMarkerService {
                   ),
                   padding: const EdgeInsets.all(6),
                   child: Text(
-                    marker.type.emoji,
+                    marker.emoji,  // Use custom emoji if available
                     style: const TextStyle(fontSize: 18),
                   ),
                 ),
@@ -198,7 +198,7 @@ class MapMarkerService {
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: Text(
-                    marker.type.displayName,
+                    marker.displayName,  // Uses notes if available, otherwise type.displayName
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 9,

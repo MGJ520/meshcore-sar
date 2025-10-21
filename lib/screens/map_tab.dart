@@ -41,10 +41,12 @@ import 'map_management_screen.dart';
 
 class MapTab extends StatefulWidget {
   final Function(bool)? onFullscreenChanged;
+  final VoidCallback? onNavigateToMessages;
 
   const MapTab({
     super.key,
     this.onFullscreenChanged,
+    this.onNavigateToMessages,
   });
 
   @override
@@ -95,6 +97,15 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
 
   // Access the singleton LocationTrackingService from AppProvider
   LocationTrackingService get _locationService => LocationTrackingService();
+
+  /// Helper to compare public keys byte-by-byte
+  bool _publicKeysMatch(Uint8List key1, Uint8List key2) {
+    if (key1.length != key2.length) return false;
+    for (int i = 0; i < key1.length; i++) {
+      if (key1[i] != key2[i]) return false;
+    }
+    return true;
+  }
 
   @override
   void initState() {
@@ -867,17 +878,17 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
       builder: (context) => SarUpdateSheet(
         prePopulatedPosition: position,
         allowLocationUpdate: false, // Don't allow changing to current location
-        onSend: (sarType, position, notes, roomPublicKey, sendToChannel) async {
-          await _sendSarMessage(sarType, position, notes, roomPublicKey, sendToChannel);
+        onSend: (emoji, name, position, roomPublicKey, sendToChannel) async {
+          await _sendSarMessage(emoji, name, position, roomPublicKey, sendToChannel);
         },
       ),
     );
   }
 
   Future<void> _sendSarMessage(
-    SarMarkerType sarType,
+    String emoji,
+    String name,
     Position position,
-    String? notes,
     Uint8List? roomPublicKey,
     bool sendToChannel,
   ) async {
@@ -907,27 +918,50 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     }
 
     try {
-      // Format: S:<emoji>:<latitude>,<longitude>
-      final sarMessage = 'S:${sarType.emoji}:${position.latitude},${position.longitude}';
-
-      // Add notes if provided
-      final fullMessage = notes != null && notes.isNotEmpty
-          ? '$sarMessage $notes'
-          : sarMessage;
+      // Format: S:<emoji>:<latitude>,<longitude>:<name>
+      // Round coordinates to 5 decimal places (~1m accuracy) since most GPS is only that accurate
+      final sarMessage = 'S:$emoji:${position.latitude.toStringAsFixed(5)},${position.longitude.toStringAsFixed(5)}:$name';
 
       if (sendToChannel) {
+        // Create message ID
+        final messageId = '${DateTime.now().millisecondsSinceEpoch}_channel_sent';
+        final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+        // Get current device's public key (first 6 bytes)
+        final devicePublicKey = connectionProvider.deviceInfo.publicKey;
+        final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
+
+        // Create sent message object
+        final sentMessage = Message(
+          id: messageId,
+          messageType: MessageType.channel,
+          senderPublicKeyPrefix: senderPublicKeyPrefix,
+          pathLen: 0,
+          textType: MessageTextType.plain,
+          senderTimestamp: timestamp,
+          text: sarMessage,
+          receivedAt: DateTime.now(),
+          deliveryStatus: MessageDeliveryStatus.sending,
+          channelIdx: 0,
+          // SAR marker data is automatically added by SarMessageParser.enhanceMessage in MessagesProvider
+        );
+
+        // Add to messages list with "sending" status
+        messagesProvider.addSentMessage(sentMessage);
+
         // Send to public channel (ephemeral, over-the-air only)
         await connectionProvider.sendChannelMessage(
           channelIdx: 0,
-          text: fullMessage,
+          text: sarMessage,
+          messageId: messageId,
         );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${sarType.displayName} marker broadcast to public channel'),
+          const SnackBar(
+            content: Text('SAR marker broadcast to public channel'),
             backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       } else {
@@ -939,7 +973,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
         final devicePublicKey = connectionProvider.deviceInfo.publicKey;
         final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
 
-        // Create sent message object
+        // Create sent message object with recipient public key for retry support
         final sentMessage = Message(
           id: messageId,
           messageType: MessageType.contact,
@@ -947,20 +981,29 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
           pathLen: 0,
           textType: MessageTextType.plain,
           senderTimestamp: timestamp,
-          text: fullMessage,
+          text: sarMessage,
           receivedAt: DateTime.now(),
           deliveryStatus: MessageDeliveryStatus.sending,
+          recipientPublicKey: roomPublicKey, // Store recipient for retry
           // SAR marker data is automatically added by SarMessageParser.enhanceMessage in MessagesProvider
         );
 
         // Add to messages list with "sending" status
         messagesProvider.addSentMessage(sentMessage);
 
+        // Look up the room contact for path logging
+        final contactsProvider = context.read<ContactsProvider>();
+        final roomContact = contactsProvider.contacts.where((c) {
+          return c.publicKey.length >= roomPublicKey!.length &&
+              _publicKeysMatch(c.publicKey, roomPublicKey);
+        }).firstOrNull;
+
         // Send SAR message to selected room (persisted and immutable)
         final sentSuccessfully = await connectionProvider.sendTextMessage(
           contactPublicKey: roomPublicKey!,
-          text: fullMessage,
+          text: sarMessage,
           messageId: messageId, // Pass message ID so it can be tracked
+          contact: roomContact, // Include contact for path status logging
         );
 
         if (!sentSuccessfully) {
@@ -970,10 +1013,10 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${sarType.displayName} marker sent to room'),
+          const SnackBar(
+            content: Text('SAR marker sent to room'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -991,10 +1034,17 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
+    final appProvider = context.watch<AppProvider>();
+    final isSimpleMode = appProvider.isSimpleMode;
+
     return Consumer3<ContactsProvider, MessagesProvider, DrawingProvider>(
       builder: (context, contactsProvider, messagesProvider, drawingProvider, child) {
         final contactsWithLocation = contactsProvider.contactsWithLocation;
-        final sarMarkers = messagesProvider.sarMarkers;
+        // Filter SAR markers based on visibility toggle
+        final allSarMarkers = messagesProvider.sarMarkers;
+        final sarMarkers = drawingProvider.showSarMarkers
+            ? allSarMarkers
+            : <SarMarker>[];
         final center = _calculateCenter(contactsWithLocation, sarMarkers);
 
         return Stack(
@@ -1167,6 +1217,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                       DrawingLayer(
                         drawings: drawingProvider.drawings,
                         previewDrawing: drawingProvider.getPreviewDrawing(),
+                        isSimpleMode: isSimpleMode,
                       ),
                       MarkerLayer(
                         markers: [
@@ -1191,12 +1242,9 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                             context: context,
                             mapRotation: _getMapRotation(),
                             onTap: (marker) {
-                              _showDetailedCompassWithSarMarker(
-                                context,
-                                contactsProvider.contactsWithLocation,
-                                messagesProvider.sarMarkers,
-                                marker,
-                              );
+                              // Navigate to the corresponding message in Messages tab
+                              messagesProvider.navigateToMessage(marker.id);
+                              widget.onNavigateToMessages?.call();
                             },
                           ),
                           // User location marker
@@ -1284,8 +1332,16 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                       DrawingMarkersLayer(
                         drawings: drawingProvider.drawings,
                         showDeleteButtons: drawingProvider.isDrawing,
+                        isSimpleMode: isSimpleMode,
                         onDeleteDrawing: (drawingId) {
                           drawingProvider.removeDrawing(drawingId);
+                        },
+                        onTapDrawing: (drawing) {
+                          // Navigate to the corresponding message in Messages tab
+                          if (drawing.messageId != null) {
+                            messagesProvider.navigateToMessage(drawing.messageId!);
+                            widget.onNavigateToMessages?.call();
+                          }
                         },
                       ),
                     ],
@@ -1406,6 +1462,21 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                       child: const Icon(Icons.layers),
                     ),
                     const SizedBox(height: 8),
+                    // In simple mode: show fullscreen button directly
+                    // In normal mode: show options menu (which includes fullscreen)
+                    if (context.watch<AppProvider>().isSimpleMode)
+                      FloatingActionButton.small(
+                        heroTag: 'fullscreen_toggle',
+                        onPressed: () {
+                          setState(() {
+                            _isFullscreen = !_isFullscreen;
+                          });
+                          _saveSettings();
+                          widget.onFullscreenChanged?.call(_isFullscreen);
+                        },
+                        child: Icon(_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen),
+                      )
+                    else
                       FloatingActionButton.small(
                         heroTag: 'options_menu',
                         onPressed: () => _showOptionsMenu(context),

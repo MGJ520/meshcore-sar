@@ -12,6 +12,7 @@ import '../services/locale_preferences.dart';
 import '../utils/sample_data_generator.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
+import 'sar_template_management_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
@@ -259,27 +260,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.settings, size: 24),
-                SizedBox(width: 12),
-                Text('Location Permission'),
+                const Icon(Icons.settings, size: 24),
+                const SizedBox(width: 12),
+                Text(AppLocalizations.of(context)!.locationPermission),
               ],
             ),
-            content: const Text(
-              'Location permission is permanently denied. Please enable it in your device settings to use GPS tracking and location sharing features.',
+            content: Text(
+              AppLocalizations.of(context)!.locationPermissionDialogContent,
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(context);
                   await Geolocator.openAppSettings();
                 },
-                child: const Text('Open Settings'),
+                child: Text(AppLocalizations.of(context)!.openSettings),
               ),
             ],
           ),
@@ -294,8 +295,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             newPermission == LocationPermission.always) {
           // Permission granted
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission granted!'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.locationPermissionGranted),
               backgroundColor: Colors.green,
             ),
           );
@@ -303,10 +304,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         } else {
           // Permission denied
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission is required for GPS tracking and location sharing.'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.locationPermissionRequiredForGps),
               backgroundColor: Colors.orange,
-              duration: Duration(seconds: 4),
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -314,8 +315,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Already granted - show info
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location permission is already granted.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.locationPermissionAlreadyGranted),
             backgroundColor: Colors.blue,
           ),
         );
@@ -433,6 +434,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await _saveRxTxPreference(value);
             },
           ),
+          Consumer<AppProvider>(
+            builder: (context, appProvider, child) => SwitchListTile(
+              secondary: const Icon(Icons.visibility_off),
+              title: Text(AppLocalizations.of(context)!.simpleMode),
+              subtitle: Text(AppLocalizations.of(context)!.simpleModeDescription),
+              value: appProvider.isSimpleMode,
+              onChanged: (value) async {
+                await appProvider.toggleSimpleMode(value);
+              },
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.language),
             title: Text(AppLocalizations.of(context)!.language),
@@ -440,18 +452,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLanguageDialog(),
           ),
+          ListTile(
+            leading: const Icon(Icons.location_searching),
+            title: Text(AppLocalizations.of(context)!.sarTemplates),
+            subtitle: Text(AppLocalizations.of(context)!.manageSarTemplates),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SarTemplateManagementScreen(),
+                ),
+              );
+            },
+          ),
           const Divider(),
 
           // Permissions Section
-          _buildSectionHeader('Permissions'),
+          _buildSectionHeader(AppLocalizations.of(context)!.permissionsSection),
           ListTile(
             leading: const Icon(Icons.location_on),
-            title: const Text('Location Permission'),
+            title: Text(AppLocalizations.of(context)!.locationPermission),
             subtitle: FutureBuilder<LocationPermission>(
               future: Geolocator.checkPermission(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Text('Checking...');
+                  return Text(AppLocalizations.of(context)!.checking);
                 }
                 final permission = snapshot.data!;
                 String statusText;
@@ -459,23 +485,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 switch (permission) {
                   case LocationPermission.always:
-                    statusText = 'Granted (Always)';
+                    statusText = AppLocalizations.of(context)!.locationPermissionGrantedAlways;
                     statusColor = Colors.green;
                     break;
                   case LocationPermission.whileInUse:
-                    statusText = 'Granted (While In Use)';
+                    statusText = AppLocalizations.of(context)!.locationPermissionGrantedWhileInUse;
                     statusColor = Colors.green;
                     break;
                   case LocationPermission.denied:
-                    statusText = 'Denied - Tap to request';
+                    statusText = AppLocalizations.of(context)!.locationPermissionDeniedTapToRequest;
                     statusColor = Colors.orange;
                     break;
                   case LocationPermission.deniedForever:
-                    statusText = 'Permanently Denied - Open Settings';
+                    statusText = AppLocalizations.of(context)!.locationPermissionPermanentlyDeniedOpenSettings;
                     statusColor = Colors.red;
                     break;
                   default:
-                    statusText = 'Unknown';
+                    statusText = AppLocalizations.of(context)!.unknown;
                     statusColor = Colors.grey;
                 }
 
@@ -906,7 +932,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               RadioListTile<AppThemeMode>(
                 title: Row(
                   children: [
-                    const Text('SAR Navy Blue'),
+                    Text(AppLocalizations.of(context)!.sarNavyBlue),
                     const SizedBox(width: 8),
                     Container(
                       width: 16,
@@ -919,7 +945,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-                subtitle: const Text('Professional/Operations Mode'),
+                subtitle: Text(AppLocalizations.of(context)!.sarNavyBlueDescription),
                 value: AppThemeMode.sarNavyBlue,
                 groupValue: _selectedTheme,
                 onChanged: (value) {

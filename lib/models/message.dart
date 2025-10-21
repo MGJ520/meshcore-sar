@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'sar_marker.dart';
 
@@ -51,6 +52,7 @@ class Message {
   final SarMarkerType? sarMarkerType;
   final LatLng? sarGpsCoordinates;
   final String? sarNotes; // Optional message/notes for SAR marker
+  final String? sarCustomEmoji; // Custom emoji for unknown SAR marker types
 
   // Display metadata
   final DateTime receivedAt;
@@ -89,6 +91,7 @@ class Message {
     this.sarMarkerType,
     this.sarGpsCoordinates,
     this.sarNotes,
+    this.sarCustomEmoji,
     required this.receivedAt,
     this.senderName,
     this.deliveryStatus = MessageDeliveryStatus.received,
@@ -171,6 +174,13 @@ class Message {
       return null;
     }
 
+    // Debug: Check what's in sarNotes
+    debugPrint('📍 [Message.toSarMarker] Converting to marker:');
+    debugPrint('   message.text: "${text}"');
+    debugPrint('   message.sarNotes: "${sarNotes}"');
+    debugPrint('   message.sarMarkerType: ${sarMarkerType}');
+    debugPrint('   message.sarCustomEmoji: "${sarCustomEmoji}"');
+
     return SarMarker(
       id: id,
       type: sarMarkerType!,
@@ -179,6 +189,7 @@ class Message {
       senderPublicKey: senderPublicKeyPrefix,
       senderName: senderName,
       notes: sarNotes, // Use dedicated notes field instead of full text
+      customEmoji: sarCustomEmoji, // Preserve custom emoji for unknown types
     );
   }
 
@@ -275,6 +286,7 @@ class Message {
     SarMarkerType? sarMarkerType,
     LatLng? sarGpsCoordinates,
     String? sarNotes,
+    String? sarCustomEmoji,
     DateTime? receivedAt,
     String? senderName,
     MessageDeliveryStatus? deliveryStatus,
@@ -303,6 +315,7 @@ class Message {
       sarMarkerType: sarMarkerType ?? this.sarMarkerType,
       sarGpsCoordinates: sarGpsCoordinates ?? this.sarGpsCoordinates,
       sarNotes: sarNotes ?? this.sarNotes,
+      sarCustomEmoji: sarCustomEmoji ?? this.sarCustomEmoji,
       receivedAt: receivedAt ?? this.receivedAt,
       senderName: senderName ?? this.senderName,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,

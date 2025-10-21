@@ -534,7 +534,7 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
         additionalInfo = 'Battery: ${_selectedContact!.telemetry!.batteryPercentage!.round()}%';
       }
     } else if (_selectedSarMarker != null) {
-      title = _selectedSarMarker!.type.displayName;
+      title = _selectedSarMarker!.displayName;
       targetLocation = _selectedSarMarker!.location;
       additionalInfo = _selectedSarMarker!.timeAgo;
 
@@ -664,21 +664,21 @@ class _DetailedCompassDialogState extends State<DetailedCompassDialog> {
                 children: [
                   _buildLargeInfoCard(
                     context,
-                    'Distance',
+                    AppLocalizations.of(context)!.distance,
                     _formatDistance(distance),
                     Icons.straighten,
                     color,
                   ),
                   _buildLargeInfoCard(
                     context,
-                    'Bearing',
+                    AppLocalizations.of(context)!.bearing,
                     '${bearing.round()}°',
                     Icons.navigation,
                     color,
                   ),
                   _buildLargeInfoCard(
                     context,
-                    'Direction',
+                    AppLocalizations.of(context)!.direction,
                     _bearingToCardinal(bearing),
                     Icons.explore,
                     color,

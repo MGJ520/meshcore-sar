@@ -207,6 +207,16 @@
     "description": "Description du paramètre des indicateurs RX/TX"
   },
 
+  "simpleMode": "Mode Simple",
+  "@simpleMode": {
+    "description": "Paramètre pour activer le mode simple"
+  },
+
+  "simpleModeDescription": "Masquer les informations non essentielles dans les messages et les contacts",
+  "@simpleModeDescription": {
+    "description": "Description du paramètre du mode simple"
+  },
+
   "language": "Langue",
   "@language": {
     "description": "Libellé du paramètre de langue"
@@ -514,7 +524,7 @@
     "description": "Libellé du bouton Actualiser"
   },
 
-  "sendDirectMessage": "Envoyer un message direct",
+  "sendDirectMessage": "Envoyer",
   "@sendDirectMessage": {
     "description": "Action pour envoyer un message direct au contact"
   },
@@ -632,6 +642,36 @@
   "clearAllDrawings": "Effacer tous les dessins",
   "@clearAllDrawings": {
     "description": "Action pour effacer tous les dessins locaux"
+  },
+
+  "showReceivedDrawings": "Afficher les dessins reçus",
+  "@showReceivedDrawings": {
+    "description": "Basculer pour afficher/masquer les dessins reçus des autres membres de l'équipe"
+  },
+
+  "showingAllDrawings": "Affichage de tous les dessins",
+  "@showingAllDrawings": {
+    "description": "Sous-titre lorsque les dessins reçus sont visibles"
+  },
+
+  "showingOnlyYourDrawings": "Affichage uniquement de vos dessins",
+  "@showingOnlyYourDrawings": {
+    "description": "Sous-titre lorsque les dessins reçus sont masqués"
+  },
+
+  "showSarMarkers": "Afficher les marqueurs SAR",
+  "@showSarMarkers": {
+    "description": "Basculer pour afficher/masquer les marqueurs SAR sur la carte"
+  },
+
+  "showingSarMarkers": "Affichage des marqueurs SAR",
+  "@showingSarMarkers": {
+    "description": "Sous-titre lorsque les marqueurs SAR sont visibles"
+  },
+
+  "hidingSarMarkers": "Masquage des marqueurs SAR",
+  "@hidingSarMarkers": {
+    "description": "Sous-titre lorsque les marqueurs SAR sont masqués"
   },
 
   "clearAll": "Tout effacer",
@@ -760,6 +800,11 @@
   "location": "Position",
   "@location": {
     "description": "Libellé de la section de position"
+  },
+
+  "myLocation": "Ma position",
+  "@myLocation": {
+    "description": "Libellé du bouton pour insérer la position GPS actuelle"
   },
 
   "fromMap": "Depuis la carte",
@@ -1123,6 +1168,21 @@
   "accuracy": "Précision",
   "@accuracy": {
     "description": "Libellé de la précision GPS"
+  },
+
+  "distance": "Distance",
+  "@distance": {
+    "description": "Libellé de la distance dans la boussole"
+  },
+
+  "bearing": "Relèvement",
+  "@bearing": {
+    "description": "Libellé du relèvement dans la boussole"
+  },
+
+  "direction": "Direction",
+  "@direction": {
+    "description": "Libellé de la direction dans la boussole"
   },
 
   "filterMarkers": "Filtrer les marqueurs",
@@ -1538,6 +1598,21 @@
     "description": "Nom de la couche d'imagerie satellite ESRI"
   },
 
+  "googleHybrid": "Google Hybride",
+  "@googleHybrid": {
+    "description": "Nom de la couche Google Hybride (satellite + étiquettes)"
+  },
+
+  "googleRoadmap": "Google Carte Routière",
+  "@googleRoadmap": {
+    "description": "Nom de la couche Google Carte Routière"
+  },
+
+  "googleTerrain": "Google Terrain",
+  "@googleTerrain": {
+    "description": "Nom de la couche Google Terrain (topographique)"
+  },
+
   "downloadVisibleArea": "Télécharger la zone visible",
   "@downloadVisibleArea": {
     "description": "Info-bulle du bouton de téléchargement de la zone visible"
@@ -1672,6 +1747,11 @@
   "@messageDeleted": {
     "description": "Message d'information lorsque le message est supprimé"
   },
+
+  "copyText": "Copier le texte",
+  "textCopiedToClipboard": "Texte copié dans le presse-papiers",
+  "deleteMessage": "Supprimer le message",
+  "deleteMessageConfirmation": "Êtes-vous sûr de vouloir supprimer ce message?",
 
   "refreshedContacts": "Contacts actualisés",
   "@refreshedContacts": {
@@ -1899,6 +1979,111 @@
   "failedToDeleteMbtiles": "Échec de la suppression de la carte hors ligne",
   "@failedToDeleteMbtiles": {
     "description": "Message d'erreur lorsque la suppression de MBTiles échoue"
+  },
+
+  "importExportCachedTiles": "Importer/Exporter les tuiles en cache",
+  "@importExportCachedTiles": {
+    "description": "Titre pour section d'importation/exportation"
+  },
+
+  "importExportDescription": "Sauvegarder, partager et restaurer les tuiles de carte téléchargées entre appareils",
+  "@importExportDescription": {
+    "description": "Description de la fonctionnalité d'importation/exportation"
+  },
+
+  "exportTilesToFile": "Exporter les tuiles vers fichier",
+  "@exportTilesToFile": {
+    "description": "Bouton pour exporter les tuiles"
+  },
+
+  "importTilesFromFile": "Importer les tuiles depuis fichier",
+  "@importTilesFromFile": {
+    "description": "Bouton pour importer les tuiles"
+  },
+
+  "selectExportLocation": "Sélectionner l'emplacement d'exportation",
+  "@selectExportLocation": {
+    "description": "Titre pour sélecteur de fichier d'exportation"
+  },
+
+  "selectImportFile": "Sélectionner l'archive de tuiles",
+  "@selectImportFile": {
+    "description": "Titre pour sélecteur de fichier d'importation"
+  },
+
+  "exportingTiles": "Exportation des tuiles...",
+  "@exportingTiles": {
+    "description": "Message de statut pendant l'exportation"
+  },
+
+  "importingTiles": "Importation des tuiles...",
+  "@importingTiles": {
+    "description": "Message de statut pendant l'importation"
+  },
+
+  "exportSuccess": "{count} tuiles exportées avec succès",
+  "@exportSuccess": {
+    "description": "Message de succès après exportation",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "importSuccess": "{count} magasins importés avec succès",
+  "@importSuccess": {
+    "description": "Message de succès après importation",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "exportFailed": "Échec de l'exportation: {error}",
+  "@exportFailed": {
+    "description": "Message d'erreur lors de l'échec de l'exportation",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "importFailed": "Échec de l'importation: {error}",
+  "@importFailed": {
+    "description": "Message d'erreur lors de l'échec de l'importation",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "exportNote": "Crée un fichier d'archive compressé (.fmtc) qui peut être partagé et importé sur d'autres appareils.",
+  "@exportNote": {
+    "description": "Note sur la fonctionnalité d'exportation"
+  },
+
+  "importNote": "Importe les tuiles de carte depuis un fichier d'archive précédemment exporté. Les tuiles seront fusionnées avec le cache existant.",
+  "@importNote": {
+    "description": "Note sur la fonctionnalité d'importation"
+  },
+
+  "noTilesToExport": "Aucune tuile à exporter",
+  "@noTilesToExport": {
+    "description": "Message quand le cache est vide"
+  },
+
+  "archiveContainsStores": "L'archive contient {count} magasins",
+  "@archiveContainsStores": {
+    "description": "Information sur le contenu de l'archive",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
 
   "vectorTiles": "Tuiles vectorielles",
@@ -2139,5 +2324,63 @@
         "type": "String"
       }
     }
-  }
+  },
+
+  "sarTemplates": "SAR Templates",
+  "manageSarTemplates": "Manage cursor on target templates",
+  "addTemplate": "Add Template",
+  "editTemplate": "Edit Template",
+  "deleteTemplate": "Delete Template",
+  "templateName": "Template Name",
+  "templateNameHint": "e.g. Found Person",
+  "templateEmoji": "Emoji",
+  "emojiRequired": "Emoji est requis",
+  "nameRequired": "Nom est requis",
+  "templateDescription": "Description (Optional)",
+  "templateDescriptionHint": "Add additional context...",
+  "templateColor": "Color",
+  "previewFormat": "Preview (SAR Message Format)",
+  "importFromClipboard": "Import",
+  "exportToClipboard": "Export",
+  "deleteTemplateConfirmation": "Delete template '{name}'?",
+  "templateAdded": "Template added",
+  "templateUpdated": "Template updated",
+  "templateDeleted": "Template deleted",
+  "templatesImported": "{count, plural, =0{No templates imported} =1{Imported 1 template} other{Imported {count} templates}}",
+  "templatesExported": "{count, plural, =1{Exported 1 template to clipboard} other{Exported {count} templates to clipboard}}",
+  "importFailed": "Import failed: {error}",
+  "exportFailed": "Export failed: {error}",
+  "resetToDefaults": "Reset to Defaults",
+  "resetToDefaultsConfirmation": "This will delete all custom templates and restore the 4 default templates. Continue?",
+  "reset": "Reset",
+  "resetComplete": "Templates reset to defaults",
+  "noTemplates": "No templates available",
+  "tapAddToCreate": "Tap + to create your first template",
+  "ok": "OK",
+  "delete": "Supprimer",
+
+  "permissionsSection": "Autorisations",
+  "locationPermission": "Autorisation de localisation",
+  "checking": "Vérification...",
+  "locationPermissionGrantedAlways": "Accordée (Toujours)",
+  "locationPermissionGrantedWhileInUse": "Accordée (En cours d'utilisation)",
+  "locationPermissionDeniedTapToRequest": "Refusée - Appuyez pour demander",
+  "locationPermissionPermanentlyDeniedOpenSettings": "Refusée définitivement - Ouvrir les paramètres",
+  "locationPermissionDialogContent": "L'autorisation de localisation est définitivement refusée. Veuillez l'activer dans les paramètres de votre appareil pour utiliser le suivi GPS et le partage de localisation.",
+  "openSettings": "Ouvrir les paramètres",
+  "locationPermissionGranted": "Autorisation de localisation accordée !",
+  "locationPermissionRequiredForGps": "L'autorisation de localisation est nécessaire pour le suivi GPS et le partage de localisation.",
+  "locationPermissionAlreadyGranted": "L'autorisation de localisation est déjà accordée.",
+  "sarNavyBlue": "SAR Bleu Marine",
+  "sarNavyBlueDescription": "Mode Professionnel/Opérations",
+
+  "selectRecipient": "Sélectionner le destinataire",
+  "broadcastToAllNearby": "Diffuser à tous à proximité",
+  "searchRecipients": "Rechercher des destinataires...",
+  "noContactsFound": "Aucun contact trouvé",
+  "noRoomsFound": "Aucune salle trouvée",
+  "noContactsOrRoomsAvailable": "Aucun contact ou salle disponible",
+  "messagesWillBeSentToPublicChannel": "Les messages seront envoyés au canal public",
+  "newMessage": "Nouveau message",
+  "channel": "Canal"
 }

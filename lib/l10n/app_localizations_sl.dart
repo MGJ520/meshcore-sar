@@ -130,6 +130,13 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prikaži kazalnike aktivnosti paketov v zgornji vrstici';
 
   @override
+  String get simpleMode => 'Preprost način';
+
+  @override
+  String get simpleModeDescription =>
+      'Skrij nepomembne informacije v sporočilih in kontaktih';
+
+  @override
   String get language => 'Jezik';
 
   @override
@@ -314,7 +321,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get refresh => 'Osveži';
 
   @override
-  String get sendDirectMessage => 'Pošlji neposredno sporočilo';
+  String get sendDirectMessage => 'Pošlji';
 
   @override
   String get resetPath => 'Ponastavi pot (preusmeri)';
@@ -381,6 +388,24 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get clearAllDrawings => 'Počisti vse risbe';
+
+  @override
+  String get showReceivedDrawings => 'Prikaži prejete risbe';
+
+  @override
+  String get showingAllDrawings => 'Prikazujem vse risbe';
+
+  @override
+  String get showingOnlyYourDrawings => 'Prikazujem samo vaše risbe';
+
+  @override
+  String get showSarMarkers => 'Prikaži SAR označevalce';
+
+  @override
+  String get showingSarMarkers => 'Prikazujem SAR označevalce';
+
+  @override
+  String get hidingSarMarkers => 'Skrivam SAR označevalce';
 
   @override
   String get clearAll => 'Počisti vse';
@@ -456,6 +481,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get location => 'Lokacija';
+
+  @override
+  String get myLocation => 'Moja lokacija';
 
   @override
   String get fromMap => 'Z zemljevida';
@@ -659,6 +687,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get accuracy => 'Natančnost';
+
+  @override
+  String get bearing => 'Azimut';
+
+  @override
+  String get direction => 'Smer';
 
   @override
   String get filterMarkers => 'Filtriraj označevalce';
@@ -901,6 +935,15 @@ class AppLocalizationsSl extends AppLocalizations {
   String get esriSatellite => 'ESRI satelit';
 
   @override
+  String get googleHybrid => 'Google hibridno';
+
+  @override
+  String get googleRoadmap => 'Google cestni zemljevid';
+
+  @override
+  String get googleTerrain => 'Google teren';
+
+  @override
   String get downloadVisibleArea => 'Prenesi vidno območje';
 
   @override
@@ -979,6 +1022,16 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get messageDeleted => 'Sporočilo izbrisano';
+
+  @override
+  String get copyText => 'Kopiraj besedilo';
+
+  @override
+  String get deleteMessage => 'Izbriši sporočilo';
+
+  @override
+  String get deleteMessageConfirmation =>
+      'Ali ste prepričani, da želite izbrisati to sporočilo?';
 
   @override
   String get refreshedContacts => 'Stiki osveženi';
@@ -1115,6 +1168,67 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get failedToDeleteMbtiles =>
       'Brisanje brezpoveznega zemljevida ni uspelo';
+
+  @override
+  String get importExportCachedTiles => 'Uvoz/Izvoz predpomnjenih ploščic';
+
+  @override
+  String get importExportDescription =>
+      'Varnostno kopirajte, delite in obnovite prenesene ploščice zemljevida med napravami';
+
+  @override
+  String get exportTilesToFile => 'Izvozi ploščice v datoteko';
+
+  @override
+  String get importTilesFromFile => 'Uvozi ploščice iz datoteke';
+
+  @override
+  String get selectExportLocation => 'Izberi lokacijo izvoza';
+
+  @override
+  String get selectImportFile => 'Izberi arhiv ploščic';
+
+  @override
+  String get exportingTiles => 'Izvažanje ploščic...';
+
+  @override
+  String get importingTiles => 'Uvažanje ploščic...';
+
+  @override
+  String exportSuccess(int count) {
+    return 'Uspešno izvoženih $count ploščic';
+  }
+
+  @override
+  String importSuccess(int count) {
+    return 'Uspešno uvoženih $count skladišč';
+  }
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String importFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get exportNote =>
+      'Ustvari stisnjeno arhivsko datoteko (.fmtc), ki jo lahko delite in uvozite na drugih napravah.';
+
+  @override
+  String get importNote =>
+      'Uvozi ploščice zemljevida iz predhodno izvožene arhivske datoteke. Ploščice bodo združene z obstoječim predpomnilnikom.';
+
+  @override
+  String get noTilesToExport => 'Ni ploščic za izvoz';
+
+  @override
+  String archiveContainsStores(int count) {
+    return 'Arhiv vsebuje $count skladišč';
+  }
 
   @override
   String get vectorTiles => 'Vektorske ploščice';
@@ -1254,4 +1368,186 @@ class AppLocalizationsSl extends AppLocalizations {
   String failedToGetLocation(String error) {
     return 'Pridobivanje lokacije ni uspelo: $error';
   }
+
+  @override
+  String get sarTemplates => 'SAR Templates';
+
+  @override
+  String get manageSarTemplates => 'Manage cursor on target templates';
+
+  @override
+  String get addTemplate => 'Add Template';
+
+  @override
+  String get editTemplate => 'Edit Template';
+
+  @override
+  String get deleteTemplate => 'Delete Template';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get templateNameHint => 'e.g. Found Person';
+
+  @override
+  String get templateEmoji => 'Emoji';
+
+  @override
+  String get emojiRequired => 'Emoji je obvezen';
+
+  @override
+  String get nameRequired => 'Ime je obvezno';
+
+  @override
+  String get templateDescription => 'Description (Optional)';
+
+  @override
+  String get templateDescriptionHint => 'Add additional context...';
+
+  @override
+  String get templateColor => 'Color';
+
+  @override
+  String get previewFormat => 'Preview (SAR Message Format)';
+
+  @override
+  String get importFromClipboard => 'Import';
+
+  @override
+  String get exportToClipboard => 'Export';
+
+  @override
+  String deleteTemplateConfirmation(String name) {
+    return 'Delete template \'$name\'?';
+  }
+
+  @override
+  String get templateAdded => 'Template added';
+
+  @override
+  String get templateUpdated => 'Template updated';
+
+  @override
+  String get templateDeleted => 'Template deleted';
+
+  @override
+  String templatesImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Imported $count templates',
+      one: 'Imported 1 template',
+      zero: 'No templates imported',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String templatesExported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Exported $count templates to clipboard',
+      one: 'Exported 1 template to clipboard',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resetToDefaults => 'Reset to Defaults';
+
+  @override
+  String get resetToDefaultsConfirmation =>
+      'This will delete all custom templates and restore the 4 default templates. Continue?';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get resetComplete => 'Templates reset to defaults';
+
+  @override
+  String get noTemplates => 'No templates available';
+
+  @override
+  String get tapAddToCreate => 'Tap + to create your first template';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get permissionsSection => 'Dovoljenja';
+
+  @override
+  String get locationPermission => 'Dovoljenje za lokacijo';
+
+  @override
+  String get checking => 'Preverjanje...';
+
+  @override
+  String get locationPermissionGrantedAlways => 'Odobreno (Vedno)';
+
+  @override
+  String get locationPermissionGrantedWhileInUse => 'Odobreno (Med uporabo)';
+
+  @override
+  String get locationPermissionDeniedTapToRequest =>
+      'Zavrnjeno - Tapnite za zahtevo';
+
+  @override
+  String get locationPermissionPermanentlyDeniedOpenSettings =>
+      'Trajno zavrnjeno - Odpri nastavitve';
+
+  @override
+  String get locationPermissionDialogContent =>
+      'Dovoljenje za lokacijo je trajno zavrnjeno. Omogočite ga v nastavitvah naprave za uporabo sledenja GPS in deljenja lokacije.';
+
+  @override
+  String get openSettings => 'Odpri nastavitve';
+
+  @override
+  String get locationPermissionGranted => 'Dovoljenje za lokacijo odobreno!';
+
+  @override
+  String get locationPermissionRequiredForGps =>
+      'Dovoljenje za lokacijo je potrebno za sledenje GPS in deljenje lokacije.';
+
+  @override
+  String get locationPermissionAlreadyGranted =>
+      'Dovoljenje za lokacijo je že odobreno.';
+
+  @override
+  String get sarNavyBlue => 'SAR Mornarska Modra';
+
+  @override
+  String get sarNavyBlueDescription => 'Profesionalni/Operativni Način';
+
+  @override
+  String get selectRecipient => 'Izberi prejemnika';
+
+  @override
+  String get broadcastToAllNearby => 'Oddajaj vsem v bližini';
+
+  @override
+  String get searchRecipients => 'Išči prejemnike...';
+
+  @override
+  String get noContactsFound => 'Ni kontaktov';
+
+  @override
+  String get noRoomsFound => 'Ni sob';
+
+  @override
+  String get noContactsOrRoomsAvailable => 'Ni na voljo kontaktov ali sob';
+
+  @override
+  String get messagesWillBeSentToPublicChannel =>
+      'Sporočila bodo poslana na javni kanal';
+
+  @override
+  String get newMessage => 'Novo sporočilo';
+
+  @override
+  String get channel => 'Kanal';
 }

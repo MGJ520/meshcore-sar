@@ -158,7 +158,7 @@ class MapMarkers {
                   ),
                   padding: const EdgeInsets.all(6),
                   child: Text(
-                    marker.type.emoji,
+                    marker.emoji,  // Use custom emoji if available
                     style: const TextStyle(fontSize: 18),
                   ),
                 ),
@@ -171,16 +171,27 @@ class MapMarkers {
                     color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(3),
                   ),
-                  child: Text(
-                    marker.type.getLocalizedName(context),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
+                  child: Builder(
+                    builder: (context) {
+                      // Debug: Print what we're actually displaying
+                      debugPrint('🗺️ [MapMarker] Displaying SAR marker:');
+                      debugPrint('   marker.notes: "${marker.notes}"');
+                      debugPrint('   marker.type: ${marker.type}');
+                      debugPrint('   marker.type.displayName: ${marker.type.displayName}');
+                      debugPrint('   marker.displayName: ${marker.displayName}');
+
+                      return Text(
+                        marker.displayName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                      );
+                    },
                   ),
                 ),
               ],
@@ -252,9 +263,9 @@ class MapMarkers {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Text(marker.type.emoji, style: const TextStyle(fontSize: 24)),
+            Text(marker.emoji, style: const TextStyle(fontSize: 24)),  // Use custom emoji if available
             const SizedBox(width: 8),
-            Expanded(child: Text(marker.type.getLocalizedName(context))),
+            Expanded(child: Text(marker.displayName)),
           ],
         ),
         content: Column(

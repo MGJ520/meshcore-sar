@@ -75,6 +75,10 @@
 
   "displayPacketActivity": "Prikaži kazalnike aktivnosti paketov v zgornji vrstici",
 
+  "simpleMode": "Preprost način",
+
+  "simpleModeDescription": "Skrij nepomembne informacije v sporočilih in kontaktih",
+
   "language": "Jezik",
 
   "chooseLanguage": "Izberite jezik",
@@ -181,7 +185,7 @@
 
   "refresh": "Osveži",
 
-  "sendDirectMessage": "Pošlji neposredno sporočilo",
+  "sendDirectMessage": "Pošlji",
 
   "resetPath": "Ponastavi pot (preusmeri)",
 
@@ -220,6 +224,18 @@
   "shareDrawings": "Deli risbe",
 
   "clearAllDrawings": "Počisti vse risbe",
+
+  "showReceivedDrawings": "Prikaži prejete risbe",
+
+  "showingAllDrawings": "Prikazujem vse risbe",
+
+  "showingOnlyYourDrawings": "Prikazujem samo vaše risbe",
+
+  "showSarMarkers": "Prikaži SAR označevalce",
+
+  "showingSarMarkers": "Prikazujem SAR označevalce",
+
+  "hidingSarMarkers": "Skrivam SAR označevalce",
 
   "clearAll": "Počisti vse",
 
@@ -262,6 +278,8 @@
   "persistentRoomInfo": "Trajno: Nespremenljivo shranjeno v sobi. Samodejno sinhronizirano in ohranjeno brez povezave.",
 
   "location": "Lokacija",
+
+  "myLocation": "Moja lokacija",
 
   "fromMap": "Z zemljevida",
 
@@ -378,6 +396,12 @@
   "elevation": "Nadmorska višina",
 
   "accuracy": "Natančnost",
+
+  "distance": "Razdalja",
+
+  "bearing": "Azimut",
+
+  "direction": "Smer",
 
   "filterMarkers": "Filtriraj označevalce",
 
@@ -521,6 +545,12 @@
 
   "esriSatellite": "ESRI satelit",
 
+  "googleHybrid": "Google hibridno",
+
+  "googleRoadmap": "Google cestni zemljevid",
+
+  "googleTerrain": "Google teren",
+
   "downloadVisibleArea": "Prenesi vidno območje",
 
   "initializingMap": "Inicializacija zemljevida...",
@@ -586,6 +616,10 @@
   "cannotReplyContactNotFound": "Ni mogoče odgovoriti: stik ni najden",
 
   "messageDeleted": "Sporočilo izbrisano",
+  "copyText": "Kopiraj besedilo",
+  "textCopiedToClipboard": "Besedilo kopirano v odložišče",
+  "deleteMessage": "Izbriši sporočilo",
+  "deleteMessageConfirmation": "Ali ste prepričani, da želite izbrisati to sporočilo?",
 
   "refreshedContacts": "Stiki osveženi",
 
@@ -635,6 +669,38 @@
   "mbtilesDeletedSuccessfully": "Brezpovezni zemljevid uspešno izbrisan",
 
   "failedToDeleteMbtiles": "Brisanje brezpoveznega zemljevida ni uspelo",
+
+  "importExportCachedTiles": "Uvoz/Izvoz predpomnjenih ploščic",
+
+  "importExportDescription": "Varnostno kopirajte, delite in obnovite prenesene ploščice zemljevida med napravami",
+
+  "exportTilesToFile": "Izvozi ploščice v datoteko",
+
+  "importTilesFromFile": "Uvozi ploščice iz datoteke",
+
+  "selectExportLocation": "Izberi lokacijo izvoza",
+
+  "selectImportFile": "Izberi arhiv ploščic",
+
+  "exportingTiles": "Izvažanje ploščic...",
+
+  "importingTiles": "Uvažanje ploščic...",
+
+  "exportSuccess": "Uspešno izvoženih {count} ploščic",
+
+  "importSuccess": "Uspešno uvoženih {count} skladišč",
+
+  "exportFailed": "Izvoz ni uspel: {error}",
+
+  "importFailed": "Uvoz ni uspel: {error}",
+
+  "exportNote": "Ustvari stisnjeno arhivsko datoteko (.fmtc), ki jo lahko delite in uvozite na drugih napravah.",
+
+  "importNote": "Uvozi ploščice zemljevida iz predhodno izvožene arhivske datoteke. Ploščice bodo združene z obstoječim predpomnilnikom.",
+
+  "noTilesToExport": "Ni ploščic za izvoz",
+
+  "archiveContainsStores": "Arhiv vsebuje {count} skladišč",
 
   "vectorTiles": "Vektorske ploščice",
 
@@ -722,5 +788,63 @@
 
   "failedToSave": "Shranjevanje ni uspelo: {error}",
 
-  "failedToGetLocation": "Pridobivanje lokacije ni uspelo: {error}"
+  "failedToGetLocation": "Pridobivanje lokacije ni uspelo: {error}",
+
+  "sarTemplates": "SAR Templates",
+  "manageSarTemplates": "Manage cursor on target templates",
+  "addTemplate": "Add Template",
+  "editTemplate": "Edit Template",
+  "deleteTemplate": "Delete Template",
+  "templateName": "Template Name",
+  "templateNameHint": "e.g. Found Person",
+  "templateEmoji": "Emoji",
+  "emojiRequired": "Emoji je obvezen",
+  "nameRequired": "Ime je obvezno",
+  "templateDescription": "Description (Optional)",
+  "templateDescriptionHint": "Add additional context...",
+  "templateColor": "Color",
+  "previewFormat": "Preview (SAR Message Format)",
+  "importFromClipboard": "Import",
+  "exportToClipboard": "Export",
+  "deleteTemplateConfirmation": "Delete template '{name}'?",
+  "templateAdded": "Template added",
+  "templateUpdated": "Template updated",
+  "templateDeleted": "Template deleted",
+  "templatesImported": "{count, plural, =0{No templates imported} =1{Imported 1 template} other{Imported {count} templates}}",
+  "templatesExported": "{count, plural, =1{Exported 1 template to clipboard} other{Exported {count} templates to clipboard}}",
+  "importFailed": "Import failed: {error}",
+  "exportFailed": "Export failed: {error}",
+  "resetToDefaults": "Reset to Defaults",
+  "resetToDefaultsConfirmation": "This will delete all custom templates and restore the 4 default templates. Continue?",
+  "reset": "Reset",
+  "resetComplete": "Templates reset to defaults",
+  "noTemplates": "No templates available",
+  "tapAddToCreate": "Tap + to create your first template",
+  "ok": "OK",
+  "delete": "Izbriši",
+
+  "permissionsSection": "Dovoljenja",
+  "locationPermission": "Dovoljenje za lokacijo",
+  "checking": "Preverjanje...",
+  "locationPermissionGrantedAlways": "Odobreno (Vedno)",
+  "locationPermissionGrantedWhileInUse": "Odobreno (Med uporabo)",
+  "locationPermissionDeniedTapToRequest": "Zavrnjeno - Tapnite za zahtevo",
+  "locationPermissionPermanentlyDeniedOpenSettings": "Trajno zavrnjeno - Odpri nastavitve",
+  "locationPermissionDialogContent": "Dovoljenje za lokacijo je trajno zavrnjeno. Omogočite ga v nastavitvah naprave za uporabo sledenja GPS in deljenja lokacije.",
+  "openSettings": "Odpri nastavitve",
+  "locationPermissionGranted": "Dovoljenje za lokacijo odobreno!",
+  "locationPermissionRequiredForGps": "Dovoljenje za lokacijo je potrebno za sledenje GPS in deljenje lokacije.",
+  "locationPermissionAlreadyGranted": "Dovoljenje za lokacijo je že odobreno.",
+  "sarNavyBlue": "SAR Mornarska Modra",
+  "sarNavyBlueDescription": "Profesionalni/Operativni Način",
+
+  "selectRecipient": "Izberi prejemnika",
+  "broadcastToAllNearby": "Oddajaj vsem v bližini",
+  "searchRecipients": "Išči prejemnike...",
+  "noContactsFound": "Ni kontaktov",
+  "noRoomsFound": "Ni sob",
+  "noContactsOrRoomsAvailable": "Ni na voljo kontaktov ali sob",
+  "messagesWillBeSentToPublicChannel": "Sporočila bodo poslana na javni kanal",
+  "newMessage": "Novo sporočilo",
+  "channel": "Kanal"
 }

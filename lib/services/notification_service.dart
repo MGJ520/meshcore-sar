@@ -20,12 +20,18 @@ class NotificationService {
 
   // Notification IDs
   static const int _sarNotificationId = 1000;
+  static const int _messageNotificationId = 2000;
 
   // Notification channels
   static const String _urgentChannelId = 'sar_urgent';
   static const String _urgentChannelName = 'SAR Urgent Alerts';
   static const String _urgentChannelDescription =
       'Critical alerts for SAR markers (found persons, fires, staging areas)';
+
+  static const String _messagesChannelId = 'messages';
+  static const String _messagesChannelName = 'Messages';
+  static const String _messagesChannelDescription =
+      'Notifications for incoming messages from contacts and channels';
 
   /// Initialize notification service
   Future<void> initialize() async {
@@ -125,8 +131,20 @@ class NotificationService {
         sound: RawResourceAndroidNotificationSound('notification'),
       );
 
+      // Messages channel with high priority
+      const messagesChannel = AndroidNotificationChannel(
+        _messagesChannelId,
+        _messagesChannelName,
+        description: _messagesChannelDescription,
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      );
+
       await androidPlugin.createNotificationChannel(urgentChannel);
-      debugPrint('✅ [NotificationService] Created urgent notification channel');
+      await androidPlugin.createNotificationChannel(messagesChannel);
+      debugPrint('✅ [NotificationService] Created notification channels');
     } catch (e) {
       debugPrint('⚠️ [NotificationService] Error creating channels: $e');
     }
@@ -300,6 +318,93 @@ class NotificationService {
         return 0xFF2196F3; // Blue
       case SarMarkerType.unknown:
         return 0xFF9E9E9E; // Gray
+    }
+  }
+
+  /// Show notification for regular message (contact or channel)
+  Future<void> showMessageNotification({
+    required String senderName,
+    required String messageText,
+    required bool isChannelMessage,
+    String? channelName,
+    AppLocalizations? localizations,
+  }) async {
+    if (!_isInitialized) {
+      debugPrint('⚠️ [NotificationService] Not initialized, skipping notification');
+      return;
+    }
+
+    if (!_permissionGranted) {
+      debugPrint('⚠️ [NotificationService] Permission not granted, skipping notification');
+      return;
+    }
+
+    try {
+      // Generate unique notification ID based on timestamp
+      final notificationId = _messageNotificationId + (DateTime.now().millisecondsSinceEpoch % 1000);
+
+      // Build notification title and body
+      final title = isChannelMessage
+          ? (localizations != null
+              ? '${localizations.channel}: ${channelName ?? "Public"}'
+              : 'Channel: ${channelName ?? "Public"}')
+          : (localizations != null
+              ? '${localizations.newMessage} ${localizations.from} $senderName'
+              : 'New message from $senderName');
+
+      final body = messageText.length > 200
+          ? '${messageText.substring(0, 200)}...'
+          : messageText;
+
+      // Android notification details
+      final androidDetails = AndroidNotificationDetails(
+        _messagesChannelId,
+        _messagesChannelName,
+        channelDescription: _messagesChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        ticker: title,
+        playSound: true,
+        enableVibration: true,
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        styleInformation: BigTextStyleInformation(
+          body,
+          contentTitle: title,
+          summaryText: senderName,
+        ),
+      );
+
+      // iOS notification details
+      final darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+        threadIdentifier: isChannelMessage ? 'channel_messages' : 'direct_messages',
+        subtitle: senderName,
+      );
+
+      // Combined notification details
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+      );
+
+      // Show notification
+      await _notificationsPlugin.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: 'message:${isChannelMessage ? "channel" : "contact"}',
+      );
+
+      debugPrint('✅ [NotificationService] Showed message notification');
+      debugPrint('   Sender: $senderName');
+      debugPrint('   Type: ${isChannelMessage ? "Channel" : "Direct"}');
+    } catch (e) {
+      debugPrint('❌ [NotificationService] Error showing message notification: $e');
     }
   }
 

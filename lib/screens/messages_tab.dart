@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,12 +7,14 @@ import '../providers/contacts_provider.dart';
 import '../providers/map_provider.dart';
 import '../providers/connection_provider.dart';
 import '../models/message.dart';
+import '../models/contact.dart';
 import '../models/sar_marker.dart';
 import '../widgets/messages/sar_update_sheet.dart';
+import '../widgets/messages/recipient_selector_sheet.dart';
 import '../widgets/contacts/direct_message_sheet.dart';
+import '../services/message_destination_preferences.dart';
 import '../utils/toast_logger.dart';
 import '../l10n/app_localizations.dart';
-import '../utils/sar_marker_extensions.dart';
 import '../utils/message_extensions.dart';
 
 class MessagesTab extends StatefulWidget {
@@ -28,8 +29,14 @@ class MessagesTab extends StatefulWidget {
 class _MessagesTabState extends State<MessagesTab> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   int _characterCount = 0;
   static const int _maxCharacters = 160;
+  String? _highlightedMessageId;
+
+  // Message destination state
+  String _destinationType = MessageDestinationPreferences.destinationTypeChannel;
+  Contact? _selectedRecipient;
 
   /// Helper method to compare two public keys for equality
   bool _publicKeysMatch(Uint8List key1, Uint8List key2) {
@@ -44,9 +51,21 @@ class _MessagesTabState extends State<MessagesTab> {
   void initState() {
     super.initState();
     _textController.addListener(_updateCharacterCount);
+    // Load saved message destination
+    _loadSavedDestination();
     // Mark all messages as read when tab is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MessagesProvider>().markAllAsRead();
+      _checkForNavigationRequest();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check for navigation request whenever dependencies change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForNavigationRequest();
     });
   }
 
@@ -54,7 +73,52 @@ class _MessagesTabState extends State<MessagesTab> {
   void dispose() {
     _textController.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkForNavigationRequest() {
+    final messagesProvider = context.read<MessagesProvider>();
+    final targetMessageId = messagesProvider.targetMessageId;
+
+    if (targetMessageId != null) {
+      _scrollToMessage(targetMessageId);
+      messagesProvider.clearMessageNavigation();
+    }
+  }
+
+  void _scrollToMessage(String messageId) {
+    final messagesProvider = context.read<MessagesProvider>();
+    final messages = _getFilteredMessages(messagesProvider);
+
+    final messageIndex = messages.indexWhere((m) => m.id == messageId);
+
+    if (messageIndex != -1 && _scrollController.hasClients) {
+      // Calculate position - accounting for reverse list
+      final itemHeight = 80.0; // Approximate height of a message bubble
+      final targetOffset = messageIndex * itemHeight;
+
+      // Scroll to the message
+      _scrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+
+      // Highlight the message briefly
+      setState(() {
+        _highlightedMessageId = messageId;
+      });
+
+      // Clear highlight after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _highlightedMessageId = null;
+          });
+        }
+      });
+    }
   }
 
   void _updateCharacterCount() {
@@ -63,12 +127,129 @@ class _MessagesTabState extends State<MessagesTab> {
     });
   }
 
+  /// Load saved message destination from preferences
+  Future<void> _loadSavedDestination() async {
+    final savedDestination = await MessageDestinationPreferences.getDestination();
+
+    if (savedDestination == null || !mounted) {
+      // Default to public channel
+      return;
+    }
+
+    final type = savedDestination['type']!;
+    final publicKey = savedDestination['publicKey'];
+
+    setState(() {
+      _destinationType = type;
+    });
+
+    // If it's a contact or room, try to find it in the contacts list
+    if (publicKey != null && mounted) {
+      final contactsProvider = context.read<ContactsProvider>();
+      final contact = contactsProvider.contacts.where((c) {
+        return c.publicKeyHex == publicKey;
+      }).firstOrNull;
+
+      if (contact != null) {
+        setState(() {
+          _selectedRecipient = contact;
+        });
+      } else {
+        // Contact/room not found, fallback to public channel
+        debugPrint(
+          '⚠️ [MessagesTab] Saved recipient not found, falling back to public channel',
+        );
+        setState(() {
+          _destinationType = MessageDestinationPreferences.destinationTypeChannel;
+          _selectedRecipient = null;
+        });
+        await MessageDestinationPreferences.clearDestination();
+      }
+    }
+  }
+
+  /// Show recipient selector bottom sheet
+  void _showRecipientSelector() {
+    final contactsProvider = context.read<ContactsProvider>();
+
+    // Filter contacts by type
+    final contacts = contactsProvider.contacts
+        .where((c) => c.type == ContactType.chat)
+        .toList();
+    final rooms = contactsProvider.contacts
+        .where((c) => c.type == ContactType.room)
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RecipientSelectorSheet(
+        contacts: contacts,
+        rooms: rooms,
+        currentDestinationType: _destinationType,
+        currentRecipientPublicKey: _selectedRecipient?.publicKeyHex,
+        onSelect: _onRecipientSelected,
+      ),
+    );
+  }
+
+  /// Handle recipient selection
+  Future<void> _onRecipientSelected(String type, Contact? recipient) async {
+    // Get display name before async gap
+    final recipientName = type == MessageDestinationPreferences.destinationTypeChannel
+        ? AppLocalizations.of(context)!.publicChannel
+        : (recipient?.displayName ?? recipient?.advName ?? 'Unknown');
+
+    setState(() {
+      _destinationType = type;
+      _selectedRecipient = recipient;
+    });
+
+    // Save to preferences
+    await MessageDestinationPreferences.setDestination(
+      type,
+      recipientPublicKey: recipient?.publicKeyHex,
+    );
+
+    // Show confirmation toast
+    if (!mounted) return;
+    ToastLogger.success(
+      context,
+      'Messages will be sent to: $recipientName',
+    );
+  }
+
+  /// Get icon for current destination type
+  IconData _getDestinationIcon() {
+    if (_destinationType == MessageDestinationPreferences.destinationTypeChannel) {
+      return Icons.public;
+    } else if (_destinationType == MessageDestinationPreferences.destinationTypeRoom) {
+      return Icons.meeting_room;
+    } else {
+      return Icons.person;
+    }
+  }
+
+  /// Get tooltip for destination button
+  String _getDestinationTooltip() {
+    final l10n = AppLocalizations.of(context)!;
+    if (_destinationType == MessageDestinationPreferences.destinationTypeChannel) {
+      return '${l10n.publicChannel} (tap to change)';
+    } else if (_selectedRecipient != null) {
+      final recipientName = _selectedRecipient!.displayName ?? _selectedRecipient!.advName;
+      return '$recipientName (tap to change)';
+    }
+    return 'Select recipient';
+  }
+
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
     final connectionProvider = context.read<ConnectionProvider>();
     final messagesProvider = context.read<MessagesProvider>();
+    final contactsProvider = context.read<ContactsProvider>();
 
     if (!connectionProvider.deviceInfo.isConnected) {
       if (!mounted) return;
@@ -77,37 +258,23 @@ class _MessagesTabState extends State<MessagesTab> {
     }
 
     try {
-      // Create message ID
-      final messageId = '${DateTime.now().millisecondsSinceEpoch}_channel_sent';
-      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-      // Get current device's public key (first 6 bytes)
-      final devicePublicKey = connectionProvider.deviceInfo.publicKey;
-      final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
-
-      // Create sent message object
-      final sentMessage = Message(
-        id: messageId,
-        messageType: MessageType.channel,
-        senderPublicKeyPrefix: senderPublicKeyPrefix,
-        pathLen: 0,
-        textType: MessageTextType.plain,
-        senderTimestamp: timestamp,
-        text: text,
-        receivedAt: DateTime.now(),
-        deliveryStatus: MessageDeliveryStatus.sending,
-        channelIdx: 0,
-      );
-
-      // Add to messages list with "sending" status
-      messagesProvider.addSentMessage(sentMessage);
-
-      // Send to public channel (channel 0)
-      await connectionProvider.sendChannelMessage(
-        channelIdx: 0,
-        text: text,
-        messageId: messageId,
-      );
+      // Check destination type and send accordingly
+      if (_destinationType == MessageDestinationPreferences.destinationTypeChannel) {
+        // Send to public channel
+        await _sendToChannel(text, connectionProvider, messagesProvider);
+      } else if (_selectedRecipient != null) {
+        // Send to contact or room
+        await _sendToRecipient(
+          text,
+          connectionProvider,
+          messagesProvider,
+          contactsProvider,
+        );
+      } else {
+        // Fallback to public channel if no recipient selected
+        debugPrint('⚠️ [MessagesTab] No recipient selected, falling back to channel');
+        await _sendToChannel(text, connectionProvider, messagesProvider);
+      }
 
       _textController.clear();
       _focusNode.unfocus();
@@ -119,17 +286,104 @@ class _MessagesTabState extends State<MessagesTab> {
     }
   }
 
+  /// Send message to public channel
+  Future<void> _sendToChannel(
+    String text,
+    ConnectionProvider connectionProvider,
+    MessagesProvider messagesProvider,
+  ) async {
+    // Create message ID
+    final messageId = '${DateTime.now().millisecondsSinceEpoch}_channel_sent';
+    final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    // Get current device's public key (first 6 bytes)
+    final devicePublicKey = connectionProvider.deviceInfo.publicKey;
+    final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
+
+    // Create sent message object
+    final sentMessage = Message(
+      id: messageId,
+      messageType: MessageType.channel,
+      senderPublicKeyPrefix: senderPublicKeyPrefix,
+      pathLen: 0,
+      textType: MessageTextType.plain,
+      senderTimestamp: timestamp,
+      text: text,
+      receivedAt: DateTime.now(),
+      deliveryStatus: MessageDeliveryStatus.sending,
+      channelIdx: 0,
+    );
+
+    // Add to messages list with "sending" status
+    messagesProvider.addSentMessage(sentMessage);
+
+    // Send to public channel (channel 0)
+    await connectionProvider.sendChannelMessage(
+      channelIdx: 0,
+      text: text,
+      messageId: messageId,
+    );
+  }
+
+  /// Send message to contact or room
+  Future<void> _sendToRecipient(
+    String text,
+    ConnectionProvider connectionProvider,
+    MessagesProvider messagesProvider,
+    ContactsProvider contactsProvider,
+  ) async {
+    if (_selectedRecipient == null) return;
+
+    // Create message ID
+    final messageId = '${DateTime.now().millisecondsSinceEpoch}_sent';
+    final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    // Get current device's public key (first 6 bytes)
+    final devicePublicKey = connectionProvider.deviceInfo.publicKey;
+    final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
+
+    // Create sent message object with recipient public key for retry support
+    final sentMessage = Message(
+      id: messageId,
+      messageType: MessageType.contact,
+      senderPublicKeyPrefix: senderPublicKeyPrefix,
+      pathLen: 0,
+      textType: MessageTextType.plain,
+      senderTimestamp: timestamp,
+      text: text,
+      receivedAt: DateTime.now(),
+      deliveryStatus: MessageDeliveryStatus.sending,
+      recipientPublicKey: _selectedRecipient!.publicKey,
+    );
+
+    // Add to messages list with "sending" status
+    messagesProvider.addSentMessage(sentMessage);
+
+    // Send message to selected recipient
+    final sentSuccessfully = await connectionProvider.sendTextMessage(
+      contactPublicKey: _selectedRecipient!.publicKey,
+      text: text,
+      messageId: messageId,
+      contact: _selectedRecipient,
+    );
+
+    if (!sentSuccessfully) {
+      // Mark message as failed if sending failed
+      messagesProvider.markMessageFailed(messageId);
+    }
+  }
+
   void _showSarDialog() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => SarUpdateSheet(
-        onSend: (sarType, position, notes, roomPublicKey, sendToChannel) async {
+        onSend: (emoji, name, position, roomPublicKey, sendToChannel) async {
           await _sendSarMessage(
-            sarType,
+            emoji,
+            name,
             position,
-            notes,
             roomPublicKey,
             sendToChannel,
           );
@@ -139,9 +393,9 @@ class _MessagesTabState extends State<MessagesTab> {
   }
 
   Future<void> _sendSarMessage(
-    SarMarkerType sarType,
+    String emoji,
+    String name,
     Position position,
-    String? notes,
     Uint8List? roomPublicKey,
     bool sendToChannel,
   ) async {
@@ -161,14 +415,10 @@ class _MessagesTabState extends State<MessagesTab> {
     }
 
     try {
-      // Format: S:<emoji>:<latitude>,<longitude>
+      // Format: S:<emoji>:<latitude>,<longitude>:<name>
+      // Round coordinates to 5 decimal places (~1m accuracy) since most GPS is only that accurate
       final sarMessage =
-          'S:${sarType.emoji}:${position.latitude},${position.longitude}';
-
-      // Add notes if provided
-      final fullMessage = notes != null && notes.isNotEmpty
-          ? '$sarMessage $notes'
-          : sarMessage;
+          'S:$emoji:${position.latitude.toStringAsFixed(5)},${position.longitude.toStringAsFixed(5)}:$name';
 
       if (sendToChannel) {
         // Create message ID
@@ -187,7 +437,7 @@ class _MessagesTabState extends State<MessagesTab> {
           pathLen: 0,
           textType: MessageTextType.plain,
           senderTimestamp: timestamp,
-          text: fullMessage,
+          text: sarMessage,
           receivedAt: DateTime.now(),
           deliveryStatus: MessageDeliveryStatus.sending,
           channelIdx: 0,
@@ -200,14 +450,14 @@ class _MessagesTabState extends State<MessagesTab> {
         // Send to public channel (ephemeral, over-the-air only)
         await connectionProvider.sendChannelMessage(
           channelIdx: 0,
-          text: fullMessage,
+          text: sarMessage,
           messageId: messageId,
         );
 
         if (!mounted) return;
         ToastLogger.success(
           context,
-          '${sarType.getLocalizedName(context)} marker broadcast to public channel',
+          'SAR marker broadcast to public channel',
         );
       } else {
         // Create message ID
@@ -226,7 +476,7 @@ class _MessagesTabState extends State<MessagesTab> {
           pathLen: 0,
           textType: MessageTextType.plain,
           senderTimestamp: timestamp,
-          text: fullMessage,
+          text: sarMessage,
           receivedAt: DateTime.now(),
           deliveryStatus: MessageDeliveryStatus.sending,
           recipientPublicKey: roomPublicKey, // Store recipient for retry
@@ -246,7 +496,7 @@ class _MessagesTabState extends State<MessagesTab> {
         // Send SAR message to selected room (persisted and immutable)
         final sentSuccessfully = await connectionProvider.sendTextMessage(
           contactPublicKey: roomPublicKey!,
-          text: fullMessage,
+          text: sarMessage,
           messageId: messageId, // Pass message ID so it can be tracked
           contact: roomContact, // Include contact for path status logging
         );
@@ -259,7 +509,7 @@ class _MessagesTabState extends State<MessagesTab> {
         if (!mounted) return;
         ToastLogger.success(
           context,
-          '${sarType.getLocalizedName(context)} marker sent to room',
+          'SAR marker sent to room',
         );
       }
     } catch (e) {
@@ -359,11 +609,13 @@ class _MessagesTabState extends State<MessagesTab> {
                             ),
                       )
                     : ListView.builder(
+                        controller: _scrollController,
                         reverse: true,
                         padding: const EdgeInsets.all(8),
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final message = messages[index];
+                          final isHighlighted = message.id == _highlightedMessageId;
 
                           // Display system messages with minimal styling
                           if (message.isSystemMessage) {
@@ -372,6 +624,7 @@ class _MessagesTabState extends State<MessagesTab> {
 
                           return _MessageBubble(
                             message: message,
+                            isHighlighted: isHighlighted,
                             onTap:
                                 message.isSarMarker &&
                                     message.sarGpsCoordinates != null
@@ -420,7 +673,22 @@ class _MessagesTabState extends State<MessagesTab> {
                       ).colorScheme.onPrimaryContainer,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
+                  // Destination switcher button
+                  IconButton(
+                    icon: Icon(_getDestinationIcon()),
+                    tooltip: _getDestinationTooltip(),
+                    onPressed: _showRecipientSelector,
+                    style: IconButton.styleFrom(
+                      backgroundColor: _destinationType == MessageDestinationPreferences.destinationTypeChannel
+                          ? Theme.of(context).colorScheme.surfaceContainerHighest
+                          : Theme.of(context).colorScheme.secondaryContainer,
+                      foregroundColor: _destinationType == MessageDestinationPreferences.destinationTypeChannel
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   // Text field with embedded send button
                   Expanded(
                     child: TextField(
@@ -431,7 +699,9 @@ class _MessagesTabState extends State<MessagesTab> {
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context)!.typeYourMessage,
+                        hintText: AppLocalizations.of(
+                          context,
+                        )!.typeYourMessage,
                         hintStyle: const TextStyle(fontSize: 14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
@@ -448,7 +718,9 @@ class _MessagesTabState extends State<MessagesTab> {
                           fontSize: 10,
                           color: _characterCount > _maxCharacters * 0.9
                               ? Colors.orange
-                              : Theme.of(context).textTheme.bodySmall?.color,
+                              : Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.color,
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -481,8 +753,13 @@ class _MessagesTabState extends State<MessagesTab> {
 class _MessageBubble extends StatelessWidget {
   final Message message;
   final VoidCallback? onTap;
+  final bool isHighlighted;
 
-  const _MessageBubble({required this.message, this.onTap});
+  const _MessageBubble({
+    required this.message,
+    this.onTap,
+    this.isHighlighted = false,
+  });
 
   /// Helper method to compare two public keys for equality
   bool _publicKeysMatch(Uint8List key1, Uint8List key2) {
@@ -604,11 +881,11 @@ class _MessageBubble extends StatelessWidget {
             // Copy text option
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Copy text'),
+              title: Text(AppLocalizations.of(context)!.copyText),
               onTap: () {
                 Clipboard.setData(ClipboardData(text: message.text));
                 Navigator.pop(context);
-                ToastLogger.success(context, 'Text copied to clipboard');
+                ToastLogger.success(context, AppLocalizations.of(context)!.textCopiedToClipboard);
               },
             ),
             // Delete message option
@@ -672,8 +949,8 @@ class _MessageBubble extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete message'),
-        content: const Text('Are you sure you want to delete this message?'),
+        title: Text(l10n.deleteMessage),
+        content: Text(l10n.deleteMessageConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -684,10 +961,10 @@ class _MessageBubble extends StatelessWidget {
               final messagesProvider = context.read<MessagesProvider>();
               messagesProvider.deleteMessage(message.id);
               Navigator.pop(context);
-              ToastLogger.info(context, 'Message deleted');
+              ToastLogger.info(context, l10n.messageDeleted);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -820,39 +1097,55 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSarMarker
-              ? _getSarMarkerColor(context, isDarkMode)
-              : _getMessageBubbleColor(context, isOwnMessage, isDarkMode),
+          color: isHighlighted
+              ? Theme.of(context).colorScheme.primaryContainer
+              : isSarMarker
+                  ? _getSarMarkerColor(context, isDarkMode)
+                  : _getMessageBubbleColor(context, isOwnMessage, isDarkMode),
           borderRadius: BorderRadius.circular(12),
-          border: isSarMarker
+          border: isHighlighted
               ? Border.all(
-                  color: _getSarMarkerBorderColor(context, isDarkMode),
-                  width: 2,
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 3,
                 )
-              : isOwnMessage
-              ? Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.3),
-                  width: 1.5,
-                )
-              : !message.isRead &&
-                    !message.isSentMessage &&
-                    !message.isSystemMessage
-              ? Border.all(color: Colors.blue, width: 1.5)
-              : null,
-          boxShadow: isSarMarker
+              : isSarMarker
+                  ? Border.all(
+                      color: _getSarMarkerBorderColor(context, isDarkMode),
+                      width: 2,
+                    )
+                  : isOwnMessage
+                  ? Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                    )
+                  : !message.isRead &&
+                        !message.isSentMessage &&
+                        !message.isSystemMessage
+                  ? Border.all(color: Colors.blue, width: 1.5)
+                  : null,
+          boxShadow: isHighlighted
               ? [
                   BoxShadow(
-                    color: _getSarMarkerBorderColor(
-                      context,
-                      isDarkMode,
-                    ).withValues(alpha: 0.3),
-                    blurRadius: 8,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                    blurRadius: 12,
+                    spreadRadius: 2,
                     offset: const Offset(0, 2),
                   ),
                 ]
-              : null,
+              : isSarMarker
+                  ? [
+                      BoxShadow(
+                        color: _getSarMarkerBorderColor(
+                          context,
+                          isDarkMode,
+                        ).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -968,7 +1261,8 @@ class _MessageBubble extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    message.sarMarkerType!.emoji,
+                    // Use custom emoji if available (for unknown types), otherwise use type emoji
+                    message.sarCustomEmoji ?? message.sarMarkerType!.emoji,
                     style: const TextStyle(fontSize: 28),
                   ),
                   const SizedBox(width: 10),
@@ -977,7 +1271,10 @@ class _MessageBubble extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          message.sarMarkerType!.getLocalizedName(context),
+                          // Show template name (sarNotes) if available, otherwise show localized type name
+                          message.sarNotes != null && message.sarNotes!.isNotEmpty
+                              ? message.sarNotes!
+                              : message.sarMarkerType!.getLocalizedName(context),
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -997,23 +1294,6 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
               ),
-              // Display SAR notes/message if present
-              if (message.sarNotes != null && message.sarNotes!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceVariant.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    message.sarNotes!,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
             ]
             // Regular message content
             else

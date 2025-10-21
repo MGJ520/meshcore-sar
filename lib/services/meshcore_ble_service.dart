@@ -401,8 +401,8 @@ class MeshCoreBleService {
     required double latitude,
     required double longitude,
   }) async {
-    // Note: This command does not return an ACK, so we use writeData (fire-and-forget)
-    await _commandSender.writeData(FrameBuilder.buildSetAdvertLatLon(
+    // This command returns OK (0x00) response, so wait for acknowledgment
+    await _commandSender.writeDataAndWaitForAck(FrameBuilder.buildSetAdvertLatLon(
       latitude: latitude,
       longitude: longitude,
     ));

@@ -201,6 +201,43 @@ class DrawingToolbar extends StatelessWidget {
                 drawingProvider.setDrawingMode(DrawingMode.rectangle);
               },
             ),
+            const Divider(),
+            // Toggle received drawings visibility
+            SwitchListTile(
+              secondary: Icon(
+                drawingProvider.showReceivedDrawings
+                    ? Icons.visibility
+                    : Icons.visibility_off,
+              ),
+              title: Text(AppLocalizations.of(context)!.showReceivedDrawings),
+              subtitle: Text(
+                drawingProvider.showReceivedDrawings
+                    ? AppLocalizations.of(context)!.showingAllDrawings
+                    : AppLocalizations.of(context)!.showingOnlyYourDrawings,
+              ),
+              value: drawingProvider.showReceivedDrawings,
+              onChanged: (value) {
+                drawingProvider.toggleReceivedDrawings();
+              },
+            ),
+            // Toggle SAR markers visibility
+            SwitchListTile(
+              secondary: Icon(
+                drawingProvider.showSarMarkers
+                    ? Icons.pin_drop
+                    : Icons.pin_drop_outlined,
+              ),
+              title: Text(AppLocalizations.of(context)!.showSarMarkers),
+              subtitle: Text(
+                drawingProvider.showSarMarkers
+                    ? AppLocalizations.of(context)!.showingSarMarkers
+                    : AppLocalizations.of(context)!.hidingSarMarkers,
+              ),
+              value: drawingProvider.showSarMarkers,
+              onChanged: (value) {
+                drawingProvider.toggleSarMarkers();
+              },
+            ),
             if (drawingProvider.drawings.isNotEmpty) ...[
               const Divider(),
               ListTile(

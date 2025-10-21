@@ -31,6 +31,9 @@ class MessagesProvider with ChangeNotifier {
   // Track which contact each sent message was sent to (for retry logic)
   final Map<String, Contact> _messageContactMap = {};
 
+  // Navigation state for message highlighting/scrolling
+  String? _targetMessageId;
+
   // Callback to connection provider for sending messages (set by AppProvider)
   Future<bool> Function({
     required Uint8List contactPublicKey,
@@ -70,9 +73,22 @@ class MessagesProvider with ChangeNotifier {
 
   bool get isInitialized => _isInitialized;
 
+  String? get targetMessageId => _targetMessageId;
+
   /// Set localizations for notifications
   void setLocalizations(AppLocalizations localizations) {
     _localizations = localizations;
+  }
+
+  /// Navigate to a specific message (scroll and highlight)
+  void navigateToMessage(String messageId) {
+    _targetMessageId = messageId;
+    notifyListeners();
+  }
+
+  /// Clear message navigation state
+  void clearMessageNavigation() {
+    _targetMessageId = null;
   }
 
   /// Get count of unread messages (excluding sent messages and system messages)
@@ -178,6 +194,9 @@ class MessagesProvider with ChangeNotifier {
           _triggerSarNotification(finalMessage, marker);
         }
       }
+    } else if (!finalMessage.isSentMessage && !finalMessage.isSystemMessage) {
+      // Trigger notification for regular messages (not SAR, not sent by user, not system)
+      _triggerMessageNotification(finalMessage);
     }
 
     // Persist to storage asynchronously
@@ -293,6 +312,40 @@ class MessagesProvider with ChangeNotifier {
       );
     } catch (e) {
       debugPrint('❌ [MessagesProvider] Error triggering SAR notification: $e');
+    }
+  }
+
+  /// Trigger notification for regular message
+  Future<void> _triggerMessageNotification(Message message) async {
+    try {
+      // Get sender name from message
+      final senderName = message.senderName ?? message.senderKeyShort ?? 'Unknown';
+
+      // Determine if it's a channel message
+      final isChannelMessage = message.isChannelMessage;
+
+      // Get channel name if available
+      String? channelName;
+      if (isChannelMessage) {
+        // You could map channelIdx to channel name here if needed
+        // For now, use "Public" for channel 0
+        channelName = message.channelIdx == 0 ? 'Public' : 'Channel ${message.channelIdx}';
+      }
+
+      debugPrint('🔔 [MessagesProvider] Triggering message notification');
+      debugPrint('   Sender: $senderName');
+      debugPrint('   Type: ${isChannelMessage ? "Channel" : "Direct"}');
+      debugPrint('   Message: ${message.text.substring(0, message.text.length > 50 ? 50 : message.text.length)}...');
+
+      await _notificationService.showMessageNotification(
+        senderName: senderName,
+        messageText: message.text,
+        isChannelMessage: isChannelMessage,
+        channelName: channelName,
+        localizations: _localizations,
+      );
+    } catch (e) {
+      debugPrint('❌ [MessagesProvider] Error triggering message notification: $e');
     }
   }
 
@@ -529,6 +582,11 @@ class MessagesProvider with ChangeNotifier {
     if (sendingMessage.isSarMarker) {
       final marker = sendingMessage.toSarMarker();
       if (marker != null) {
+        debugPrint('  ✅ SAR Marker created:');
+        debugPrint('     marker.id: ${marker.id}');
+        debugPrint('     marker.notes: "${marker.notes}"');
+        debugPrint('     marker.type: ${marker.type}');
+        debugPrint('     marker.displayName: ${marker.displayName}');
         _sarMarkers[marker.id] = marker;
       }
     }

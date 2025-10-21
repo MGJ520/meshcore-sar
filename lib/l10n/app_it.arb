@@ -207,6 +207,16 @@
     "description": "Descrizione per l'impostazione degli indicatori RX/TX"
   },
 
+  "simpleMode": "Modalità Semplice",
+  "@simpleMode": {
+    "description": "Impostazione per abilitare la modalità semplice"
+  },
+
+  "simpleModeDescription": "Nascondi informazioni non essenziali nei messaggi e contatti",
+  "@simpleModeDescription": {
+    "description": "Descrizione per l'impostazione della modalità semplice"
+  },
+
   "language": "Lingua",
   "@language": {
     "description": "Etichetta impostazione lingua"
@@ -514,7 +524,7 @@
     "description": "Etichetta pulsante Aggiorna"
   },
 
-  "sendDirectMessage": "Invia Messaggio Diretto",
+  "sendDirectMessage": "Invia",
   "@sendDirectMessage": {
     "description": "Azione per inviare messaggio diretto al contatto"
   },
@@ -632,6 +642,36 @@
   "clearAllDrawings": "Cancella Tutti i Disegni",
   "@clearAllDrawings": {
     "description": "Azione per cancellare tutti i disegni locali"
+  },
+
+  "showReceivedDrawings": "Mostra Disegni Ricevuti",
+  "@showReceivedDrawings": {
+    "description": "Interruttore per mostrare/nascondere i disegni ricevuti da altri membri del team"
+  },
+
+  "showingAllDrawings": "Visualizzazione di tutti i disegni",
+  "@showingAllDrawings": {
+    "description": "Sottotitolo quando i disegni ricevuti sono visibili"
+  },
+
+  "showingOnlyYourDrawings": "Visualizzazione solo dei tuoi disegni",
+  "@showingOnlyYourDrawings": {
+    "description": "Sottotitolo quando i disegni ricevuti sono nascosti"
+  },
+
+  "showSarMarkers": "Mostra marcatori SAR",
+  "@showSarMarkers": {
+    "description": "Interruttore per mostrare/nascondere i marcatori SAR sulla mappa"
+  },
+
+  "showingSarMarkers": "Visualizzazione marcatori SAR",
+  "@showingSarMarkers": {
+    "description": "Sottotitolo quando i marcatori SAR sono visibili"
+  },
+
+  "hidingSarMarkers": "Nascondere marcatori SAR",
+  "@hidingSarMarkers": {
+    "description": "Sottotitolo quando i marcatori SAR sono nascosti"
   },
 
   "clearAll": "Cancella Tutto",
@@ -760,6 +800,11 @@
   "location": "Posizione",
   "@location": {
     "description": "Etichetta per la sezione posizione"
+  },
+
+  "myLocation": "La mia posizione",
+  "@myLocation": {
+    "description": "Etichetta del pulsante per inserire la posizione GPS attuale"
   },
 
   "fromMap": "Dalla Mappa",
@@ -1123,6 +1168,21 @@
   "accuracy": "Precisione",
   "@accuracy": {
     "description": "Etichetta precisione GPS"
+  },
+
+  "distance": "Distanza",
+  "@distance": {
+    "description": "Etichetta distanza nella bussola"
+  },
+
+  "bearing": "Rilevamento",
+  "@bearing": {
+    "description": "Etichetta rilevamento nella bussola"
+  },
+
+  "direction": "Direzione",
+  "@direction": {
+    "description": "Etichetta direzione nella bussola"
   },
 
   "filterMarkers": "Filtra Marcatori",
@@ -1538,6 +1598,21 @@
     "description": "Nome livello immagini satellitari ESRI"
   },
 
+  "googleHybrid": "Google Ibrido",
+  "@googleHybrid": {
+    "description": "Nome livello Google Ibrido (satellite + etichette)"
+  },
+
+  "googleRoadmap": "Google Mappa Stradale",
+  "@googleRoadmap": {
+    "description": "Nome livello Google Mappa Stradale"
+  },
+
+  "googleTerrain": "Google Terreno",
+  "@googleTerrain": {
+    "description": "Nome livello Google Terreno (topografico)"
+  },
+
   "downloadVisibleArea": "Scarica area visibile",
   "@downloadVisibleArea": {
     "description": "Tooltip per il pulsante scarica area visibile"
@@ -1672,6 +1747,11 @@
   "@messageDeleted": {
     "description": "Messaggio informativo quando un messaggio viene eliminato"
   },
+
+  "copyText": "Copia testo",
+  "textCopiedToClipboard": "Testo copiato negli appunti",
+  "deleteMessage": "Elimina messaggio",
+  "deleteMessageConfirmation": "Sei sicuro di voler eliminare questo messaggio?",
 
   "refreshedContacts": "Contatti aggiornati",
   "@refreshedContacts": {
@@ -1899,6 +1979,111 @@
   "failedToDeleteMbtiles": "Impossibile eliminare la mappa offline",
   "@failedToDeleteMbtiles": {
     "description": "Messaggio di errore quando l'eliminazione MBTiles fallisce"
+  },
+
+  "importExportCachedTiles": "Importa/Esporta tile in cache",
+  "@importExportCachedTiles": {
+    "description": "Titolo per sezione di importazione/esportazione"
+  },
+
+  "importExportDescription": "Esegui backup, condividi e ripristina tile mappa scaricati tra dispositivi",
+  "@importExportDescription": {
+    "description": "Descrizione della funzionalità di importazione/esportazione"
+  },
+
+  "exportTilesToFile": "Esporta tile su file",
+  "@exportTilesToFile": {
+    "description": "Pulsante per esportare tile"
+  },
+
+  "importTilesFromFile": "Importa tile da file",
+  "@importTilesFromFile": {
+    "description": "Pulsante per importare tile"
+  },
+
+  "selectExportLocation": "Seleziona posizione esportazione",
+  "@selectExportLocation": {
+    "description": "Titolo per selettore file di esportazione"
+  },
+
+  "selectImportFile": "Seleziona archivio tile",
+  "@selectImportFile": {
+    "description": "Titolo per selettore file di importazione"
+  },
+
+  "exportingTiles": "Esportazione tile...",
+  "@exportingTiles": {
+    "description": "Messaggio di stato durante esportazione"
+  },
+
+  "importingTiles": "Importazione tile...",
+  "@importingTiles": {
+    "description": "Messaggio di stato durante importazione"
+  },
+
+  "exportSuccess": "{count} tile esportati con successo",
+  "@exportSuccess": {
+    "description": "Messaggio di successo dopo esportazione",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "importSuccess": "{count} archivi importati con successo",
+  "@importSuccess": {
+    "description": "Messaggio di successo dopo importazione",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "exportFailed": "Esportazione fallita: {error}",
+  "@exportFailed": {
+    "description": "Messaggio di errore quando esportazione fallisce",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "importFailed": "Importazione fallita: {error}",
+  "@importFailed": {
+    "description": "Messaggio di errore quando importazione fallisce",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "exportNote": "Crea un file archivio compresso (.fmtc) che può essere condiviso e importato su altri dispositivi.",
+  "@exportNote": {
+    "description": "Nota sulla funzionalità di esportazione"
+  },
+
+  "importNote": "Importa tile mappa da un file archivio precedentemente esportato. I tile verranno uniti con la cache esistente.",
+  "@importNote": {
+    "description": "Nota sulla funzionalità di importazione"
+  },
+
+  "noTilesToExport": "Nessun tile da esportare",
+  "@noTilesToExport": {
+    "description": "Messaggio quando cache è vuota"
+  },
+
+  "archiveContainsStores": "L'archivio contiene {count} archivi",
+  "@archiveContainsStores": {
+    "description": "Informazioni sul contenuto dell'archivio",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
 
   "vectorTiles": "Tile Vettoriali",
@@ -2139,5 +2324,63 @@
         "type": "String"
       }
     }
-  }
+  },
+
+  "sarTemplates": "SAR Templates",
+  "manageSarTemplates": "Manage cursor on target templates",
+  "addTemplate": "Add Template",
+  "editTemplate": "Edit Template",
+  "deleteTemplate": "Delete Template",
+  "templateName": "Template Name",
+  "templateNameHint": "e.g. Found Person",
+  "templateEmoji": "Emoji",
+  "emojiRequired": "Emoji è obbligatorio",
+  "nameRequired": "Nome è obbligatorio",
+  "templateDescription": "Description (Optional)",
+  "templateDescriptionHint": "Add additional context...",
+  "templateColor": "Color",
+  "previewFormat": "Preview (SAR Message Format)",
+  "importFromClipboard": "Import",
+  "exportToClipboard": "Export",
+  "deleteTemplateConfirmation": "Delete template '{name}'?",
+  "templateAdded": "Template added",
+  "templateUpdated": "Template updated",
+  "templateDeleted": "Template deleted",
+  "templatesImported": "{count, plural, =0{No templates imported} =1{Imported 1 template} other{Imported {count} templates}}",
+  "templatesExported": "{count, plural, =1{Exported 1 template to clipboard} other{Exported {count} templates to clipboard}}",
+  "importFailed": "Import failed: {error}",
+  "exportFailed": "Export failed: {error}",
+  "resetToDefaults": "Reset to Defaults",
+  "resetToDefaultsConfirmation": "This will delete all custom templates and restore the 4 default templates. Continue?",
+  "reset": "Reset",
+  "resetComplete": "Templates reset to defaults",
+  "noTemplates": "No templates available",
+  "tapAddToCreate": "Tap + to create your first template",
+  "ok": "OK",
+  "delete": "Elimina",
+
+  "permissionsSection": "Permessi",
+  "locationPermission": "Permesso di posizione",
+  "checking": "Verifica in corso...",
+  "locationPermissionGrantedAlways": "Concesso (Sempre)",
+  "locationPermissionGrantedWhileInUse": "Concesso (Durante l'uso)",
+  "locationPermissionDeniedTapToRequest": "Negato - Tocca per richiedere",
+  "locationPermissionPermanentlyDeniedOpenSettings": "Negato permanentemente - Apri impostazioni",
+  "locationPermissionDialogContent": "Il permesso di posizione è permanentemente negato. Si prega di abilitarlo nelle impostazioni del dispositivo per utilizzare il tracciamento GPS e la condivisione della posizione.",
+  "openSettings": "Apri impostazioni",
+  "locationPermissionGranted": "Permesso di posizione concesso!",
+  "locationPermissionRequiredForGps": "Il permesso di posizione è necessario per il tracciamento GPS e la condivisione della posizione.",
+  "locationPermissionAlreadyGranted": "Il permesso di posizione è già concesso.",
+  "sarNavyBlue": "SAR Blu Navy",
+  "sarNavyBlueDescription": "Modalità Professionale/Operativa",
+
+  "selectRecipient": "Seleziona destinatario",
+  "broadcastToAllNearby": "Trasmetti a tutti nelle vicinanze",
+  "searchRecipients": "Cerca destinatari...",
+  "noContactsFound": "Nessun contatto trovato",
+  "noRoomsFound": "Nessuna stanza trovata",
+  "noContactsOrRoomsAvailable": "Nessun contatto o stanza disponibile",
+  "messagesWillBeSentToPublicChannel": "I messaggi saranno inviati al canale pubblico",
+  "newMessage": "Nuovo messaggio",
+  "channel": "Canale"
 }

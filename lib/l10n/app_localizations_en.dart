@@ -130,6 +130,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Display packet activity indicators in top bar';
 
   @override
+  String get simpleMode => 'Simple Mode';
+
+  @override
+  String get simpleModeDescription =>
+      'Hide non-essential information in messages and contacts';
+
+  @override
   String get language => 'Language';
 
   @override
@@ -314,7 +321,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get refresh => 'Refresh';
 
   @override
-  String get sendDirectMessage => 'Send Direct Message';
+  String get sendDirectMessage => 'Send';
 
   @override
   String get resetPath => 'Reset Path (Re-route)';
@@ -381,6 +388,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clearAllDrawings => 'Clear All Drawings';
+
+  @override
+  String get showReceivedDrawings => 'Show Received Drawings';
+
+  @override
+  String get showingAllDrawings => 'Showing all drawings';
+
+  @override
+  String get showingOnlyYourDrawings => 'Showing only your drawings';
+
+  @override
+  String get showSarMarkers => 'Show SAR Markers';
+
+  @override
+  String get showingSarMarkers => 'Showing SAR markers';
+
+  @override
+  String get hidingSarMarkers => 'Hiding SAR markers';
 
   @override
   String get clearAll => 'Clear All';
@@ -456,6 +481,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get location => 'Location';
+
+  @override
+  String get myLocation => 'My Location';
 
   @override
   String get fromMap => 'From Map';
@@ -659,6 +687,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accuracy => 'Accuracy';
+
+  @override
+  String get bearing => 'Bearing';
+
+  @override
+  String get direction => 'Direction';
 
   @override
   String get filterMarkers => 'Filter Markers';
@@ -901,6 +935,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get esriSatellite => 'ESRI Satellite';
 
   @override
+  String get googleHybrid => 'Google Hybrid';
+
+  @override
+  String get googleRoadmap => 'Google Roadmap';
+
+  @override
+  String get googleTerrain => 'Google Terrain';
+
+  @override
   String get downloadVisibleArea => 'Download visible area';
 
   @override
@@ -977,6 +1020,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messageDeleted => 'Message deleted';
+
+  @override
+  String get copyText => 'Copy text';
+
+  @override
+  String get deleteMessage => 'Delete message';
+
+  @override
+  String get deleteMessageConfirmation =>
+      'Are you sure you want to delete this message?';
 
   @override
   String get refreshedContacts => 'Refreshed contacts';
@@ -1111,6 +1164,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failedToDeleteMbtiles => 'Failed to delete offline map';
+
+  @override
+  String get importExportCachedTiles => 'Import/Export Cached Tiles';
+
+  @override
+  String get importExportDescription =>
+      'Backup, share, and restore downloaded map tiles between devices';
+
+  @override
+  String get exportTilesToFile => 'Export Tiles to File';
+
+  @override
+  String get importTilesFromFile => 'Import Tiles from File';
+
+  @override
+  String get selectExportLocation => 'Select Export Location';
+
+  @override
+  String get selectImportFile => 'Select Tile Archive';
+
+  @override
+  String get exportingTiles => 'Exporting tiles...';
+
+  @override
+  String get importingTiles => 'Importing tiles...';
+
+  @override
+  String exportSuccess(int count) {
+    return 'Exported $count tiles successfully';
+  }
+
+  @override
+  String importSuccess(int count) {
+    return 'Imported $count stores successfully';
+  }
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String importFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get exportNote =>
+      'Creates a compressed archive (.fmtc) file that can be shared and imported on other devices.';
+
+  @override
+  String get importNote =>
+      'Imports map tiles from a previously exported archive file. Tiles will be merged with existing cache.';
+
+  @override
+  String get noTilesToExport => 'No tiles available to export';
+
+  @override
+  String archiveContainsStores(int count) {
+    return 'Archive contains $count stores';
+  }
 
   @override
   String get vectorTiles => 'Vector Tiles';
@@ -1250,4 +1364,185 @@ class AppLocalizationsEn extends AppLocalizations {
   String failedToGetLocation(String error) {
     return 'Failed to get location: $error';
   }
+
+  @override
+  String get sarTemplates => 'SAR Templates';
+
+  @override
+  String get manageSarTemplates => 'Manage cursor on target templates';
+
+  @override
+  String get addTemplate => 'Add Template';
+
+  @override
+  String get editTemplate => 'Edit Template';
+
+  @override
+  String get deleteTemplate => 'Delete Template';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get templateNameHint => 'e.g. Found Person';
+
+  @override
+  String get templateEmoji => 'Emoji';
+
+  @override
+  String get emojiRequired => 'Emoji is required';
+
+  @override
+  String get nameRequired => 'Name is required';
+
+  @override
+  String get templateDescription => 'Description (Optional)';
+
+  @override
+  String get templateDescriptionHint => 'Add additional context...';
+
+  @override
+  String get templateColor => 'Color';
+
+  @override
+  String get previewFormat => 'Preview (SAR Message Format)';
+
+  @override
+  String get importFromClipboard => 'Import';
+
+  @override
+  String get exportToClipboard => 'Export';
+
+  @override
+  String deleteTemplateConfirmation(String name) {
+    return 'Delete template \'$name\'?';
+  }
+
+  @override
+  String get templateAdded => 'Template added';
+
+  @override
+  String get templateUpdated => 'Template updated';
+
+  @override
+  String get templateDeleted => 'Template deleted';
+
+  @override
+  String templatesImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Imported $count templates',
+      one: 'Imported 1 template',
+      zero: 'No templates imported',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String templatesExported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Exported $count templates to clipboard',
+      one: 'Exported 1 template to clipboard',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resetToDefaults => 'Reset to Defaults';
+
+  @override
+  String get resetToDefaultsConfirmation =>
+      'This will delete all custom templates and restore the 4 default templates. Continue?';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get resetComplete => 'Templates reset to defaults';
+
+  @override
+  String get noTemplates => 'No templates available';
+
+  @override
+  String get tapAddToCreate => 'Tap + to create your first template';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get permissionsSection => 'Permissions';
+
+  @override
+  String get locationPermission => 'Location Permission';
+
+  @override
+  String get checking => 'Checking...';
+
+  @override
+  String get locationPermissionGrantedAlways => 'Granted (Always)';
+
+  @override
+  String get locationPermissionGrantedWhileInUse => 'Granted (While In Use)';
+
+  @override
+  String get locationPermissionDeniedTapToRequest => 'Denied - Tap to request';
+
+  @override
+  String get locationPermissionPermanentlyDeniedOpenSettings =>
+      'Permanently Denied - Open Settings';
+
+  @override
+  String get locationPermissionDialogContent =>
+      'Location permission is permanently denied. Please enable it in your device settings to use GPS tracking and location sharing features.';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get locationPermissionGranted => 'Location permission granted!';
+
+  @override
+  String get locationPermissionRequiredForGps =>
+      'Location permission is required for GPS tracking and location sharing.';
+
+  @override
+  String get locationPermissionAlreadyGranted =>
+      'Location permission is already granted.';
+
+  @override
+  String get sarNavyBlue => 'SAR Navy Blue';
+
+  @override
+  String get sarNavyBlueDescription => 'Professional/Operations Mode';
+
+  @override
+  String get selectRecipient => 'Select Recipient';
+
+  @override
+  String get broadcastToAllNearby => 'Broadcast to all nearby';
+
+  @override
+  String get searchRecipients => 'Search recipients...';
+
+  @override
+  String get noContactsFound => 'No contacts found';
+
+  @override
+  String get noRoomsFound => 'No rooms found';
+
+  @override
+  String get noContactsOrRoomsAvailable => 'No contacts or rooms available';
+
+  @override
+  String get messagesWillBeSentToPublicChannel =>
+      'Messages will be sent to public channel';
+
+  @override
+  String get newMessage => 'New message';
+
+  @override
+  String get channel => 'Channel';
 }

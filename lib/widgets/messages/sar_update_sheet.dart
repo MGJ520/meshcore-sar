@@ -4,14 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../providers/contacts_provider.dart';
 import '../../models/contact.dart';
-import '../../models/sar_marker.dart';
+import '../../models/sar_template.dart';
 import '../../services/validation_service.dart';
+import '../../services/sar_template_service.dart';
 import '../../l10n/app_localizations.dart';
 
 /// SAR Update Sheet - Modal bottom sheet for creating and sending SAR markers
 /// This widget is public so it can be used from both messages_tab.dart and map_tab.dart
 class SarUpdateSheet extends StatefulWidget {
-  final Future<void> Function(SarMarkerType, Position, String?, Uint8List?, bool) onSend;
+  final Future<void> Function(String emoji, String name, Position, Uint8List?, bool) onSend;
   final Position? prePopulatedPosition;
   final bool allowLocationUpdate;
 
@@ -27,7 +28,9 @@ class SarUpdateSheet extends StatefulWidget {
 }
 
 class _SarUpdateSheetState extends State<SarUpdateSheet> {
-  SarMarkerType _selectedType = SarMarkerType.foundPerson;
+  SarTemplate? _selectedTemplate;
+  List<SarTemplate> _templates = [];
+  final SarTemplateService _templateService = SarTemplateService();
   Position? _currentPosition;
   bool _loadingLocation = false;
   String? _locationError;
@@ -37,6 +40,7 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
   @override
   void initState() {
     super.initState();
+    _initializeTemplates();
     // Use pre-populated position if provided, otherwise get current location
     if (widget.prePopulatedPosition != null) {
       _currentPosition = widget.prePopulatedPosition;
@@ -44,6 +48,21 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
       _getCurrentLocation();
     }
     _setDefaultDestination();
+  }
+
+  Future<void> _initializeTemplates() async {
+    if (!_templateService.isInitialized) {
+      await _templateService.initialize();
+    }
+    if (mounted) {
+      setState(() {
+        _templates = _templateService.templates;
+        // Select first template by default
+        if (_templates.isNotEmpty) {
+          _selectedTemplate = _templates.first;
+        }
+      });
+    }
   }
 
   void _setDefaultDestination() {
@@ -140,19 +159,23 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
   Widget build(BuildContext context) {
     // Get keyboard height to adjust padding
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      duration: const Duration(milliseconds: 100),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest,
@@ -196,7 +219,9 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                 left: 16,
                 right: 16,
                 top: 16,
-                bottom: keyboardHeight > 0 ? keyboardHeight + 16 : 16,
+                // Add bottom padding for button area (button + padding + safe area)
+                // Button height ~48px + container padding 32px + safe area
+                bottom: 80 + bottomSafeArea,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,30 +236,17 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  MarkerTypeChip(
-                    type: SarMarkerType.foundPerson,
-                    isSelected: _selectedType == SarMarkerType.foundPerson,
-                    onTap: () => setState(() => _selectedType = SarMarkerType.foundPerson),
-                  ),
-                  const SizedBox(height: 8),
-                  MarkerTypeChip(
-                    type: SarMarkerType.fire,
-                    isSelected: _selectedType == SarMarkerType.fire,
-                    onTap: () => setState(() => _selectedType = SarMarkerType.fire),
-                  ),
-                  const SizedBox(height: 8),
-                  MarkerTypeChip(
-                    type: SarMarkerType.stagingArea,
-                    isSelected: _selectedType == SarMarkerType.stagingArea,
-                    onTap: () => setState(() => _selectedType = SarMarkerType.stagingArea),
-                  ),
-                  const SizedBox(height: 8),
-                  MarkerTypeChip(
-                    type: SarMarkerType.object,
-                    isSelected: _selectedType == SarMarkerType.object,
-                    onTap: () => setState(() => _selectedType = SarMarkerType.object),
-                  ),
-                  const SizedBox(height: 24),
+                  ..._templates.map((template) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: TemplateChip(
+                        template: template,
+                        isSelected: _selectedTemplate?.id == template.id,
+                        onTap: () => setState(() => _selectedTemplate = template),
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
 
                   // Destination selection (compact dropdown with rooms and channel)
                   Text(
@@ -595,35 +607,28 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
           // Bottom action button
           Container(
             padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
             child: SafeArea(
               top: false,
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _currentPosition == null || _selectedContact == null
+                  onPressed: _currentPosition == null || _selectedContact == null || _selectedTemplate == null
                       ? null
                       : () async {
                           final validator = ValidationService();
-
-                          // Validate coordinates
-                          final coordResult = validator.validateCoordinates(
-                            _currentPosition!.latitude,
-                            _currentPosition!.longitude,
-                          );
-                          if (!coordResult.isValid) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(coordResult.errorMessage!),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                            return;
-                          }
+                          final notes = _notesController.text.trim();
 
                           // Validate notes length if provided
-                          final notes = _notesController.text.trim();
                           if (notes.isNotEmpty) {
                             final notesResult = validator.validateName(
                               notes,
@@ -640,6 +645,23 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                               }
                               return;
                             }
+                          }
+
+                          // Validate coordinates
+                          final coordResult = validator.validateCoordinates(
+                            _currentPosition!.latitude,
+                            _currentPosition!.longitude,
+                          );
+                          if (!coordResult.isValid) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(coordResult.errorMessage!),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
                           }
 
                           // Validate location accuracy (warn if >50m)
@@ -669,10 +691,21 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                             if (shouldContinue != true) return;
                           }
 
+                          // Combine template name with optional notes
+                          String displayText;
+                          if (notes.isNotEmpty) {
+                            // Include both template name and custom notes
+                            displayText = '${_selectedTemplate!.name} - $notes';
+                          } else {
+                            // Just the template name
+                            displayText = _selectedTemplate!.name;
+                          }
+
+                          // Send SAR marker with emoji and display text
                           await widget.onSend(
-                            _selectedType,
+                            _selectedTemplate!.emoji,
+                            displayText,
                             _currentPosition!,
-                            notes.isEmpty ? null : notes,
                             _selectedContact!.isChannel
                                 ? null
                                 : _selectedContact!.publicKey,
@@ -701,43 +734,29 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
           ),
         ],
       ),
+      ),
     );
   }
 }
 
-/// Marker Type Chip widget - Displays a selectable SAR marker type
-class MarkerTypeChip extends StatelessWidget {
-  final SarMarkerType type;
+/// Template Chip widget - Displays a selectable SAR template
+class TemplateChip extends StatelessWidget {
+  final SarTemplate template;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const MarkerTypeChip({
+  const TemplateChip({
     super.key,
-    required this.type,
+    required this.template,
     required this.isSelected,
     required this.onTap,
   });
 
-  Color _getMarkerColor() {
-    switch (type) {
-      case SarMarkerType.foundPerson:
-        return Colors.green;
-      case SarMarkerType.fire:
-        return Colors.red;
-      case SarMarkerType.stagingArea:
-        return Colors.orange;
-      case SarMarkerType.object:
-        return Colors.purple;
-      case SarMarkerType.unknown:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _getMarkerColor();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final color = template.color;
 
     return InkWell(
       onTap: onTap,
@@ -758,18 +777,35 @@ class MarkerTypeChip extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              type.emoji,
+              template.emoji,
               style: const TextStyle(fontSize: 32),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                type.getLocalizedName(context),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? color : colorScheme.onSurface,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    template.name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? color : colorScheme.onSurface,
+                    ),
+                  ),
+                  if (template.description.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      template.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             if (isSelected)

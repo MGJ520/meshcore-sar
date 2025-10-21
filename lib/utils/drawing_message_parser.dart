@@ -12,9 +12,13 @@ class DrawingMessageParser {
   }
 
   /// Parse drawing message text into MapDrawing object
-  /// senderName should be extracted from packet metadata
+  /// senderName and messageId should be extracted from packet metadata
   /// Returns null if parsing fails
-  static MapDrawing? parseDrawingMessage(String text, {String? senderName}) {
+  static MapDrawing? parseDrawingMessage(
+    String text, {
+    String? senderName,
+    String? messageId,
+  }) {
     if (!isDrawingMessage(text)) {
       return null;
     }
@@ -27,8 +31,12 @@ class DrawingMessageParser {
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
 
       // Use ultra-compact network format parser
-      // Sender name comes from packet metadata, not JSON
-      return MapDrawing.fromNetworkJson(json, senderName: senderName);
+      // Sender name and message ID come from packet metadata, not JSON
+      return MapDrawing.fromNetworkJson(
+        json,
+        senderName: senderName,
+        messageId: messageId,
+      );
     } catch (e) {
       return null;
     }

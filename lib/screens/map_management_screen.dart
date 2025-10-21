@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/tile_cache_service.dart';
 import '../services/validation_service.dart';
 import '../services/mbtiles_service.dart';
@@ -391,6 +393,133 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
     }
   }
 
+  Future<void> _exportTiles() async {
+    try {
+      // Check if there are tiles to export
+      final tileCount = await widget.tileCacheService.getCachedTileCount();
+      if (tileCount == 0) {
+        _showError(AppLocalizations.of(context)!.noTilesToExport);
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = true;
+        _statusMessage = AppLocalizations.of(context)!.exportingTiles;
+      });
+
+      // Export to temporary directory first (works on all platforms)
+      final tempDir = await getTemporaryDirectory();
+      final fileName = 'meshcore_tiles_${DateTime.now().millisecondsSinceEpoch}.fmtc';
+      final tempFilePath = '${tempDir.path}/$fileName';
+
+      final exportedCount = await widget.tileCacheService.exportStore(tempFilePath);
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _statusMessage = null;
+      });
+
+      // Share the file using share_plus (works on all platforms)
+      final file = File(tempFilePath);
+      if (await file.exists()) {
+        // Get the button position for iPad popover
+        final box = context.findRenderObject() as RenderBox?;
+        final sharePositionOrigin = box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : null;
+
+        final result = await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(tempFilePath)],
+            subject: 'MeshCore Map Tiles Export',
+            text: 'Exported $exportedCount map tiles',
+            sharePositionOrigin: sharePositionOrigin,
+          ),
+        );
+
+        if (mounted) {
+          if (result.status == ShareResultStatus.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.exportSuccess(exportedCount)),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      } else {
+        _showError('Export file not found');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _statusMessage = null;
+      });
+      _showError(AppLocalizations.of(context)!.exportFailed(e.toString()));
+    }
+  }
+
+  Future<void> _importTiles() async {
+    try {
+      // Use file picker to select import file
+      final result = await FilePicker.platform.pickFiles(
+        dialogTitle: AppLocalizations.of(context)!.selectImportFile,
+        type: FileType.custom,
+        allowedExtensions: ['fmtc'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final filePath = result.files.first.path;
+      if (filePath == null) return;
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = true;
+        _statusMessage = AppLocalizations.of(context)!.importingTiles;
+      });
+
+      // Optional: Preview stores in archive before importing
+      try {
+        final stores = await widget.tileCacheService.listArchiveStores(filePath);
+        debugPrint('Archive contains stores: $stores');
+      } catch (e) {
+        debugPrint('Could not list stores: $e');
+      }
+
+      final importResult = await widget.tileCacheService.importStore(filePath);
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _statusMessage = null;
+      });
+
+      await _loadCacheStats(); // Refresh stats after import
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.importSuccess(importResult['successfulStores'] as int),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _statusMessage = null;
+      });
+      _showError(AppLocalizations.of(context)!.importFailed(e.toString()));
+    }
+  }
+
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -422,6 +551,10 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
 
                   // Offline Vector Maps (MBTiles)
                   _buildMbtilesCard(),
+                  const SizedBox(height: 16),
+
+                  // Import/Export Cached Tiles
+                  _buildImportExportCard(),
                   const SizedBox(height: 16),
 
                   // Download Region
@@ -628,6 +761,60 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context)!.importMbtilesNote,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImportExportCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppLocalizations.of(context)!.importExportCachedTiles,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              AppLocalizations.of(context)!.importExportDescription,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+
+            // Export Section
+            ElevatedButton.icon(
+              onPressed: _isDownloading || _isLoading ? null : _exportTiles,
+              icon: const Icon(Icons.file_upload),
+              label: Text(AppLocalizations.of(context)!.exportTilesToFile),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              AppLocalizations.of(context)!.exportNote,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+
+            // Import Section
+            ElevatedButton.icon(
+              onPressed: _isDownloading || _isLoading ? null : _importTiles,
+              icon: const Icon(Icons.file_download),
+              label: Text(AppLocalizations.of(context)!.importTilesFromFile),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              AppLocalizations.of(context)!.importNote,
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],

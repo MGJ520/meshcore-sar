@@ -81,6 +81,9 @@ class SarMessageParser {
       sarMarkerType: sarInfo.type,
       sarGpsCoordinates: sarInfo.location,
       sarNotes: sarInfo.notes, // Extract and store notes
+      sarCustomEmoji: sarInfo.type == SarMarkerType.unknown
+          ? sarInfo.emoji  // Preserve custom emoji for unknown types
+          : null,
     );
   }
 

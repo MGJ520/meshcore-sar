@@ -6,6 +6,9 @@ enum MapLayerType {
   openStreetMap,
   openTopoMap,
   esriWorldImagery,
+  googleHybrid,
+  googleRoadmap,
+  googleTerrain,
   vectorMbtiles,
 }
 
@@ -46,6 +49,12 @@ class MapLayer {
         return localizations.openTopoMap;
       case MapLayerType.esriWorldImagery:
         return localizations.esriSatellite;
+      case MapLayerType.googleHybrid:
+        return localizations.googleHybrid;
+      case MapLayerType.googleRoadmap:
+        return localizations.googleRoadmap;
+      case MapLayerType.googleTerrain:
+        return localizations.googleTerrain;
       case MapLayerType.vectorMbtiles:
         // For vector tiles, use the name from metadata
         return name;
@@ -77,10 +86,37 @@ class MapLayer {
     maxZoom: 19, // ESRI World Imagery maximum
   );
 
+  static const googleHybrid = MapLayer(
+    type: MapLayerType.googleHybrid,
+    name: 'Google Hybrid',
+    urlTemplate: 'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+    attribution: '© Google',
+    maxZoom: 20, // Google Maps maximum
+  );
+
+  static const googleRoadmap = MapLayer(
+    type: MapLayerType.googleRoadmap,
+    name: 'Google Roadmap',
+    urlTemplate: 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}',
+    attribution: '© Google',
+    maxZoom: 20, // Google Maps maximum
+  );
+
+  static const googleTerrain = MapLayer(
+    type: MapLayerType.googleTerrain,
+    name: 'Google Terrain',
+    urlTemplate: 'http://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}',
+    attribution: '© Google',
+    maxZoom: 20, // Google Maps maximum
+  );
+
   static const List<MapLayer> allLayers = [
     openStreetMap,
     openTopoMap,
     esriWorldImagery,
+    googleHybrid,
+    googleRoadmap,
+    googleTerrain,
   ];
 
   static MapLayer fromType(MapLayerType type) {

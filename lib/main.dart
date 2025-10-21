@@ -113,9 +113,11 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
         ChangeNotifierProvider(create: (_) => ConnectionProvider()),
         ChangeNotifierProvider(
           create: (_) {
-            // Don't initialize here - it will be initialized in AppProvider.initialize()
-            // after connection is established and device info is available
-            return ContactsProvider();
+            // Initialize early to load persisted contacts for offline viewing
+            // Self-contact filtering will happen later when BLE connects
+            final provider = ContactsProvider();
+            provider.initializeEarly();
+            return provider;
           },
         ),
         ChangeNotifierProvider(

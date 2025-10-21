@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../l10n/app_localizations.dart';
+import '../services/sar_template_service.dart';
 
 /// SAR (Search & Rescue) marker types
 enum SarMarkerType {
@@ -75,6 +76,7 @@ class SarMarker {
   final Uint8List? senderPublicKey;
   final String? senderName;
   final String? notes;
+  final String? customEmoji; // For custom SAR markers not in predefined types
 
   SarMarker({
     required this.id,
@@ -84,6 +86,7 @@ class SarMarker {
     this.senderPublicKey,
     this.senderName,
     this.notes,
+    this.customEmoji,
   });
 
   /// Get sender public key as hex string (short)
@@ -109,9 +112,47 @@ class SarMarker {
     return DateTime.now().difference(timestamp).inHours < 1;
   }
 
-  /// Get display name
+  /// Get the emoji to display (custom emoji if available, otherwise type emoji)
+  String get emoji {
+    return customEmoji ?? type.emoji;
+  }
+
+  /// Get display name - uses notes if available, otherwise looks up template by emoji, otherwise type name
   String get displayName {
-    return '${type.emoji} ${type.displayName}';
+    if (notes != null && notes!.isNotEmpty) {
+      return notes!;
+    }
+
+    // If no notes and we have a custom emoji, try to look up the template
+    if (customEmoji != null) {
+      // Import the service here to avoid circular dependencies
+      // We'll use a static lookup method
+      return _lookupTemplateNameByEmoji(customEmoji!) ?? type.displayName;
+    }
+
+    return type.displayName;
+  }
+
+  /// Look up template name by emoji from SarTemplateService
+  static String? _lookupTemplateNameByEmoji(String emoji) {
+    try {
+      // Use the singleton instance
+      final service = SarTemplateService();
+      if (!service.isInitialized) {
+        return null;
+      }
+
+      // Find template with matching emoji
+      final template = service.templates.firstWhere(
+        (t) => t.emoji == emoji,
+        orElse: () => throw StateError('No template found'),
+      );
+
+      return template.name;
+    } catch (e) {
+      // Template not found or service not initialized
+      return null;
+    }
   }
 
   SarMarker copyWith({
@@ -122,6 +163,7 @@ class SarMarker {
     Uint8List? senderPublicKey,
     String? senderName,
     String? notes,
+    String? customEmoji,
   }) {
     return SarMarker(
       id: id ?? this.id,
@@ -131,6 +173,7 @@ class SarMarker {
       senderPublicKey: senderPublicKey ?? this.senderPublicKey,
       senderName: senderName ?? this.senderName,
       notes: notes ?? this.notes,
+      customEmoji: customEmoji ?? this.customEmoji,
     );
   }
 

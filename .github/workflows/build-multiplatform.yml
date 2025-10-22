@@ -657,6 +657,9 @@ jobs:
         env:
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
         run: |
+          # Don't exit on error - generate index for whatever artifacts exist
+          set +e
+
           generate_index() {
             local BUILD_DIR="$1"
             local BASE_URL="$2"
@@ -1103,6 +1106,9 @@ jobs:
 
       - name: Create build manifests
         run: |
+          # Don't exit on error - create manifests for whatever artifacts exist
+          set +e
+
           # Create manifest for build-specific directory (after index.html is generated)
           cat > "r2-upload/unstable/${{ steps.metadata.outputs.build_prefix }}/manifest.json" <<EOF
           {

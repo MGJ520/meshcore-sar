@@ -456,18 +456,54 @@ jobs:
     if: always() && (needs.build-android.result == 'success' || needs.build-ios.result == 'success' || needs.build-macos.result == 'success' || needs.build-windows.result == 'success')
 
     steps:
-      - name: Download all artifacts
+      - name: Download Android APK
+        if: needs.build-android.result == 'success'
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          path: artifacts
+          name: android-apk
+          path: artifacts/android-apk
+
+      - name: Download Android App Bundle
+        if: needs.build-android.result == 'success'
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: android-appbundle
+          path: artifacts/android-appbundle
+
+      - name: Download macOS DMG
+        if: needs.build-macos.result == 'success'
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: macos-dmg
+          path: artifacts/macos-dmg
+
+      - name: Download Windows Executable
+        if: needs.build-windows.result == 'success'
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: windows-executable
+          path: artifacts/windows-executable
 
       - name: Verify downloaded artifacts
         run: |
-          echo "=== Verifying downloaded artifacts structure ==="
-          ls -lah artifacts/ || echo "No artifacts directory found!"
-          echo ""
-          echo "=== All files in artifacts directory ==="
-          find artifacts -type f -ls || echo "No files found!"
+          echo "=== Downloaded build artifacts for R2 upload ==="
+          if [ -d artifacts ]; then
+            echo "Directory structure:"
+            ls -laR artifacts/
+            echo ""
+            echo "All files:"
+            find artifacts -type f -ls 2>/dev/null || echo "No files found"
+            echo ""
+            echo "=== File sizes ==="
+            find artifacts -type f -exec du -h {} \; 2>/dev/null || echo "No artifacts to measure"
+          else
+            echo "⚠️  No artifacts directory - all builds may have failed"
+            exit 1
+          fi
 
       - name: Checkout code for git log
         uses: actions/checkout@v4
@@ -519,49 +555,57 @@ jobs:
             mkdir -p r2-upload/unstable/latest
           fi
 
-          # Helper function to copy artifact
+          # Helper function to find and copy artifact
           copy_artifact() {
-            local src_path="$1"
-            local dest_name="$2"
-            local platform="$3"
+            local search_dir="$1"
+            local pattern="$2"
+            local dest_name="$3"
+            local platform="$4"
 
-            if [ -f "$src_path" ]; then
-              echo "✅ Copying $platform: $src_path"
-              cp "$src_path" \
+            # Find the file matching the pattern
+            local src_file=$(find "$search_dir" -type f -name "$pattern" 2>/dev/null | head -1)
+
+            if [ -n "$src_file" ] && [ -f "$src_file" ]; then
+              echo "✅ Copying $platform: $src_file"
+              cp "$src_file" \
                 "r2-upload/unstable/${{ steps.metadata.outputs.build_prefix }}/$dest_name"
 
               if [ "${{ steps.metadata.outputs.branch_name }}" == "main" ]; then
                 local latest_name="${dest_name/${{ steps.metadata.outputs.build_prefix }}-${{ steps.metadata.outputs.timestamp }}/latest}"
-                cp "$src_path" "r2-upload/unstable/latest/$latest_name"
+                cp "$src_file" "r2-upload/unstable/latest/$latest_name"
               fi
               return 0
             else
-              echo "⚠️  Skipping $platform: $src_path not found"
+              echo "⚠️  Skipping $platform: No file matching '$pattern' found in $search_dir"
               return 1
             fi
           }
 
-          # Copy Android APK
+          # Copy Android APK (search for any .apk file)
           copy_artifact \
-            "artifacts/android-apk/app-release.apk" \
+            "artifacts/android-apk" \
+            "*.apk" \
             "meshcore-sar-${{ steps.metadata.outputs.build_prefix }}-${{ steps.metadata.outputs.timestamp }}.apk" \
             "Android APK"
 
-          # Copy Android App Bundle
+          # Copy Android App Bundle (search for any .aab file)
           copy_artifact \
-            "artifacts/android-appbundle/app-release.aab" \
+            "artifacts/android-appbundle" \
+            "*.aab" \
             "meshcore-sar-${{ steps.metadata.outputs.build_prefix }}-${{ steps.metadata.outputs.timestamp }}.aab" \
             "Android App Bundle"
 
-          # Copy macOS DMG
+          # Copy macOS DMG (search for any .dmg file)
           copy_artifact \
-            "artifacts/macos-dmg/MeshCore-SAR.dmg" \
+            "artifacts/macos-dmg" \
+            "*.dmg" \
             "meshcore-sar-${{ steps.metadata.outputs.build_prefix }}-${{ steps.metadata.outputs.timestamp }}.dmg" \
             "macOS DMG"
 
-          # Copy Windows ZIP
+          # Copy Windows ZIP (search for any .zip file)
           copy_artifact \
-            "artifacts/windows-executable/MeshCore-SAR-Windows.zip" \
+            "artifacts/windows-executable" \
+            "*.zip" \
             "meshcore-sar-${{ steps.metadata.outputs.build_prefix }}-${{ steps.metadata.outputs.timestamp }}-windows.zip" \
             "Windows ZIP"
 
@@ -1082,6 +1126,7 @@ jobs:
           fi
 
       - name: Upload build-specific artifacts to Cloudflare R2
+        if: hashFiles('r2-upload/unstable/${{ steps.metadata.outputs.build_prefix }}/*') != ''
         uses: ryand56/r2-upload-action@latest
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
@@ -1092,7 +1137,7 @@ jobs:
           destination-dir: unstable/${{ steps.metadata.outputs.build_prefix }}
 
       - name: Upload latest artifacts to Cloudflare R2 (main branch only)
-        if: steps.metadata.outputs.branch_name == 'main'
+        if: steps.metadata.outputs.branch_name == 'main' && hashFiles('r2-upload/unstable/latest/*') != ''
         uses: ryand56/r2-upload-action@latest
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}

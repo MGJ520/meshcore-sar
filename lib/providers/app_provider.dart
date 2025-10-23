@@ -39,7 +39,25 @@ class AppProvider with ChangeNotifier {
     _initializeTileCache();
     _initializeLocationTracking();
     _loadSimpleMode();
+    _syncDrawingsOnStartup(); // Sync drawings immediately after providers load
     _isInitialized = true;
+  }
+
+  /// Sync drawings from messages on app startup (before BLE connection)
+  Future<void> _syncDrawingsOnStartup() async {
+    // Wait for MessagesProvider to finish initializing
+    // DrawingProvider loads around the same time
+    int attempts = 0;
+    while (!messagesProvider.isInitialized && attempts < 20) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      attempts++;
+    }
+
+    // Give DrawingProvider a moment to finish loading too
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    debugPrint('🔄 [AppProvider] Early sync: syncing drawings from messages...');
+    messagesProvider.syncDrawingsWithProvider(drawingProvider);
   }
 
   /// Load simple mode setting from shared preferences

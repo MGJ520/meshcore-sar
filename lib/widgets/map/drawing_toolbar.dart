@@ -377,6 +377,13 @@ class DrawingToolbar extends StatelessWidget {
     );
 
     if (!connectionProvider.deviceInfo.isConnected) {
+      debugPrint('  ❌ Not connected - showing error toast');
+      if (context.mounted) {
+        ToastLogger.error(
+          context,
+          AppLocalizations.of(context)!.notConnectedToDevice,
+        );
+      }
       return;
     }
 
@@ -390,6 +397,13 @@ class DrawingToolbar extends StatelessWidget {
     debugPrint('  Total drawings count: ${drawingProvider.drawings.length}');
 
     if (unsharedDrawings.isEmpty) {
+      debugPrint('  ℹ️ No unshared drawings - showing info toast');
+      if (context.mounted) {
+        ToastLogger.info(
+          context,
+          'All drawings have already been shared',
+        );
+      }
       return;
     }
 

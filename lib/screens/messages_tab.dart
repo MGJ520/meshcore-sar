@@ -694,6 +694,7 @@ class _MessagesTabState extends State<MessagesTab> {
                                   }
                                 : message.isDrawing && message.drawingId != null
                                 ? () {
+                                    debugPrint('🗺️ [MessagesTab] Drawing tapped! ID: ${message.drawingId}');
                                     final mapProvider = context
                                         .read<MapProvider>();
                                     final drawingProvider = context
@@ -1331,6 +1332,14 @@ class _MessageBubble extends StatelessWidget {
       debugPrint('   Text: ${message.text}');
       debugPrint('   isSarMarker: $isSarMarker');
       debugPrint('   sarMarkerType: ${message.sarMarkerType}');
+    }
+
+    if (message.text.startsWith('D:')) {
+      debugPrint('🎨 [MessageBubble] Rendering drawing message:');
+      debugPrint('   Text: ${message.text.substring(0, message.text.length > 50 ? 50 : message.text.length)}...');
+      debugPrint('   isDrawing: ${message.isDrawing}');
+      debugPrint('   drawingId: ${message.drawingId}');
+      debugPrint('   onTap is null: ${onTap == null}');
     }
 
     return GestureDetector(

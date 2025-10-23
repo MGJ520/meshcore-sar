@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/location_trail.dart';
+import '../models/map_drawing.dart';
 
 class MapProvider with ChangeNotifier {
   LatLng? _targetLocation;
@@ -46,8 +47,10 @@ class MapProvider with ChangeNotifier {
 
   /// Navigate to a drawing by its ID
   void navigateToDrawing(String drawingId, dynamic drawingProvider) {
+    debugPrint('🗺️ [MapProvider] navigateToDrawing called with ID: $drawingId');
     // Find the drawing in the provider
     final drawings = drawingProvider.drawings as List;
+    debugPrint('🗺️ [MapProvider] Total drawings in provider: ${drawings.length}');
     final drawing = drawings.cast<dynamic>().firstWhere(
       (d) => d.id == drawingId,
       orElse: () => null,
@@ -55,6 +58,7 @@ class MapProvider with ChangeNotifier {
 
     if (drawing == null) {
       debugPrint('⚠️ [MapProvider] Drawing $drawingId not found');
+      debugPrint('⚠️ [MapProvider] Available drawing IDs: ${drawings.map((d) => d.id).toList()}');
       return;
     }
 
@@ -90,7 +94,8 @@ class MapProvider with ChangeNotifier {
       zoom = 10.0;
     }
 
-    debugPrint('🗺️ [MapProvider] Navigating to drawing: ${drawing.type.name}, zoom: $zoom');
+    final typeStr = drawing is LineDrawing ? 'line' : 'rectangle';
+    debugPrint('🗺️ [MapProvider] Navigating to drawing: $typeStr, zoom: $zoom');
     navigateToLocation(location: center, zoom: zoom, animate: true);
   }
 

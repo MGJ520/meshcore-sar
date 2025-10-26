@@ -1869,4 +1869,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get rectangle => 'Rechteck';
+
+  @override
+  String get updateAvailable => 'Update Verfügbar';
+
+  @override
+  String get currentVersion => 'Aktuell';
+
+  @override
+  String get latestVersion => 'Neueste';
+
+  @override
+  String get downloadUpdate => 'Herunterladen';
+
+  @override
+  String get updateLater => 'Später';
 }

@@ -10,6 +10,11 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    // Enable BuildConfig generation
+    buildFeatures {
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -31,6 +36,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Inject commit hash from environment variable (set by GitHub Actions)
+        // Falls back to "dev" for local development builds
+        val commitHash = System.getenv("COMMIT_HASH") ?: "dev"
+        buildConfigField("String", "COMMIT_HASH", "\"$commitHash\"")
     }
 
     buildTypes {

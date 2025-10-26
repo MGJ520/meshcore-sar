@@ -2541,5 +2541,11 @@
   "yourDrawingsCount": "I Tuoi Disegni ({count})",
   "shared": "Condiviso",
   "line": "Linea",
-  "rectangle": "Rettangolo"
+  "rectangle": "Rettangolo",
+
+  "updateAvailable": "Aggiornamento Disponibile",
+  "currentVersion": "Attuale",
+  "latestVersion": "Ultima",
+  "downloadUpdate": "Scarica",
+  "updateLater": "Più Tardi"
 }

@@ -2541,5 +2541,11 @@
   "yourDrawingsCount": "Ihre Zeichnungen ({count})",
   "shared": "Geteilt",
   "line": "Linie",
-  "rectangle": "Rechteck"
+  "rectangle": "Rechteck",
+
+  "updateAvailable": "Update Verfügbar",
+  "currentVersion": "Aktuell",
+  "latestVersion": "Neueste",
+  "downloadUpdate": "Herunterladen",
+  "updateLater": "Später"
 }

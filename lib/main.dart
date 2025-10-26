@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +14,8 @@ import 'providers/app_provider.dart';
 import 'services/tile_cache_service.dart';
 import 'services/notification_service.dart';
 import 'services/locale_preferences.dart';
+import 'services/update_checker_service.dart';
+import 'widgets/update_dialog.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 import 'l10n/app_localizations.dart';
@@ -48,6 +51,10 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
 
     // Check if we need to request location permissions
     await _checkLocationPermissions();
+
+    // Check for app updates (Android only) - runs in background
+    // Shows dialog if update is available
+    _checkForUpdates();
 
     setState(() {
       _isInitialized = true;
@@ -93,6 +100,37 @@ class _MeshCoreSarAppState extends State<MeshCoreSarApp> {
     setState(() {
       _locale = locale;
     });
+  }
+
+  /// Check for app updates on Android only
+  /// Shows dialog if update is available
+  Future<void> _checkForUpdates() async {
+    // Only check for updates on Android
+    if (!Platform.isAndroid) {
+      debugPrint('[UpdateChecker] Skipping update check (not Android)');
+      return;
+    }
+
+    try {
+      debugPrint('[UpdateChecker] Starting update check...');
+      final updateInfo = await UpdateCheckerService().checkForUpdate();
+
+      if (!updateInfo.isAvailable) {
+        debugPrint('[UpdateChecker] No update available');
+        return;
+      }
+
+      debugPrint('[UpdateChecker] Update available! Showing dialog...');
+
+      // Wait for widget tree to be built before showing dialog
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          UpdateDialog.show(context, updateInfo);
+        }
+      });
+    } catch (e) {
+      debugPrint('[UpdateChecker] Error checking for updates: $e');
+    }
   }
 
   @override

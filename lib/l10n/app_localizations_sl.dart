@@ -1860,4 +1860,19 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get rectangle => 'Pravokotnik';
+
+  @override
+  String get updateAvailable => 'Na Voljo Posodobitev';
+
+  @override
+  String get currentVersion => 'Trenutna';
+
+  @override
+  String get latestVersion => 'Najnovejša';
+
+  @override
+  String get downloadUpdate => 'Prenesi';
+
+  @override
+  String get updateLater => 'Kasneje';
 }

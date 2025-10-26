@@ -949,5 +949,11 @@
   "yourDrawingsCount": "Vaši Crteži ({count})",
   "shared": "Podijeljeno",
   "line": "Linija",
-  "rectangle": "Pravokutnik"
+  "rectangle": "Pravokutnik",
+
+  "updateAvailable": "Dostupno Ažuriranje",
+  "currentVersion": "Trenutna",
+  "latestVersion": "Najnovija",
+  "downloadUpdate": "Preuzmi",
+  "updateLater": "Kasnije"
 }

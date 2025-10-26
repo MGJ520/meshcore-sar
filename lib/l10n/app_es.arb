@@ -2536,5 +2536,11 @@
   "yourDrawingsCount": "Sus Dibujos ({count})",
   "shared": "Compartido",
   "line": "Línea",
-  "rectangle": "Rectángulo"
+  "rectangle": "Rectángulo",
+
+  "updateAvailable": "Actualización Disponible",
+  "currentVersion": "Actual",
+  "latestVersion": "Última",
+  "downloadUpdate": "Descargar",
+  "updateLater": "Más Tarde"
 }

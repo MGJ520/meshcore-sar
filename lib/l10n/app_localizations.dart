@@ -3344,6 +3344,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rectangle'**
   String get rectangle;
+
+  /// Title for update dialog when new version is available
+  ///
+  /// In en, this message translates to:
+  /// **'Update Available'**
+  String get updateAvailable;
+
+  /// Label for current app version
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get currentVersion;
+
+  /// Label for latest available app version
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get latestVersion;
+
+  /// Button to download app update
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get downloadUpdate;
+
+  /// Button to dismiss update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateLater;
 }
 
 class _AppLocalizationsDelegate

@@ -115,6 +115,8 @@ jobs:
         run: flutter gen-l10n
 
       - name: Build APK
+        env:
+          COMMIT_HASH: ${{ github.sha }}
         run: flutter build apk --release
 
       - name: Upload APK

@@ -949,5 +949,11 @@
   "yourDrawingsCount": "Vaše Risbe ({count})",
   "shared": "Deljeno",
   "line": "Črta",
-  "rectangle": "Pravokotnik"
+  "rectangle": "Pravokotnik",
+
+  "updateAvailable": "Na Voljo Posodobitev",
+  "currentVersion": "Trenutna",
+  "latestVersion": "Najnovejša",
+  "downloadUpdate": "Prenesi",
+  "updateLater": "Kasneje"
 }

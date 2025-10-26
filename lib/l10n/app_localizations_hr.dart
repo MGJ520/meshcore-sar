@@ -1859,4 +1859,19 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get rectangle => 'Pravokutnik';
+
+  @override
+  String get updateAvailable => 'Dostupno Ažuriranje';
+
+  @override
+  String get currentVersion => 'Trenutna';
+
+  @override
+  String get latestVersion => 'Najnovija';
+
+  @override
+  String get downloadUpdate => 'Preuzmi';
+
+  @override
+  String get updateLater => 'Kasnije';
 }

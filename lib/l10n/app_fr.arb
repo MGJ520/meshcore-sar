@@ -2541,5 +2541,11 @@
   "yourDrawingsCount": "Vos Dessins ({count})",
   "shared": "Partagé",
   "line": "Ligne",
-  "rectangle": "Rectangle"
+  "rectangle": "Rectangle",
+
+  "updateAvailable": "Mise à Jour Disponible",
+  "currentVersion": "Actuelle",
+  "latestVersion": "Dernière",
+  "downloadUpdate": "Télécharger",
+  "updateLater": "Plus Tard"
 }

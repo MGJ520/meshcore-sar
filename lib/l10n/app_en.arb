@@ -3138,5 +3138,30 @@
   "rectangle": "Rectangle",
   "@rectangle": {
     "description": "Rectangle drawing type label"
+  },
+
+  "updateAvailable": "Update Available",
+  "@updateAvailable": {
+    "description": "Title for update dialog when new version is available"
+  },
+
+  "currentVersion": "Current",
+  "@currentVersion": {
+    "description": "Label for current app version"
+  },
+
+  "latestVersion": "Latest",
+  "@latestVersion": {
+    "description": "Label for latest available app version"
+  },
+
+  "downloadUpdate": "Download",
+  "@downloadUpdate": {
+    "description": "Button to download app update"
+  },
+
+  "updateLater": "Later",
+  "@updateLater": {
+    "description": "Button to dismiss update dialog"
   }
 }

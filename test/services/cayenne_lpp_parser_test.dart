@@ -7,7 +7,7 @@ import 'package:meshcore_sar_app/services/meshcore_constants.dart';
 
 void main() {
   group('CayenneLppParser - GPS Codec Tests', () {
-    test('GPS encoding uses correct 4-byte int32 LE format', () {
+    test('GPS encoding uses correct 3-byte signed BE format', () {
       // Test coordinates (Ljubljana, Slovenia)
       const double lat = 46.0569;
       const double lon = 14.5058;
@@ -20,37 +20,52 @@ void main() {
         channel: 0,
       );
 
-      // Expected format:
+      // Expected format (Standard Cayenne LPP):
       // [0] = channel (0)
       // [1] = type (136 = 0x88 = lppGps)
-      // [2-5] = lat as int32 LE
-      // [6-9] = lon as int32 LE
-      // [10-13] = alt as int32 LE
-      expect(encoded.length, equals(14));
+      // [2-4] = lat as 24-bit signed BE
+      // [5-7] = lon as 24-bit signed BE
+      // [8-10] = alt as 24-bit signed BE
+      expect(encoded.length, equals(11));
       expect(encoded[0], equals(0)); // channel
       expect(encoded[1], equals(MeshCoreConstants.lppGps)); // type 0x88
 
-      // Verify little-endian encoding
-      final buffer = ByteData.sublistView(encoded);
-      final latEncoded = buffer.getInt32(2, Endian.little);
-      final lonEncoded = buffer.getInt32(6, Endian.little);
-      final altEncoded = buffer.getInt32(10, Endian.little);
+      // Verify big-endian encoding (3 bytes each)
+      final latEncoded =
+          (encoded[2] << 16) | (encoded[3] << 8) | encoded[4];
+      final lonEncoded =
+          (encoded[5] << 16) | (encoded[6] << 8) | encoded[7];
+      final altEncoded =
+          (encoded[8] << 16) | (encoded[9] << 8) | encoded[10];
 
       expect(latEncoded, equals(460569)); // 46.0569 * 10000
       expect(lonEncoded, equals(145058)); // 14.5058 * 10000
       expect(altEncoded, equals(29500)); // 295.0 * 100
     });
 
-    test('GPS decoding uses correct divisor (10000, not 1000000)', () {
-      // Create raw GPS telemetry packet
-      final buffer = ByteData(14);
-      buffer.setUint8(0, 0); // channel
-      buffer.setUint8(1, MeshCoreConstants.lppGps); // type
-      buffer.setInt32(2, 460569, Endian.little); // lat: 46.0569 * 10000
-      buffer.setInt32(6, 145058, Endian.little); // lon: 14.5058 * 10000
-      buffer.setInt32(10, 29500, Endian.little); // alt: 295.0 * 100
+    test('GPS decoding uses correct 3-byte BE format and divisor', () {
+      // Create raw GPS telemetry packet (standard Cayenne LPP format)
+      final buffer = <int>[];
+      buffer.add(0); // channel
+      buffer.add(MeshCoreConstants.lppGps); // type 0x88
 
-      final telemetry = CayenneLppParser.parse(buffer.buffer.asUint8List());
+      // Lat: 46.0569 * 10000 = 460569 = 0x070719
+      buffer.add(0x07); // MSB
+      buffer.add(0x07);
+      buffer.add(0x19); // LSB
+
+      // Lon: 14.5058 * 10000 = 145058 = 0x0236A2
+      buffer.add(0x02);
+      buffer.add(0x36);
+      buffer.add(0xA2);
+
+      // Alt: 295.0 * 100 = 29500 = 0x7 33C
+      buffer.add(0x00);
+      buffer.add(0x73);
+      buffer.add(0x3C);
+
+      final telemetry =
+          CayenneLppParser.parse(Uint8List.fromList(buffer));
 
       expect(telemetry.gpsLocation, isNotNull);
       expect(telemetry.gpsLocation!.latitude, closeTo(46.0569, 0.0001));
@@ -104,20 +119,22 @@ void main() {
       // and any validation warnings are logged (not enforced)
 
       // Valid coordinates should decode without issue
-      final validBuffer = ByteData(14);
-      validBuffer.setUint8(0, 0);
-      validBuffer.setUint8(1, MeshCoreConstants.lppGps);
-      validBuffer.setInt32(2, 450000, Endian.little); // 45.0°
-      validBuffer.setInt32(6, 100000, Endian.little); // 10.0°
-      validBuffer.setInt32(10, 0, Endian.little);
+      final validBuffer = <int>[];
+      validBuffer.add(0); // channel
+      validBuffer.add(MeshCoreConstants.lppGps);
 
-      final telemetry = CayenneLppParser.parse(
-        validBuffer.buffer.asUint8List(),
-      );
+      // Lat: 45.0 * 10000 = 450000 = 0x06DDD0 (3 bytes BE)
+      validBuffer.addAll([0x06, 0xDD, 0xD0]);
+      // Lon: 10.0 * 10000 = 100000 = 0x0186A0 (3 bytes BE)
+      validBuffer.addAll([0x01, 0x86, 0xA0]);
+      // Alt: 0 (3 bytes BE)
+      validBuffer.addAll([0x00, 0x00, 0x00]);
+
+      final telemetry = CayenneLppParser.parse(Uint8List.fromList(validBuffer));
 
       expect(telemetry.gpsLocation, isNotNull);
-      expect(telemetry.gpsLocation!.latitude, equals(45.0));
-      expect(telemetry.gpsLocation!.longitude, equals(10.0));
+      expect(telemetry.gpsLocation!.latitude, closeTo(45.0, 0.0001));
+      expect(telemetry.gpsLocation!.longitude, closeTo(10.0, 0.0001));
     });
 
     test('GPS encoding handles negative coordinates correctly', () {
@@ -129,13 +146,18 @@ void main() {
         longitude: lon,
       );
 
-      // Verify signed int32 encoding
-      final buffer = ByteData.sublistView(encoded);
-      final latEncoded = buffer.getInt32(2, Endian.little);
-      final lonEncoded = buffer.getInt32(6, Endian.little);
+      // Verify 3-byte signed encoding
+      // Lat: -33.8688 * 10000 = -338688
+      // In 24-bit two's complement: -338688 + 0x1000000 = 16438608 = 0xFAD4E0
+      final latEncoded =
+          (encoded[2] << 16) | (encoded[3] << 8) | encoded[4];
+      // Lon: -151.2093 * 10000 = -1512093
+      // In 24-bit two's complement: -1512093 + 0x1000000 = 15265123 = 0xE8E963
+      final lonEncoded =
+          (encoded[5] << 16) | (encoded[6] << 8) | encoded[7];
 
-      expect(latEncoded, equals(-338688)); // -33.8688 * 10000
-      expect(lonEncoded, equals(-1512093)); // -151.2093 * 10000
+      expect(latEncoded, equals(0xFAD4E0)); // Verify two's complement
+      expect(lonEncoded, equals(0xE8E963));
 
       // Verify decoding
       final decoded = CayenneLppParser.parse(encoded);
@@ -150,8 +172,10 @@ void main() {
         altitude: 1234.56,
       );
 
-      final buffer = ByteData.sublistView(encoded);
-      final altEncoded = buffer.getInt32(10, Endian.little);
+      // Altitude is at bytes 8-10 (3 bytes BE)
+      // Alt: 1234.56 * 100 = 123456 = 0x01E240
+      final altEncoded =
+          (encoded[8] << 16) | (encoded[9] << 8) | encoded[10];
 
       // Altitude precision is 0.01m (divide by 100)
       expect(altEncoded, equals(123456)); // 1234.56 * 100
@@ -177,33 +201,42 @@ void main() {
       expect(decoded.extraSensorData!['altitude_5'], isNotNull);
     });
 
-    test('OLD BUG: divisor 1000000 would cause 99% error', () {
+    test('OLD BUG: Using 4-byte LE instead of 3-byte BE caused wrong coords',
+        () {
       // This test documents the bug that was fixed
-      // The old code divided by 1,000,000 instead of 10,000
+      // The old code used 4-byte int32 LE (MeshCore advertisement format)
+      // instead of 3-byte signed BE (standard Cayenne LPP format)
 
-      final buffer = ByteData(14);
-      buffer.setUint8(0, 0);
-      buffer.setUint8(1, MeshCoreConstants.lppGps);
-      buffer.setInt32(2, 460569, Endian.little); // Should be 46.0569°
-      buffer.setInt32(6, 145058, Endian.little); // Should be 14.5058°
-      buffer.setInt32(10, 0, Endian.little);
+      // Real data from device:
+      // Hex: 06 f7 08 02 38 0e 01 2c 46
+      final realData = <int>[
+        0x00, 0x88, // channel 0, type GPS
+        0x06, 0xf7, 0x08, // lat (3 bytes BE)
+        0x02, 0x38, 0x0e, // lon (3 bytes BE)
+        0x01, 0x2c, 0x46, // alt (3 bytes BE)
+      ];
 
-      // With CORRECT divisor (10000):
-      final correctLat = 460569 / 10000.0; // 46.0569
-      final correctLon = 145058 / 10000.0; // 14.5058
+      // CORRECT decoding (3-byte BE):
+      final correctLat =
+          ((0x06 << 16) | (0xf7 << 8) | 0x08) / 10000.0; // 45.6456°
+      final correctLon =
+          ((0x02 << 16) | (0x38 << 8) | 0x0e) / 10000.0; // 14.5422°
 
-      // With OLD BUGGY divisor (1000000):
-      final buggyLat = 460569 / 1000000.0; // 0.460569 (100x too small!)
-      final buggyLon = 145058 / 1000000.0; // 0.145058 (100x too small!)
+      // OLD BUGGY decoding (4-byte LE - reads wrong bytes!):
+      // Would read: lat=06f70802, lon=38010e2c (completely wrong)
+      final buggyLatRaw = 0x02 | (0x08 << 8) | (0xf7 << 16) | (0x06 << 24);
+      final buggyLat = buggyLatRaw / 10000.0; // 3414.1958° (out of range!)
 
-      // Verify the bug would have caused ~99% error
-      final errorPercent = ((correctLat - buggyLat) / correctLat) * 100;
-      expect(errorPercent, closeTo(99.0, 0.1));
+      // Verify current implementation decodes correctly
+      final telemetry = CayenneLppParser.parse(Uint8List.fromList(realData));
+      expect(telemetry.gpsLocation, isNotNull);
+      expect(telemetry.gpsLocation!.latitude, closeTo(correctLat, 0.0001));
+      expect(telemetry.gpsLocation!.longitude, closeTo(correctLon, 0.0001));
 
-      // Verify current implementation uses correct divisor
-      final telemetry = CayenneLppParser.parse(buffer.buffer.asUint8List());
-      expect(telemetry.gpsLocation!.latitude, equals(correctLat));
+      // Verify it doesn't produce the buggy values
       expect(telemetry.gpsLocation!.latitude, isNot(equals(buggyLat)));
+      expect(telemetry.gpsLocation!.latitude, lessThan(90.0)); // Valid range
+      expect(telemetry.gpsLocation!.latitude, greaterThan(-90.0));
     });
   });
 
@@ -353,32 +386,31 @@ void main() {
 
     test('multiple sensors in single packet', () {
       // Create a combined packet with multiple sensors
-      final buffer = ByteData(22);
-      int offset = 0;
+      final buffer = <int>[];
 
       // GPS (channel 2) - use channel 2 to avoid battery auto-detection
-      buffer.setUint8(offset++, 2); // channel
-      buffer.setUint8(offset++, MeshCoreConstants.lppGps);
-      buffer.setInt32(offset, 460569, Endian.little); // lat
-      offset += 4;
-      buffer.setInt32(offset, 145058, Endian.little); // lon
-      offset += 4;
-      buffer.setInt32(offset, 0, Endian.little); // alt
-      offset += 4;
+      buffer.add(2); // channel
+      buffer.add(MeshCoreConstants.lppGps);
+      // Lat: 46.0569 * 10000 = 460569 = 0x070719 (3 bytes BE)
+      buffer.addAll([0x07, 0x07, 0x19]);
+      // Lon: 14.5058 * 10000 = 145058 = 0x0236A2 (3 bytes BE)
+      buffer.addAll([0x02, 0x36, 0xA2]);
+      // Alt: 0 (3 bytes BE)
+      buffer.addAll([0x00, 0x00, 0x00]);
 
       // Temperature (channel 3)
-      buffer.setUint8(offset++, 3); // channel
-      buffer.setUint8(offset++, MeshCoreConstants.lppTemperatureSensor);
-      buffer.setInt16(offset, 235, Endian.big); // 23.5°C * 10
-      offset += 2;
+      buffer.add(3); // channel
+      buffer.add(MeshCoreConstants.lppTemperatureSensor);
+      buffer.add(0x00); // 23.5°C * 10 = 235 (2 bytes BE)
+      buffer.add(0xEB);
 
       // Battery (channel 0 - required for battery detection)
-      buffer.setUint8(offset++, 0); // channel
-      buffer.setUint8(offset++, MeshCoreConstants.lppAnalogInput);
-      buffer.setInt16(offset, 385, Endian.big); // 3.85V * 100
-      offset += 2;
+      buffer.add(0); // channel
+      buffer.add(MeshCoreConstants.lppAnalogInput);
+      buffer.add(0x01); // 3.85V * 100 = 385 (2 bytes BE)
+      buffer.add(0x81);
 
-      final decoded = CayenneLppParser.parse(buffer.buffer.asUint8List());
+      final decoded = CayenneLppParser.parse(Uint8List.fromList(buffer));
 
       // All sensors should be decoded
       expect(decoded.gpsLocation, isNotNull);

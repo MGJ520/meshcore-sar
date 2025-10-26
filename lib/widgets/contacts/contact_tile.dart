@@ -30,6 +30,17 @@ class ContactTile extends StatelessWidget {
     this.onNavigateToMap,
   });
 
+  /// Get localized time since last seen
+  String _getLocalizedTimeSinceLastSeen(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final diff = DateTime.now().difference(contact.lastSeenTime);
+
+    if (diff.inMinutes < 1) return l10n.justNow;
+    if (diff.inMinutes < 60) return l10n.minutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.hoursAgo(diff.inHours);
+    return l10n.daysAgo(diff.inDays);
+  }
+
   @override
   Widget build(BuildContext context) {
     final appProvider = context.watch<AppProvider>();
@@ -194,7 +205,7 @@ class ContactTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${AppLocalizations.of(context)!.lastSeen}: ${contact.timeSinceLastSeen}',
+                        '${AppLocalizations.of(context)!.lastSeen}: ${_getLocalizedTimeSinceLastSeen(context)}',
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     ],
@@ -337,7 +348,7 @@ class ContactTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        contact.timeSinceLastSeen,
+                        _getLocalizedTimeSinceLastSeen(context),
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                       if (location != null) ...[
@@ -662,7 +673,7 @@ class ContactTile extends StatelessWidget {
                   ),
                   _DetailRow(
                     AppLocalizations.of(context)!.lastSeen,
-                    contact.timeSinceLastSeen,
+                    _getLocalizedTimeSinceLastSeen(context),
                   ),
                   const SizedBox(height: 16),
                   // Room Login Status

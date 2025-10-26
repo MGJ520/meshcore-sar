@@ -148,19 +148,33 @@ class CayenneLppParser {
             break;
 
           case MeshCoreConstants.lppGps:
-            // MeshCore GPS format: int32 LE (4 bytes each) × 10000 for lat/lon, × 100 for alt
-            // See MESHCORE_BLE_PROTOCOL.md lines 336-337, 434-435, 977-978
-            final rawLat = reader.readInt32LE();
-            final rawLon = reader.readInt32LE();
-            final rawAlt = reader.readInt32LE();
+            // Standard Cayenne LPP GPS format (type 0x88):
+            // - Latitude: 3 bytes, signed 24-bit, big-endian, × 10000
+            // - Longitude: 3 bytes, signed 24-bit, big-endian, × 10000
+            // - Altitude: 3 bytes, signed 24-bit, big-endian, × 100
+            // Total: 9 bytes (not the 12 bytes used in MeshCore advertisements!)
+
+            // Read 3-byte signed big-endian integers
+            final latBytes = reader.readBytes(3);
+            int rawLat = (latBytes[0] << 16) | (latBytes[1] << 8) | latBytes[2];
+            // Sign extend from 24-bit to 32-bit
+            if (rawLat > 0x7FFFFF) rawLat = rawLat - 0x1000000;
+
+            final lonBytes = reader.readBytes(3);
+            int rawLon = (lonBytes[0] << 16) | (lonBytes[1] << 8) | lonBytes[2];
+            if (rawLon > 0x7FFFFF) rawLon = rawLon - 0x1000000;
+
+            final altBytes = reader.readBytes(3);
+            int rawAlt = (altBytes[0] << 16) | (altBytes[1] << 8) | altBytes[2];
+            if (rawAlt > 0x7FFFFF) rawAlt = rawAlt - 0x1000000;
 
             // Decode: divide by scaling factors
-            final lat = rawLat / 10000.0;  // Fixed: was 1000000.0 (100x error!)
-            final lon = rawLon / 10000.0;  // Fixed: was 1000000.0 (100x error!)
+            final lat = rawLat / 10000.0;
+            final lon = rawLon / 10000.0;
             final alt = rawAlt / 100.0;
 
             debugPrint(
-              '      GPS Location (raw int32 LE): lat=$rawLat (0x${rawLat.toRadixString(16)}), lon=$rawLon (0x${rawLon.toRadixString(16)}), alt=$rawAlt (0x${rawAlt.toRadixString(16)})',
+              '      GPS Location (raw 24-bit BE): lat=$rawLat (0x${rawLat.toRadixString(16).padLeft(6, '0')}), lon=$rawLon (0x${rawLon.toRadixString(16).padLeft(6, '0')}), alt=$rawAlt (0x${rawAlt.toRadixString(16).padLeft(6, '0')})',
             );
             debugPrint(
               '      GPS Location (decoded): ${lat.toStringAsFixed(6)}°, ${lon.toStringAsFixed(6)}°, altitude=${alt.toStringAsFixed(2)}m',
@@ -240,7 +254,10 @@ class CayenneLppParser {
   }
 
   /// Create Cayenne LPP data for GPS location
-  /// MeshCore GPS format: int32 LE (4 bytes each) × 10000 for lat/lon, × 100 for alt
+  /// Standard Cayenne LPP GPS format (type 0x88):
+  /// - Latitude: 3 bytes, signed 24-bit, big-endian, × 10000
+  /// - Longitude: 3 bytes, signed 24-bit, big-endian, × 10000
+  /// - Altitude: 3 bytes, signed 24-bit, big-endian, × 100
   static Uint8List createGpsData({
     required double latitude,
     required double longitude,
@@ -252,26 +269,27 @@ class CayenneLppParser {
     buffer.add(channel);
     buffer.add(MeshCoreConstants.lppGps);
 
-    // Latitude (int32 LE, 4 bytes, signed, 0.0001° precision)
-    final lat = (latitude * 10000).round();
-    buffer.add(lat & 0xFF);           // Byte 0 (LSB)
+    // Latitude (signed 24-bit BE, 3 bytes, 0.0001° precision)
+    int lat = (latitude * 10000).round();
+    // Handle negative values (two's complement for 24-bit)
+    if (lat < 0) lat = lat + 0x1000000;
+    buffer.add((lat >> 16) & 0xFF);   // Byte 0 (MSB)
     buffer.add((lat >> 8) & 0xFF);    // Byte 1
-    buffer.add((lat >> 16) & 0xFF);   // Byte 2
-    buffer.add((lat >> 24) & 0xFF);   // Byte 3 (MSB)
+    buffer.add(lat & 0xFF);           // Byte 2 (LSB)
 
-    // Longitude (int32 LE, 4 bytes, signed, 0.0001° precision)
-    final lon = (longitude * 10000).round();
-    buffer.add(lon & 0xFF);           // Byte 0 (LSB)
+    // Longitude (signed 24-bit BE, 3 bytes, 0.0001° precision)
+    int lon = (longitude * 10000).round();
+    if (lon < 0) lon = lon + 0x1000000;
+    buffer.add((lon >> 16) & 0xFF);   // Byte 0 (MSB)
     buffer.add((lon >> 8) & 0xFF);    // Byte 1
-    buffer.add((lon >> 16) & 0xFF);   // Byte 2
-    buffer.add((lon >> 24) & 0xFF);   // Byte 3 (MSB)
+    buffer.add(lon & 0xFF);           // Byte 2 (LSB)
 
-    // Altitude (int32 LE, 4 bytes, signed, 0.01m precision)
-    final alt = (altitude * 100).round();
-    buffer.add(alt & 0xFF);           // Byte 0 (LSB)
+    // Altitude (signed 24-bit BE, 3 bytes, 0.01m precision)
+    int alt = (altitude * 100).round();
+    if (alt < 0) alt = alt + 0x1000000;
+    buffer.add((alt >> 16) & 0xFF);   // Byte 0 (MSB)
     buffer.add((alt >> 8) & 0xFF);    // Byte 1
-    buffer.add((alt >> 16) & 0xFF);   // Byte 2
-    buffer.add((alt >> 24) & 0xFF);   // Byte 3 (MSB)
+    buffer.add(alt & 0xFF);           // Byte 2 (LSB)
 
     return Uint8List.fromList(buffer);
   }

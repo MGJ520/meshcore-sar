@@ -148,16 +148,32 @@ class CayenneLppParser {
             break;
 
           case MeshCoreConstants.lppGps:
+            // MeshCore GPS format: int32 LE (4 bytes each) × 10000 for lat/lon, × 100 for alt
+            // See MESHCORE_BLE_PROTOCOL.md lines 336-337, 434-435, 977-978
             final rawLat = reader.readInt32LE();
             final rawLon = reader.readInt32LE();
             final rawAlt = reader.readInt32LE();
-            final lat = rawLat / 1000000.0;
-            final lon = rawLon / 1000000.0;
+
+            // Decode: divide by scaling factors
+            final lat = rawLat / 10000.0;  // Fixed: was 1000000.0 (100x error!)
+            final lon = rawLon / 10000.0;  // Fixed: was 1000000.0 (100x error!)
             final alt = rawAlt / 100.0;
+
             debugPrint(
-              '      GPS Location (raw): lat=$rawLat, lon=$rawLon, alt=$rawAlt',
+              '      GPS Location (raw int32 LE): lat=$rawLat (0x${rawLat.toRadixString(16)}), lon=$rawLon (0x${rawLon.toRadixString(16)}), alt=$rawAlt (0x${rawAlt.toRadixString(16)})',
             );
-            debugPrint('      GPS Location: $lat°, $lon°, altitude=${alt}m');
+            debugPrint(
+              '      GPS Location (decoded): ${lat.toStringAsFixed(6)}°, ${lon.toStringAsFixed(6)}°, altitude=${alt.toStringAsFixed(2)}m',
+            );
+
+            // Validate coordinates are in valid range
+            if (lat < -90.0 || lat > 90.0) {
+              debugPrint('      ⚠️ WARNING: Latitude out of range: $lat°');
+            }
+            if (lon < -180.0 || lon > 180.0) {
+              debugPrint('      ⚠️ WARNING: Longitude out of range: $lon°');
+            }
+
             gpsLocation = LatLng(lat, lon);
             extraSensorData['altitude_$channel'] = alt;
             break;
@@ -224,6 +240,7 @@ class CayenneLppParser {
   }
 
   /// Create Cayenne LPP data for GPS location
+  /// MeshCore GPS format: int32 LE (4 bytes each) × 10000 for lat/lon, × 100 for alt
   static Uint8List createGpsData({
     required double latitude,
     required double longitude,
@@ -235,23 +252,26 @@ class CayenneLppParser {
     buffer.add(channel);
     buffer.add(MeshCoreConstants.lppGps);
 
-    // Latitude (3 bytes, signed, 0.0001° precision)
+    // Latitude (int32 LE, 4 bytes, signed, 0.0001° precision)
     final lat = (latitude * 10000).round();
-    buffer.add((lat >> 16) & 0xFF);
-    buffer.add((lat >> 8) & 0xFF);
-    buffer.add(lat & 0xFF);
+    buffer.add(lat & 0xFF);           // Byte 0 (LSB)
+    buffer.add((lat >> 8) & 0xFF);    // Byte 1
+    buffer.add((lat >> 16) & 0xFF);   // Byte 2
+    buffer.add((lat >> 24) & 0xFF);   // Byte 3 (MSB)
 
-    // Longitude (3 bytes, signed, 0.0001° precision)
+    // Longitude (int32 LE, 4 bytes, signed, 0.0001° precision)
     final lon = (longitude * 10000).round();
-    buffer.add((lon >> 16) & 0xFF);
-    buffer.add((lon >> 8) & 0xFF);
-    buffer.add(lon & 0xFF);
+    buffer.add(lon & 0xFF);           // Byte 0 (LSB)
+    buffer.add((lon >> 8) & 0xFF);    // Byte 1
+    buffer.add((lon >> 16) & 0xFF);   // Byte 2
+    buffer.add((lon >> 24) & 0xFF);   // Byte 3 (MSB)
 
-    // Altitude (3 bytes, signed, 0.01m precision)
+    // Altitude (int32 LE, 4 bytes, signed, 0.01m precision)
     final alt = (altitude * 100).round();
-    buffer.add((alt >> 16) & 0xFF);
-    buffer.add((alt >> 8) & 0xFF);
-    buffer.add(alt & 0xFF);
+    buffer.add(alt & 0xFF);           // Byte 0 (LSB)
+    buffer.add((alt >> 8) & 0xFF);    // Byte 1
+    buffer.add((alt >> 16) & 0xFF);   // Byte 2
+    buffer.add((alt >> 24) & 0xFF);   // Byte 3 (MSB)
 
     return Uint8List.fromList(buffer);
   }

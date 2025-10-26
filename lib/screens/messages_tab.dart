@@ -440,7 +440,7 @@ class _MessagesTabState extends State<MessagesTab> {
       // New format: S:<emoji>:<colorIndex>:<latitude>,<longitude>:<name>
       // Round coordinates to 5 decimal places (~1m accuracy) since most GPS is only that accurate
       final sarMessage =
-          'S:$emoji:$colorIndex:${position.latitude.toStringAsFixed(5)},${position.longitude.toStringAsFixed(5)}:$name';
+          'S:$emoji:${colorIndex.toString()}:${position.latitude.toStringAsFixed(5)},${position.longitude.toStringAsFixed(5)}:$name';
 
       if (sendToChannel) {
         // Create message ID

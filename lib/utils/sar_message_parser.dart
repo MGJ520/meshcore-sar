@@ -133,7 +133,7 @@ class SarMessageParser {
   }) {
     // New format: S:emoji:colorIndex:lat,lon:notes
     final colorIdx = colorIndex ?? 0; // Default to red if not specified
-    final text = 'S:${type.emoji}:$colorIdx:${location.latitude},${location.longitude}';
+    final text = 'S:${type.emoji}:$colorIdx:${location.latitude.toString()},${location.longitude.toString()}';
     if (notes != null && notes.isNotEmpty) {
       // Use colon-separated format for inline message
       return '$text:$notes';

@@ -46,7 +46,7 @@ class DrawingMessageParser {
   /// Sender will be determined from packet metadata on receiving end
   static String createDrawingMessage(MapDrawing drawing) {
     final json = drawing.toNetworkJson();
-    final jsonStr = jsonEncode(json);
+    final jsonStr = jsonEncode(json).toString();
     return '$prefix$jsonStr';
   }
 

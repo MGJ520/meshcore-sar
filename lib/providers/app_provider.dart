@@ -24,7 +24,7 @@ class AppProvider with ChangeNotifier {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
-  bool _isSimpleMode = false;
+  bool _isSimpleMode = true;
   bool get isSimpleMode => _isSimpleMode;
 
   AppProvider({
@@ -64,7 +64,7 @@ class AppProvider with ChangeNotifier {
   Future<void> _loadSimpleMode() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _isSimpleMode = prefs.getBool('simple_mode') ?? false;
+      _isSimpleMode = prefs.getBool('simple_mode') ?? true;
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading simple mode setting: $e');

@@ -182,7 +182,25 @@ class ContactTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 4),
-                  // Simple mode: Only show location and distance
+                  // Simple mode: Show last update time
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: contact.isRecentlySeen
+                            ? Colors.green
+                            : Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${AppLocalizations.of(context)!.lastSeen}: ${contact.timeSinceLastSeen}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Simple mode: Show location and distance
                   if (location != null) ...[
                     Row(
                       children: [

@@ -2543,6 +2543,10 @@
   "line": "Linie",
   "rectangle": "Rechteck",
 
+  "saveAsTemplate": "Als Vorlage speichern",
+  "templateSaved": "Vorlage erfolgreich gespeichert",
+  "templateAlreadyExists": "Vorlage mit diesem Emoji existiert bereits",
+
   "updateAvailable": "Update Verfügbar",
   "currentVersion": "Aktuell",
   "latestVersion": "Neueste",

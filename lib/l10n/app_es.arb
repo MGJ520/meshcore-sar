@@ -2538,6 +2538,10 @@
   "line": "Línea",
   "rectangle": "Rectángulo",
 
+  "saveAsTemplate": "Guardar como Plantilla",
+  "templateSaved": "Plantilla guardada exitosamente",
+  "templateAlreadyExists": "Ya existe una plantilla con este emoji",
+
   "updateAvailable": "Actualización Disponible",
   "currentVersion": "Actual",
   "latestVersion": "Última",

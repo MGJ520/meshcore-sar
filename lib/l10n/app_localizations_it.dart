@@ -1083,13 +1083,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get copyText => 'Copia testo';
 
   @override
-  String get saveAsTemplate => 'Save as Template';
+  String get saveAsTemplate => 'Salva come Modello';
 
   @override
-  String get templateSaved => 'Template saved successfully';
+  String get templateSaved => 'Modello salvato con successo';
 
   @override
-  String get templateAlreadyExists => 'Template with this emoji already exists';
+  String get templateAlreadyExists => 'Esiste già un modello con questa emoji';
 
   @override
   String get deleteMessage => 'Elimina messaggio';

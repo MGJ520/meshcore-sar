@@ -586,6 +586,7 @@ org.gradle.jvmargs=-Xmx4096m
 - Bounds: X: 373217.65-695777.65m, Y: 31118.30-246158.30m
 - Origin: Top-left (373217.65, 246158.30)
 - Resolutions: Calculated from scale denominators (420m/px at zoom 0 to 0.028m/px at zoom 15)
+- **Language Filter**: Only shown when app language is Slovenian (sl) or Croatian (hr)
 
 **Tile Caching**:
 - All WMS layers (base + overlays) use `flutter_map_tile_caching`
@@ -616,6 +617,8 @@ TileLayer(
 
 #### Overview
 The app integrates Slovenian government WMS (Web Map Service) layers using a custom EPSG:3794 coordinate reference system. This enables high-resolution aerial imagery and specialized overlays (cadastral parcels, forest roads) for SAR operations in Slovenia.
+
+**Language-Based Filtering**: WMS layers are only shown to users when the app language is set to Slovenian (sl) or Croatian (hr), since these layers only cover Slovenia geographically and are irrelevant to users in other regions.
 
 #### Architecture
 
@@ -699,6 +702,28 @@ FMTCTileProvider getTileProviderForWms(MapLayer layer) {
 - Format: Binary tile data + metadata (URL, timestamp, headers)
 
 #### Usage in Map
+
+**Language Filtering** (`lib/screens/map_tab.dart`):
+
+The following UI elements are only visible when `localeName == 'sl' || localeName == 'hr'`:
+1. **Slovenian Aerial 2024 layer** in the base layer selector
+2. **Cadastral Parcels overlay toggle** in map options
+3. **Forest Roads overlay toggle** in map options
+4. **WMS Overlays section divider** and header
+
+```dart
+// Implementation pattern
+final locale = AppLocalizations.of(context)!.localeName;
+if (locale == 'sl' || locale == 'hr') {
+  // Show WMS layer option
+  ListTile(
+    title: Text(_slovenianAerialLayer.name),
+    // ...
+  );
+}
+```
+
+This ensures users in other regions (English, German, French, Spanish, Italian) don't see geographically irrelevant layers.
 
 **Base Layer** (`lib/screens/map_tab.dart`):
 ```dart

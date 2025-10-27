@@ -545,21 +545,23 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                           Navigator.pop(context);
                         },
                       )),
-                  // Slovenian WMS base layer
-                  ListTile(
-                    leading: _currentLayer == _slovenianAerialLayer
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : const Icon(Icons.radio_button_unchecked),
-                    title: Text(_slovenianAerialLayer.name),
-                    subtitle: Text(_slovenianAerialLayer.attribution),
-                    onTap: () async {
-                      setState(() {
-                        _currentLayer = _slovenianAerialLayer;
-                      });
-                      _saveSettings();
-                      Navigator.pop(context);
-                    },
-                  ),
+                  // Slovenian WMS base layer (only for Slovenian/Croatian regions)
+                  if (AppLocalizations.of(context)!.localeName == 'sl' ||
+                      AppLocalizations.of(context)!.localeName == 'hr')
+                    ListTile(
+                      leading: _currentLayer == _slovenianAerialLayer
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : const Icon(Icons.radio_button_unchecked),
+                      title: Text(_slovenianAerialLayer.name),
+                      subtitle: Text(_slovenianAerialLayer.attribution),
+                      onTap: () async {
+                        setState(() {
+                          _currentLayer = _slovenianAerialLayer;
+                        });
+                        _saveSettings();
+                        Navigator.pop(context);
+                      },
+                    ),
                   // Offline MBTiles layers section
                   if (_mbtilesLayers.isNotEmpty) ...[
                     const Divider(),
@@ -599,43 +601,46 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                           },
                         )),
                   ],
-                  // WMS Overlays section
-                  const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text(
-                      AppLocalizations.of(context)!.wmsOverlays,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                  // WMS Overlays section (only for Slovenian/Croatian regions)
+                  if (AppLocalizations.of(context)!.localeName == 'sl' ||
+                      AppLocalizations.of(context)!.localeName == 'hr') ...[
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(
+                        AppLocalizations.of(context)!.wmsOverlays,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                      ),
                     ),
-                  ),
-                  Consumer<MapProvider>(
-                    builder: (context, mapProvider, _) {
-                      return Column(
-                        children: [
-                          CheckboxListTile(
-                            secondary: const Icon(Icons.grid_on, color: Colors.blue),
-                            title: Text(AppLocalizations.of(context)!.cadastralParcels),
-                            subtitle: const Text('© GURS'),
-                            value: mapProvider.showCadastralOverlay,
-                            onChanged: (value) {
-                              mapProvider.toggleCadastralOverlay();
-                            },
-                          ),
-                          CheckboxListTile(
-                            secondary: const Icon(Icons.route, color: Colors.green),
-                            title: Text(AppLocalizations.of(context)!.forestRoads),
-                            subtitle: const Text('© GURS'),
-                            value: mapProvider.showForestRoadsOverlay,
-                            onChanged: (value) {
-                              mapProvider.toggleForestRoadsOverlay();
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                    Consumer<MapProvider>(
+                      builder: (context, mapProvider, _) {
+                        return Column(
+                          children: [
+                            CheckboxListTile(
+                              secondary: const Icon(Icons.grid_on, color: Colors.blue),
+                              title: Text(AppLocalizations.of(context)!.cadastralParcels),
+                              subtitle: const Text('© GURS'),
+                              value: mapProvider.showCadastralOverlay,
+                              onChanged: (value) {
+                                mapProvider.toggleCadastralOverlay();
+                              },
+                            ),
+                            CheckboxListTile(
+                              secondary: const Icon(Icons.route, color: Colors.green),
+                              title: Text(AppLocalizations.of(context)!.forestRoads),
+                              subtitle: const Text('© GURS'),
+                              value: mapProvider.showForestRoadsOverlay,
+                              onChanged: (value) {
+                                mapProvider.toggleForestRoadsOverlay();
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),

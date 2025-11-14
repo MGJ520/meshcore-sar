@@ -1721,6 +1721,12 @@ class AppLocalizationsHr extends AppLocalizations {
   String get noContactsOrRoomsAvailable => 'Nema dostupnih kontakata ili soba';
 
   @override
+  String get noRecipientsAvailable => 'Nema dostupnih primatelja';
+
+  @override
+  String get noChannelsFound => 'Nije pronađen nijedan kanal';
+
+  @override
   String get messagesWillBeSentToPublicChannel =>
       'Poruke će biti poslane na javni kanal';
 

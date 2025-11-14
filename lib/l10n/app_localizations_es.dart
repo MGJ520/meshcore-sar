@@ -1733,6 +1733,12 @@ class AppLocalizationsEs extends AppLocalizations {
       'No hay contactos o salas disponibles';
 
   @override
+  String get noRecipientsAvailable => 'No hay destinatarios disponibles';
+
+  @override
+  String get noChannelsFound => 'No se encontraron canales';
+
+  @override
   String get messagesWillBeSentToPublicChannel =>
       'Los mensajes se enviarán al canal público';
 

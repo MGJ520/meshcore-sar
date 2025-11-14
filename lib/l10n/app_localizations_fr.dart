@@ -1738,6 +1738,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get noContactsOrRoomsAvailable => 'Aucun contact ou salle disponible';
 
   @override
+  String get noRecipientsAvailable => 'Aucun destinataire disponible';
+
+  @override
+  String get noChannelsFound => 'Aucun canal trouvé';
+
+  @override
   String get messagesWillBeSentToPublicChannel =>
       'Les messages seront envoyés au canal public';
 

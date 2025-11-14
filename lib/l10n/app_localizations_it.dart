@@ -1732,6 +1732,12 @@ class AppLocalizationsIt extends AppLocalizations {
       'Nessun contatto o stanza disponibile';
 
   @override
+  String get noRecipientsAvailable => 'Nessun destinatario disponibile';
+
+  @override
+  String get noChannelsFound => 'Nessun canale trovato';
+
+  @override
   String get messagesWillBeSentToPublicChannel =>
       'I messaggi saranno inviati al canale pubblico';
 

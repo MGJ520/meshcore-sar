@@ -2647,6 +2647,8 @@
   "noContactsFound": "Keine Kontakte gefunden",
   "noRoomsFound": "Keine Räume gefunden",
   "noContactsOrRoomsAvailable": "Keine Kontakte oder Räume verfügbar",
+  "noRecipientsAvailable": "Keine Empfänger verfügbar",
+  "noChannelsFound": "Keine Kanäle gefunden",
   "messagesWillBeSentToPublicChannel": "Nachrichten werden an öffentlichen Kanal gesendet",
   "newMessage": "Neue Nachricht",
   "channel": "Kanal",

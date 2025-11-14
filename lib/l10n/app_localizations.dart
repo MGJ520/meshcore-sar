@@ -3081,6 +3081,18 @@ abstract class AppLocalizations {
   /// **'No contacts or rooms available'**
   String get noContactsOrRoomsAvailable;
 
+  /// Message when no recipients exist (contacts, rooms, or channels)
+  ///
+  /// In en, this message translates to:
+  /// **'No recipients available'**
+  String get noRecipientsAvailable;
+
+  /// Message when no channels match the search
+  ///
+  /// In en, this message translates to:
+  /// **'No channels found'**
+  String get noChannelsFound;
+
   /// Info message when only public channel is available
   ///
   /// In en, this message translates to:

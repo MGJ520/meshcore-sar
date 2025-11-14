@@ -1718,6 +1718,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noContactsOrRoomsAvailable => 'No contacts or rooms available';
 
   @override
+  String get noRecipientsAvailable => 'No recipients available';
+
+  @override
+  String get noChannelsFound => 'No channels found';
+
+  @override
   String get messagesWillBeSentToPublicChannel =>
       'Messages will be sent to public channel';
 

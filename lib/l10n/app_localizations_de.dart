@@ -1734,6 +1734,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Keine Kontakte oder Räume verfügbar';
 
   @override
+  String get noRecipientsAvailable => 'Keine Empfänger verfügbar';
+
+  @override
+  String get noChannelsFound => 'Keine Kanäle gefunden';
+
+  @override
   String get messagesWillBeSentToPublicChannel =>
       'Nachrichten werden an öffentlichen Kanal gesendet';
 

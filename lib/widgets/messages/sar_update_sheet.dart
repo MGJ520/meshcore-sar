@@ -434,8 +434,8 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
                                     AppLocalizations.of(
                                       context,
                                     )!.noDestinationsAvailable,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
+                                    style: TextStyle(
+                                      color: Colors.red.shade900,
                                       fontSize: 11,
                                     ),
                                   ),

@@ -81,10 +81,14 @@ class _AddChannelDialogState extends State<AddChannelDialog> {
     });
 
     try {
-      await widget.onCreateChannel(
-        _nameController.text.trim(),
-        _secretController.text,
-      );
+      final channelName = _nameController.text.trim();
+      final isHashChannel = channelName.startsWith('#');
+      
+      // For hash channels, pass empty secret (will be auto-generated)
+      // For private channels, use the provided secret
+      final secret = isHashChannel ? '' : _secretController.text;
+
+      await widget.onCreateChannel(channelName, secret);
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -101,6 +105,7 @@ class _AddChannelDialogState extends State<AddChannelDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final isHashChannel = _nameController.text.startsWith('#');
 
     return AlertDialog(
       title: Text(l10n.addChannel),
@@ -111,6 +116,38 @@ class _AddChannelDialogState extends State<AddChannelDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Info banner explaining channel types
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.channelTypesInfo,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // Channel Name Field
               TextFormField(
                 controller: _nameController,
@@ -118,38 +155,74 @@ class _AddChannelDialogState extends State<AddChannelDialog> {
                   labelText: l10n.channelName,
                   hintText: l10n.channelNameHint,
                   border: const OutlineInputBorder(),
+                  prefixIcon: Icon(
+                    isHashChannel ? Icons.tag : Icons.lock_outline,
+                    color: isHashChannel ? Colors.blue : Colors.orange,
+                  ),
                 ),
                 enabled: !_isCreating,
                 maxLength: 31,
                 validator: _validateName,
                 textInputAction: TextInputAction.next,
+                onChanged: (_) => setState(() {}), // Rebuild to update icon
               ),
-              const SizedBox(height: 16),
-
-              // Channel Secret Field
-              TextFormField(
-                controller: _secretController,
-                decoration: InputDecoration(
-                  labelText: l10n.channelSecret,
-                  hintText: l10n.channelSecretHint,
-                  border: const OutlineInputBorder(),
+              // Channel Secret Field (only show for private channels)
+              if (!isHashChannel) ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _secretController,
+                  decoration: InputDecoration(
+                    labelText: l10n.channelSecret,
+                    hintText: l10n.channelSecretHint,
+                    border: const OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                  enabled: !_isCreating,
+                  maxLength: 32,
+                  validator: _validateSecret,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _handleCreate(),
                 ),
-                obscureText: true,
-                enabled: !_isCreating,
-                maxLength: 32,
-                validator: _validateSecret,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _handleCreate(),
-              ),
-              const SizedBox(height: 8),
-
-              // Help Text
-              Text(
-                l10n.channelSecretHelp,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(height: 8),
+                // Help Text for private channels
+                Text(
+                  l10n.channelSecretHelp,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
+              ],
+
+              // Help Text for hash channels
+              if (isHashChannel) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 20,
+                        color: Colors.blue,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.hashChannelInfo,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

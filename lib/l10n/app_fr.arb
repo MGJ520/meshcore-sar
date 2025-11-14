@@ -2771,6 +2771,8 @@
   "channelSecret": "Mot de Passe du Canal",
   "channelSecretHint": "Mot de passe partagé pour ce canal",
   "channelSecretHelp": "Ce mot de passe doit être partagé avec tous les membres de l'équipe qui ont besoin d'accéder à ce canal",
+  "channelTypesInfo": "Canaux hash (#équipe) : Mot de passe généré automatiquement à partir du nom. Même nom = même canal sur tous les appareils.\n\nCanaux privés : Utilisez un mot de passe explicite. Seuls ceux qui ont le mot de passe peuvent rejoindre.",
+  "hashChannelInfo": "Canal hash : Le mot de passe sera automatiquement généré à partir du nom du canal. Toute personne utilisant le même nom rejoindra le même canal.",
   "channelNameRequired": "Le nom du canal est requis",
   "channelNameTooLong": "Le nom du canal doit contenir 31 caractères ou moins",
   "channelSecretRequired": "Le mot de passe du canal est requis",

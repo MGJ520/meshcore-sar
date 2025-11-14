@@ -50,6 +50,20 @@ class ChannelsProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Remove a channel by index
+  void removeChannel(int index) {
+    if (_channels.containsKey(index)) {
+      _channels.remove(index);
+      
+      // If the deleted channel was selected, switch to public channel
+      if (_selectedChannelIndex == index) {
+        _selectedChannelIndex = 0;
+      }
+      
+      notifyListeners();
+    }
+  }
+
   /// Select a channel for sending messages
   void selectChannel(int index) {
     if (_channels.containsKey(index) || index == 0) {

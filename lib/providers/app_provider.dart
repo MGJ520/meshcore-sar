@@ -154,15 +154,84 @@ class AppProvider with ChangeNotifier {
       }
     };
 
+    // Setup callback for ConnectionProvider to query channel info
+    connectionProvider.getChannelInfo = (int channelIdx) {
+      return channelsProvider.getChannel(channelIdx);
+    };
+
     // When channel info is received
     connectionProvider.onChannelInfoReceived = (int channelIdx, String channelName, Uint8List secret, int? flags) {
-      channelsProvider.addOrUpdateChannel(
-        index: channelIdx,
-        name: channelName,
-        secret: secret,
-        flags: flags,
-      );
-      debugPrint('📻 [AppProvider] Channel $channelIdx: "$channelName" (isHashChannel: ${channelName.startsWith('#')})');
+      try {
+        debugPrint('🔔 [AppProvider] onChannelInfoReceived called: idx=$channelIdx, name="$channelName"');
+        
+        // Check if this is a channel deletion (empty name)
+        if (channelName.isEmpty && channelIdx != 0) {
+          debugPrint('   🗑️  Channel $channelIdx deleted - removing from providers');
+          
+          // Remove from ChannelsProvider
+          channelsProvider.removeChannel(channelIdx);
+          debugPrint('   ✅ Removed from ChannelsProvider');
+          
+          // Remove from ContactsProvider using pseudo public key
+          final publicKeyBytes = Uint8List(32);
+          publicKeyBytes[0] = 0xFF; // Special marker for channels
+          publicKeyBytes[1] = channelIdx; // Channel index
+          final publicKeyHex = publicKeyBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
+          
+          contactsProvider.removeContact(publicKeyHex);
+          debugPrint('   ✅ Removed from ContactsProvider');
+          
+          return;
+        }
+        
+        // Add/update in ChannelsProvider
+        channelsProvider.addOrUpdateChannel(
+          index: channelIdx,
+          name: channelName,
+          secret: secret,
+          flags: flags,
+        );
+        debugPrint('   ✅ Added to ChannelsProvider');
+        
+        // Also add as Contact to ContactsProvider (for UI display)
+        // Skip if it's public channel (already exists)
+        debugPrint('📻 [AppProvider] Channel $channelIdx: "$channelName" (isEmpty: ${channelName.isEmpty}, isHashChannel: ${channelName.startsWith('#')})');
+        
+        if (channelName.isNotEmpty && channelIdx != 0) {
+          debugPrint('   ✅ Adding channel $channelIdx to ContactsProvider as Contact');
+          
+          // Create a pseudo public key for the channel based on its index
+          // Use channel index as a unique identifier (pad to 32 bytes)
+          final publicKeyBytes = Uint8List(32);
+          publicKeyBytes[0] = 0xFF; // Special marker for channels
+          publicKeyBytes[1] = channelIdx; // Channel index
+          
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          
+          contactsProvider.addOrUpdateContact(
+            Contact(
+              publicKey: publicKeyBytes,
+              type: ContactType.channel,
+              flags: flags ?? 0,
+              outPathLen: -1, // Flood mode for channels
+              outPath: Uint8List(0), // Empty path for channels
+              advName: channelName,
+              lastAdvert: now,
+              advLat: 0, // Channels don't have location
+              advLon: 0,
+              lastMod: now,
+              isNew: false, // Don't mark channels as new
+            ),
+          );
+          
+          debugPrint('   ✅ Channel contact added. Total channels in ContactsProvider: ${contactsProvider.channels.length}');
+        } else {
+          debugPrint('   ⏭️  Skipping channel $channelIdx (empty: ${channelName.isEmpty}, isPublic: ${channelIdx == 0})');
+        }
+      } catch (e, stackTrace) {
+        debugPrint('❌ [AppProvider] Error in onChannelInfoReceived: $e');
+        debugPrint('   Stack trace: $stackTrace');
+      }
     };
 
     // When a message is received
@@ -492,12 +561,18 @@ class AppProvider with ChangeNotifier {
   // Removed _syncMessages() - messages are automatically synced via PUSH_CODE_MSG_WAITING events
   // The ConnectionProvider's onMessageWaiting callback handles automatic message fetching
 
-  /// Refresh data (contacts only - messages are handled via events)
+  /// Refresh data (contacts and channels - messages are handled via events)
   Future<void> refresh() async {
     if (!connectionProvider.deviceInfo.isConnected) return;
 
     try {
+      // Sync contacts
       await connectionProvider.getContacts();
+      
+      // Sync channels (respect simple mode settings)
+      final channelsToSync = _isSimpleMode ? 5 : null;
+      await connectionProvider.syncChannels(maxChannels: channelsToSync);
+      
       // Messages are automatically synced via PUSH_CODE_MSG_WAITING events
       notifyListeners();
     } catch (e) {

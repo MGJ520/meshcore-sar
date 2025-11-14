@@ -2082,6 +2082,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Esta contraseña debe compartirse con todos los miembros del equipo que necesiten acceso a este canal';
 
   @override
+  String get channelTypesInfo =>
+      'Canales hash (#equipo): Contraseña generada automáticamente del nombre. Mismo nombre = mismo canal en todos los dispositivos.\n\nCanales privados: Use contraseña explícita. Solo aquellos con la contraseña pueden unirse.';
+
+  @override
+  String get hashChannelInfo =>
+      'Canal hash: La contraseña se generará automáticamente del nombre del canal. Cualquiera que use el mismo nombre se unirá al mismo canal.';
+
+  @override
   String get channelNameRequired => 'El nombre del canal es obligatorio';
 
   @override

@@ -390,16 +390,21 @@ class FrameParser {
 
   /// Parse ChannelInfo response
   static Map<String, dynamic> parseChannelInfo(BufferReader reader) {
-    // Format: [channel_idx(1)][name(32)][secret(16)][flags(1)]
-    // Minimum: 1 + 32 + 16 + 1 = 50 bytes
-    if (reader.remainingBytesCount < 50) {
+    // Format: [channel_idx(1)][name(32)][secret(16)][flags(1)?]
+    // Minimum: 1 + 32 + 16 = 49 bytes (flags is optional)
+    if (reader.remainingBytesCount < 49) {
       return {};
     }
 
     final channelIdx = reader.readByte();
     final channelName = reader.readCString(32);
     final secret = reader.readBytes(16);
-    final flags = reader.readByte();
+    
+    // Flags field is optional (some firmware versions don't include it)
+    int? flags;
+    if (reader.remainingBytesCount >= 1) {
+      flags = reader.readByte();
+    }
 
     return {
       'channelIdx': channelIdx,

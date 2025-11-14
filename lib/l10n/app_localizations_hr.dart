@@ -2067,6 +2067,14 @@ class AppLocalizationsHr extends AppLocalizations {
       'Ova lozinka mora biti podijeljena sa svim članovima tima koji trebaju pristup ovom kanalu';
 
   @override
+  String get channelTypesInfo =>
+      'Hash kanali (#tim): Lozinka automatski generirana iz imena. Isto ime = isti kanal na svim uređajima.\n\nPrivatni kanali: Koristite eksplicitnu lozinku. Samo oni s lozinkom se mogu pridružiti.';
+
+  @override
+  String get hashChannelInfo =>
+      'Hash kanal: Lozinka će biti automatski generirana iz imena kanala. Bilo tko tko koristi isto ime pridružit će se istom kanalu.';
+
+  @override
   String get channelNameRequired => 'Ime kanala je obavezno';
 
   @override

@@ -3723,6 +3723,18 @@ abstract class AppLocalizations {
   /// **'This secret must be shared with all team members who need access to this channel'**
   String get channelSecretHelp;
 
+  /// Information banner explaining hash and private channel types
+  ///
+  /// In en, this message translates to:
+  /// **'Hash channels (#team): Secret auto-generated from name. Same name = same channel across devices.\n\nPrivate channels: Use explicit secret. Only those with the secret can join.'**
+  String get channelTypesInfo;
+
+  /// Help text for hash channels (# prefix)
+  ///
+  /// In en, this message translates to:
+  /// **'Hash channel: Secret will be auto-generated from the channel name. Anyone using the same name will join the same channel.'**
+  String get hashChannelInfo;
+
   /// Validation error for empty channel name
   ///
   /// In en, this message translates to:

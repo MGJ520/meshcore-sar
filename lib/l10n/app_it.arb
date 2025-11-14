@@ -2771,6 +2771,8 @@
   "channelSecret": "Password del Canale",
   "channelSecretHint": "Password condivisa per questo canale",
   "channelSecretHelp": "Questa password deve essere condivisa con tutti i membri del team che necessitano di accesso a questo canale",
+  "channelTypesInfo": "Canali hash (#squadra): Password generata automaticamente dal nome. Stesso nome = stesso canale su tutti i dispositivi.\n\nCanali privati: Usa una password esplicita. Solo chi ha la password può unirsi.",
+  "hashChannelInfo": "Canale hash: La password verrà generata automaticamente dal nome del canale. Chiunque utilizzi lo stesso nome si unirà allo stesso canale.",
   "channelNameRequired": "Il nome del canale è obbligatorio",
   "channelNameTooLong": "Il nome del canale deve contenere al massimo 31 caratteri",
   "channelSecretRequired": "La password del canale è obbligatoria",

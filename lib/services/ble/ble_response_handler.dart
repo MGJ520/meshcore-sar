@@ -1043,7 +1043,19 @@ class BleResponseHandler {
         final flags = info['flags'] as int?;
 
         debugPrint('  ✅ [ChannelInfo] Channel $channelIdx: "$channelName"');
-        onChannelInfoReceived?.call(channelIdx, channelName, secret, flags);
+        debugPrint('     Name length: ${channelName.length}');
+        debugPrint('     Name bytes: ${channelName.codeUnits.map((c) => c.toRadixString(16).padLeft(2, '0')).join(' ')}');
+        debugPrint('     Secret: ${secret.map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
+        debugPrint('     isEmpty: ${channelName.isEmpty}');
+        debugPrint('     Callback exists: ${onChannelInfoReceived != null}');
+        
+        if (onChannelInfoReceived != null) {
+          debugPrint('     🔔 Calling onChannelInfoReceived callback...');
+          onChannelInfoReceived!(channelIdx, channelName, secret, flags);
+          debugPrint('     ✅ Callback completed');
+        } else {
+          debugPrint('     ⚠️  No callback registered!');
+        }
       }
     } catch (e) {
       debugPrint('  ❌ [ChannelInfo] Parsing error: $e');

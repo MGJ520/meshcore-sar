@@ -416,7 +416,31 @@ class ContactTile extends StatelessWidget {
                   ],
                 ],
               ),
-        trailing: null,
+        trailing: contact.isChannel && !contact.isPublicChannel
+            ? PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    _showDeleteChannelDialog(context, contact);
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          AppLocalizations.of(context)!.deleteChannel,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : null,
         onTap: () {
           // In simple mode, tap directly opens message sheet for chat contacts
           if (isSimpleMode && contact.type == ContactType.chat) {
@@ -1200,5 +1224,58 @@ class ContactTile extends StatelessWidget {
     } else {
       return '${diff.inDays}d ago';
     }
+  }
+
+  /// Show delete channel confirmation dialog
+  void _showDeleteChannelDialog(BuildContext context, Contact contact) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.deleteChannel),
+        content: Text(l10n.deleteChannelConfirmation(contact.advName)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              
+              try {
+                // Extract channel index from pseudo public key
+                // publicKey format: [0xFF, channelIdx, ...]
+                final channelIdx = contact.publicKey[1];
+                
+                final connectionProvider = context.read<ConnectionProvider>();
+                await connectionProvider.deleteChannel(channelIdx);
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.channelDeletedSuccessfully),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.channelDeletionFailed(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
   }
 }

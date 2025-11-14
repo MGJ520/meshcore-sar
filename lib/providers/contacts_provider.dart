@@ -194,6 +194,8 @@ class ContactsProvider with ChangeNotifier {
   /// Add or update a contact
   /// Excludes contacts that match the device's own public key
   void addOrUpdateContact(Contact contact, {Uint8List? devicePublicKey}) {
+    debugPrint('📝 [ContactsProvider] addOrUpdateContact called: ${contact.advName} (type: ${contact.type.displayName}, key: ${contact.publicKeyHex.substring(0, 8)}...)');
+    
     // Don't add contacts that match our device's public key
     if (devicePublicKey != null &&
         _publicKeysMatch(contact.publicKey, devicePublicKey)) {
@@ -205,6 +207,7 @@ class ContactsProvider with ChangeNotifier {
 
     // Check if this is a new contact
     final isNewContact = !_contacts.containsKey(contact.publicKeyHex);
+    debugPrint('   isNew: $isNewContact, total contacts before: ${_contacts.length}');
 
     Contact updatedContact;
     if (isNewContact) {
@@ -242,8 +245,10 @@ class ContactsProvider with ChangeNotifier {
     }
 
     _contacts[contact.publicKeyHex] = updatedContact;
+    debugPrint('   ✅ Contact added/updated. Total contacts: ${_contacts.length}, channels: ${channels.length}');
     _persistContacts();
     notifyListeners();
+    debugPrint('   🔔 notifyListeners() called');
   }
 
   /// Compare two public keys for equality

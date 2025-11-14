@@ -3491,6 +3491,16 @@
     "description": "Help text explaining channel secret"
   },
 
+  "channelTypesInfo": "Hash channels (#team): Secret auto-generated from name. Same name = same channel across devices.\n\nPrivate channels: Use explicit secret. Only those with the secret can join.",
+  "@channelTypesInfo": {
+    "description": "Information banner explaining hash and private channel types"
+  },
+
+  "hashChannelInfo": "Hash channel: Secret will be auto-generated from the channel name. Anyone using the same name will join the same channel.",
+  "@hashChannelInfo": {
+    "description": "Help text for hash channels (# prefix)"
+  },
+
   "channelNameRequired": "Channel name is required",
   "@channelNameRequired": {
     "description": "Validation error for empty channel name"
@@ -3524,6 +3534,36 @@
   "channelCreationFailed": "Failed to create channel: {error}",
   "@channelCreationFailed": {
     "description": "Error message when channel creation fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "deleteChannel": "Delete Channel",
+  "@deleteChannel": {
+    "description": "Delete channel button/menu item"
+  },
+
+  "deleteChannelConfirmation": "Are you sure you want to delete channel \"{channelName}\"? This action cannot be undone.",
+  "@deleteChannelConfirmation": {
+    "description": "Confirmation dialog when deleting a channel",
+    "placeholders": {
+      "channelName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "channelDeletedSuccessfully": "Channel deleted successfully",
+  "@channelDeletedSuccessfully": {
+    "description": "Success message after deleting channel"
+  },
+
+  "channelDeletionFailed": "Failed to delete channel: {error}",
+  "@channelDeletionFailed": {
+    "description": "Error message when channel deletion fails",
     "placeholders": {
       "error": {
         "type": "String"

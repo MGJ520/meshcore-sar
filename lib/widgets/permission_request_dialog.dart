@@ -93,8 +93,13 @@ class _PermissionRequestDialogState extends State<PermissionRequestDialog> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // Prevent dismissing dialog by tapping outside
-      canPop: false,
+      // Allow dismissing dialog by back button or tapping outside
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          widget.onPermissionsDenied?.call();
+        }
+      },
       child: AlertDialog(
         title: Row(
           children: [
@@ -162,14 +167,14 @@ class _PermissionRequestDialogState extends State<PermissionRequestDialog> {
           ],
         ),
         actions: [
-          if (_errorMessage != null && !_isRequesting)
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                widget.onPermissionsDenied?.call();
-              },
-              child: const Text('Skip'),
-            ),
+          // Always show a cancel/skip button
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              widget.onPermissionsDenied?.call();
+            },
+            child: const Text('Skip'),
+          ),
           if (_errorMessage != null && !_isRequesting)
             ElevatedButton(
               onPressed: () async {

@@ -234,44 +234,43 @@ class _ContactsTabState extends State<ContactsTab> {
                   const Divider(height: 32),
                 ],
 
-                // Channels (hidden in simple mode)
-                if (!isSimpleMode) ...[
-                  _SectionHeader(
-                    title: l10n.channels,
-                    count: channels.length,
-                    icon: Icons.broadcast_on_personal,
-                  ),
-                  if (channels.isNotEmpty) ...[
-                    ...channels.map(
-                      (contact) => ContactTile(
-                        contact: contact,
-                        currentPosition: _currentPosition,
-                        calculateDistance: _calculateDistanceInMeters,
-                        formatDistance: _formatDistance,
-                        onNavigateToMap: widget.onNavigateToMap,
-                      ),
+                // Channels (visible in both simple and advanced mode)
+                _SectionHeader(
+                  title: l10n.channels,
+                  count: channels.length,
+                  icon: Icons.broadcast_on_personal,
+                ),
+                if (channels.isNotEmpty) ...[
+                  ...channels.map(
+                    (contact) => ContactTile(
+                      contact: contact,
+                      currentPosition: _currentPosition,
+                      calculateDistance: _calculateDistanceInMeters,
+                      formatDistance: _formatDistance,
+                      onNavigateToMap: widget.onNavigateToMap,
                     ),
-                  ],
-                  // Add Channel Button (only show when connected)
-                  if (context.watch<ConnectionProvider>().deviceInfo.isConnected)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showAddChannelDialog(context),
-                        icon: const Icon(Icons.add_circle_outline),
-                        label: Text(l10n.addChannel),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
+                  ),
+                ],
+
+                // Add Channel Button (visible in both simple and advanced mode, only show when connected)
+                if (context.watch<ConnectionProvider>().deviceInfo.isConnected)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showAddChannelDialog(context),
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: Text(l10n.addChannel),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
                         ),
                       ),
                     ),
-                ],
+                  ),
               ],
             ),
           );

@@ -2057,6 +2057,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'This secret must be shared with all team members who need access to this channel';
 
   @override
+  String get channelTypesInfo =>
+      'Hash channels (#team): Secret auto-generated from name. Same name = same channel across devices.\n\nPrivate channels: Use explicit secret. Only those with the secret can join.';
+
+  @override
+  String get hashChannelInfo =>
+      'Hash channel: Secret will be auto-generated from the channel name. Anyone using the same name will join the same channel.';
+
+  @override
   String get channelNameRequired => 'Channel name is required';
 
   @override

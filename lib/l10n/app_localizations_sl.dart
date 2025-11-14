@@ -2067,6 +2067,14 @@ class AppLocalizationsSl extends AppLocalizations {
       'To geslo mora biti deljeno z vsemi člani ekipe, ki potrebujejo dostop do tega kanala';
 
   @override
+  String get channelTypesInfo =>
+      'Hash kanali (#ekipa): Geslo samodejno generirano iz imena. Enako ime = isti kanal na vseh napravah.\n\nZasebni kanali: Uporabite eksplicitno geslo. Samo tisti z geslom se lahko pridružijo.';
+
+  @override
+  String get hashChannelInfo =>
+      'Hash kanal: Geslo bo samodejno generirano iz imena kanala. Kdorkoli uporabi isto ime, se bo pridružil istemu kanalu.';
+
+  @override
   String get channelNameRequired => 'Ime kanala je obvezno';
 
   @override

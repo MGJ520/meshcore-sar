@@ -609,6 +609,9 @@ class MeshCoreBleService {
   ///
   /// The secret must be exactly 16 bytes (128-bit encryption key).
   /// For the default public channel (channel 0), use [MeshCoreConstants.defaultPublicChannelSecret].
+  ///
+  /// Note: Some firmware versions don't send ACK for SET_CHANNEL, so we use
+  /// fire-and-forget and then verify with GET_CHANNEL.
   Future<void> setChannel({
     required int channelIdx,
     required String channelName,
@@ -618,23 +621,58 @@ class MeshCoreBleService {
     debugPrint('    Channel index: $channelIdx');
     debugPrint('    Channel name: $channelName');
     debugPrint('    Secret length: ${secret.length} bytes');
+    debugPrint('    Secret hex: ${secret.map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
 
-    await _commandSender.writeDataAndWaitForAck(
-      FrameBuilder.buildSetChannel(
-        channelIdx: channelIdx,
-        channelName: channelName,
-        secret: secret,
-      ),
+    // Send SET_CHANNEL command (fire-and-forget, no ACK expected)
+    final setChannelData = FrameBuilder.buildSetChannel(
+      channelIdx: channelIdx,
+      channelName: channelName,
+      secret: secret,
     );
-    debugPrint('✅ [BLE] CMD_SET_CHANNEL sent successfully');
+    debugPrint('    SET_CHANNEL data (${setChannelData.length} bytes): ${setChannelData.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
+    
+    await _commandSender.writeData(setChannelData);
+    debugPrint('✅ [BLE] CMD_SET_CHANNEL sent');
+
+    // Wait a bit for the device to process
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Verify the channel was set by reading it back
+    debugPrint('🔍 [BLE] Verifying channel was set...');
+    await getChannel(channelIdx);
   }
 
-  /// Sync all channels from the device (typically 0-39)
-  /// This queries each channel to get its name and metadata
-  Future<void> syncAllChannels({int maxChannels = 40}) async {
-    debugPrint('📻 [Service] Syncing channels (0-${maxChannels - 1})...');
+  /// Delete a channel by clearing its slot
+  ///
+  /// This removes the channel from the device by setting it to an empty name and zeroed secret.
+  /// The channel slot becomes available for reuse.
+  ///
+  /// Note: Channel 0 (public channel) cannot be deleted.
+  Future<void> deleteChannel(int channelIdx) async {
+    if (channelIdx == 0) {
+      throw ArgumentError('Cannot delete channel 0 (public channel)');
+    }
 
-    for (int i = 0; i < maxChannels; i++) {
+    debugPrint('🗑️  [BLE] Deleting channel $channelIdx...');
+
+    // Clear channel by setting empty name and zeroed secret
+    await setChannel(
+      channelIdx: channelIdx,
+      channelName: '',
+      secret: List.filled(16, 0),
+    );
+
+    debugPrint('✅ [BLE] Channel $channelIdx deleted');
+  }
+
+  /// Sync all channels from the device (channels 1-39)
+  /// Skips channel 0 (public channel) which is implicit and not stored on device
+  Future<void> syncAllChannels({int maxChannels = 40}) async {
+    debugPrint('📻 [Service] Syncing channels (1-${maxChannels - 1})...');
+
+    // Start from 1 to skip channel 0 (public channel)
+    // Channel 0 is implicit and handled separately via configurePublicChannel()
+    for (int i = 1; i < maxChannels; i++) {
       await getChannel(i);
       // Small delay to avoid overwhelming the device
       await Future.delayed(const Duration(milliseconds: 50));

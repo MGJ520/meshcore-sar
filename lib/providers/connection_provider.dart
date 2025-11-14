@@ -865,6 +865,47 @@ class ConnectionProvider with ChangeNotifier {
   ///
   /// Returns the channel index of the first empty slot, or null if all slots are in use.
   /// Skips slot 0 (reserved for Public Channel).
+  /// Callback to get channel info for empty slot detection
+  /// This should be set by AppProvider to query ChannelsProvider
+  Function(int channelIdx)? getChannelInfo;
+
+  /// Check if a specific channel slot is empty
+  Future<bool> isChannelSlotEmpty(int channelIdx) async {
+    if (!_bleService.isConnected) {
+      return false;
+    }
+
+    try {
+      // First check if we already have info about this channel
+      if (getChannelInfo != null) {
+        final channel = getChannelInfo!(channelIdx);
+        if (channel != null) {
+          final channelName = (channel as dynamic).name as String?;
+          return channelName == null || channelName.isEmpty;
+        }
+      }
+
+      // If not cached, query the device
+      await _bleService.getChannel(channelIdx);
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Check again after query
+      if (getChannelInfo != null) {
+        final channel = getChannelInfo!(channelIdx);
+        if (channel != null) {
+          final channelName = (channel as dynamic).name as String?;
+          return channelName == null || channelName.isEmpty;
+        }
+      }
+      
+      // If still no info, assume it's empty
+      return true;
+    } catch (e) {
+      debugPrint('❌ [Provider] Failed to check slot $channelIdx: $e');
+      return false;
+    }
+  }
+
   Future<int?> findNextEmptyChannelSlot() async {
     if (!_bleService.isConnected) {
       throw Exception('Not connected to device');
@@ -873,26 +914,34 @@ class ConnectionProvider with ChangeNotifier {
     try {
       debugPrint('🔍 [Provider] Finding next empty channel slot...');
 
-      // Query channels 1-39 (skip 0 = public channel)
       // maxChannels from device info, or default to 40
       final maxChannels = _deviceInfo.maxChannels ?? 40;
 
+      // Check each slot starting from 1 (skip 0 = public channel)
       for (int i = 1; i < maxChannels; i++) {
-        await _bleService.getChannel(i);
-        // Small delay to allow response to arrive
-        await Future.delayed(const Duration(milliseconds: 50));
+        // First check cache
+        if (getChannelInfo != null) {
+          final channel = getChannelInfo!(i);
+          if (channel != null) {
+            final channelName = (channel as dynamic).name as String?;
+            if (channelName != null && channelName.isNotEmpty) {
+              debugPrint('   ⏭️  Slot $i occupied: "$channelName"');
+              continue; // Skip occupied slots
+            }
+          }
+        }
 
-        // Check if this channel is empty via channels provider
-        // (The BLE response handler calls onChannelInfoReceived callback
-        // which updates the channels provider)
-        // For now, we'll return the first slot since the channels provider
-        // doesn't expose empty slot info. This can be improved later.
+        // Slot appears empty in cache, verify by querying device
+        debugPrint('   🔍 Checking slot $i...');
+        final isEmpty = await isChannelSlotEmpty(i);
+        if (isEmpty) {
+          debugPrint('   ✅ Found empty slot: $i');
+          return i;
+        }
       }
-
-      // For simplicity, return the first slot after public channel
-      // A more robust implementation would check which slots are actually empty
-      // by querying the channels provider
-      return 1;
+      
+      debugPrint('   ❌ All slots (1-${maxChannels - 1}) are in use');
+      return null;
     } catch (e) {
       debugPrint('❌ [Provider] Failed to find empty channel slot: $e');
       rethrow;
@@ -921,17 +970,63 @@ class ConnectionProvider with ChangeNotifier {
       debugPrint('📻 [Provider] Creating new channel...');
       debugPrint('  Name: $channelName');
 
-      // Find next empty slot
-      final slotIdx = await findNextEmptyChannelSlot();
-      if (slotIdx == null) {
-        throw Exception('All channel slots are in use (maximum 39 custom channels)');
+      // Determine channel type
+      final bool isHashChannel = channelName.startsWith('#');
+      
+      // Check for duplicate channels
+      int? existingSlot;
+      if (getChannelInfo != null) {
+        final maxChannels = _deviceInfo.maxChannels ?? 40;
+        for (int i = 1; i < maxChannels; i++) {
+          final channel = getChannelInfo!(i);
+          if (channel != null) {
+            final existingName = (channel as dynamic).name as String?;
+            if (existingName != null && existingName.isNotEmpty) {
+              // For hash channels (#name), check exact match to prevent duplicates
+              if (isHashChannel && existingName == channelName) {
+                debugPrint('  ⚠️  Hash channel "$channelName" already exists in slot $i');
+                throw Exception('Channel "$channelName" already exists. Hash channels cannot be duplicated.');
+              }
+              // For private channels, check name match to allow overwrite
+              else if (!isHashChannel && existingName == channelName) {
+                debugPrint('  ℹ️  Private channel "$channelName" found in slot $i - will overwrite');
+                existingSlot = i;
+                break;
+              }
+            }
+          }
+        }
       }
 
-      debugPrint('  Using slot: $slotIdx');
+      // Determine slot to use
+      final int slotIdx;
+      if (existingSlot != null) {
+        // Overwrite existing private channel
+        slotIdx = existingSlot;
+        debugPrint('  Using existing slot: $slotIdx (overwrite mode)');
+      } else {
+        // Find next empty slot for new channel
+        final emptySlot = await findNextEmptyChannelSlot();
+        if (emptySlot == null) {
+          throw Exception('All channel slots are in use (maximum 39 custom channels)');
+        }
+        slotIdx = emptySlot;
+        debugPrint('  Using empty slot: $slotIdx (new channel)');
+      }
 
-      // Convert ASCII secret to 16-byte key using MD5
-      final secretBytes = _convertSecretToBytes(channelSecret);
-      debugPrint('  Secret converted to 16-byte key');
+      // Generate secret
+      final List<int> secretBytes;
+      if (isHashChannel) {
+        // Hash channel: auto-generate secret from name using SHA256
+        debugPrint('  Channel type: Hash channel (#)');
+        secretBytes = _generateHashChannelSecret(channelName);
+        debugPrint('  Secret auto-generated from channel name using SHA256');
+      } else {
+        // Private channel: use explicit secret with MD5
+        debugPrint('  Channel type: Private channel');
+        secretBytes = _convertSecretToBytes(channelSecret);
+        debugPrint('  Secret converted to 16-byte key using MD5');
+      }
 
       // Send CMD_SET_CHANNEL to radio
       await _bleService.setChannel(
@@ -940,7 +1035,7 @@ class ConnectionProvider with ChangeNotifier {
         secret: secretBytes,
       );
 
-      debugPrint('✅ [Provider] Channel created successfully in slot $slotIdx');
+      debugPrint('✅ [Provider] Channel ${existingSlot != null ? 'updated' : 'created'} successfully in slot $slotIdx');
 
       // Small delay to allow the response to propagate
       await Future.delayed(const Duration(milliseconds: 100));
@@ -956,7 +1051,56 @@ class ConnectionProvider with ChangeNotifier {
     }
   }
 
+  /// Delete a channel and remove it from the UI
+  ///
+  /// Clears the channel slot on the device and removes it from both
+  /// ChannelsProvider and ContactsProvider. The slot becomes available for reuse.
+  ///
+  /// [channelIdx] - Channel slot index (1-39). Channel 0 (public) cannot be deleted.
+  ///
+  /// Throws an exception if the channel cannot be deleted or if channel 0 is specified.
+  Future<void> deleteChannel(int channelIdx) async {
+    if (!_bleService.isConnected) {
+      throw Exception('Not connected to device');
+    }
+
+    if (channelIdx == 0) {
+      throw Exception('Cannot delete the public channel');
+    }
+
+    try {
+      debugPrint('🗑️  [Provider] Deleting channel in slot $channelIdx...');
+
+      // Delete channel on device (sets empty name and zeroed secret)
+      await _bleService.deleteChannel(channelIdx);
+
+      debugPrint('✅ [Provider] Channel deleted successfully from slot $channelIdx');
+
+      // Small delay to allow the response to propagate
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Refresh channels to update UI
+      // The empty channel will trigger removal via onChannelInfoReceived callback
+      await _bleService.getChannel(channelIdx);
+    } catch (e) {
+      _error = 'Failed to delete channel: $e';
+      debugPrint('❌ [Provider] Channel deletion failed: $e');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Generate secret for hash channel using SHA256
+  /// Same algorithm as Channel model for consistency
+  /// Python equivalent: hashlib.sha256(channel_name.encode()).digest()[0:16]
+  List<int> _generateHashChannelSecret(String channelName) {
+    final bytes = utf8.encode(channelName);
+    final digest = sha256.convert(bytes);
+    return digest.bytes.sublist(0, 16);
+  }
+
   /// Convert ASCII secret string to 16-byte key using MD5 hash
+  /// Used for private channels with explicit secrets
   List<int> _convertSecretToBytes(String asciiSecret) {
     // Use MD5 hash to convert any length ASCII string to exactly 16 bytes
     // This provides a deterministic and secure way to generate channel keys

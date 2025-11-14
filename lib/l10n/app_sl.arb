@@ -932,6 +932,8 @@
   "noContactsFound": "Ni kontaktov",
   "noRoomsFound": "Ni sob",
   "noContactsOrRoomsAvailable": "Ni na voljo kontaktov ali sob",
+  "noRecipientsAvailable": "Ni na voljo prejemnikov",
+  "noChannelsFound": "Ni najdenih kanalov",
   "messagesWillBeSentToPublicChannel": "Sporočila bodo poslana na javni kanal",
   "newMessage": "Novo sporočilo",
   "channel": "Kanal",

@@ -928,6 +928,8 @@
   "noContactsFound": "Nema kontakata",
   "noRoomsFound": "Nema soba",
   "noContactsOrRoomsAvailable": "Nema dostupnih kontakata ili soba",
+  "noRecipientsAvailable": "Nema dostupnih primatelja",
+  "noChannelsFound": "Nije pronađen nijedan kanal",
   "messagesWillBeSentToPublicChannel": "Poruke će biti poslane na javni kanal",
   "newMessage": "Nova poruka",
   "channel": "Kanal",

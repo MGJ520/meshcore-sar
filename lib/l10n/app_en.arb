@@ -2938,6 +2938,16 @@
     "description": "Message when no contacts or rooms exist"
   },
 
+  "noRecipientsAvailable": "No recipients available",
+  "@noRecipientsAvailable": {
+    "description": "Message when no recipients exist (contacts, rooms, or channels)"
+  },
+
+  "noChannelsFound": "No channels found",
+  "@noChannelsFound": {
+    "description": "Message when no channels match the search"
+  },
+
   "messagesWillBeSentToPublicChannel": "Messages will be sent to public channel",
   "@messagesWillBeSentToPublicChannel": {
     "description": "Info message when only public channel is available"

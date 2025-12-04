@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +34,7 @@ class _MessagesTabState extends State<MessagesTab> {
   int _characterCount = 0;
   static const int _maxCharacters = 160;
   String? _highlightedMessageId;
+  Timer? _highlightTimer; // Timer for clearing message highlight
 
   // Message destination state
   String _destinationType =
@@ -73,6 +75,7 @@ class _MessagesTabState extends State<MessagesTab> {
 
   @override
   void dispose() {
+    _highlightTimer?.cancel();
     _textController.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
@@ -112,8 +115,9 @@ class _MessagesTabState extends State<MessagesTab> {
         _highlightedMessageId = messageId;
       });
 
-      // Clear highlight after 2 seconds
-      Future.delayed(const Duration(seconds: 2), () {
+      // Clear highlight after 2 seconds using a properly managed Timer
+      _highlightTimer?.cancel();
+      _highlightTimer = Timer(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
             _highlightedMessageId = null;

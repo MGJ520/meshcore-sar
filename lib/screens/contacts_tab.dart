@@ -51,9 +51,11 @@ class _ContactsTabState extends State<ContactsTab> {
   }
 
   Future<void> _handleRefresh() async {
+    if (!mounted) return;
     final appProvider = context.read<AppProvider>();
     await appProvider.refresh();
     // Also refresh location
+    if (!mounted) return;
     await _getCurrentLocation();
   }
 

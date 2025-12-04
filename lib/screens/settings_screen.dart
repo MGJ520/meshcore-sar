@@ -57,6 +57,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadRxTxPreference();
   }
 
+  @override
+  void dispose() {
+    // Clear location service callbacks to prevent memory leaks
+    _locationService.onError = null;
+    _locationService.onBroadcastSent = null;
+    _locationService.onTrackingStateChanged = null;
+    super.dispose();
+  }
+
   Future<void> _loadPackageInfo() async {
     final info = await PackageInfo.fromPlatform();
     if (mounted) {

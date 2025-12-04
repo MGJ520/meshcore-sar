@@ -38,6 +38,7 @@ class _PermissionRequestDialogState extends State<PermissionRequestDialog> {
     try {
       // Check if location service is enabled
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return;
       if (!serviceEnabled) {
         setState(() {
           _errorMessage = 'Location services are disabled. Please enable location services in your device settings.';
@@ -48,10 +49,12 @@ class _PermissionRequestDialogState extends State<PermissionRequestDialog> {
 
       // Check current permission
       LocationPermission permission = await Geolocator.checkPermission();
+      if (!mounted) return;
 
       if (permission == LocationPermission.denied) {
         // Request permission
         permission = await Geolocator.requestPermission();
+        if (!mounted) return;
       }
 
       if (permission == LocationPermission.denied) {
@@ -78,11 +81,10 @@ class _PermissionRequestDialogState extends State<PermissionRequestDialog> {
       });
 
       // Close dialog and notify parent
-      if (mounted) {
-        Navigator.of(context).pop();
-        widget.onPermissionsGranted();
-      }
+      Navigator.of(context).pop();
+      widget.onPermissionsGranted();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Error requesting permissions: $e';
         _isRequesting = false;

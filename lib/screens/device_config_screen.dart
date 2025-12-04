@@ -347,6 +347,8 @@ class _DeviceConfigScreenState extends State<DeviceConfigScreen> {
         ),
       );
 
+      if (!mounted) return;
+
       setState(() {
         _latController.text = position.latitude.toStringAsFixed(6);
         _lonController.text = position.longitude.toStringAsFixed(6);

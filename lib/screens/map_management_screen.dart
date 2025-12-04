@@ -409,6 +409,7 @@ class _MapManagementScreenState extends State<MapManagementScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError(AppLocalizations.of(context)!.clearCacheFailed(e.toString()));
     }

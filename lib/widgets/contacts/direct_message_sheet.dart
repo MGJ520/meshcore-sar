@@ -41,6 +41,7 @@ class _DirectMessageSheetState extends State<DirectMessageSheet> {
   }
 
   void _updateCharacterCount() {
+    if (!mounted) return;
     setState(() {
       _characterCount = _textController.text.length;
     });

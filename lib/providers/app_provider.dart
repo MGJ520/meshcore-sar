@@ -25,6 +25,8 @@ class AppProvider with ChangeNotifier {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
+  bool _isDisposed = false;
+
   bool _isSimpleMode = true;
   bool get isSimpleMode => _isSimpleMode;
 
@@ -682,5 +684,18 @@ class AppProvider with ChangeNotifier {
       'messages': messagesProvider.messageStats,
       'sarMarkers': messagesProvider.sarMarkerStats,
     };
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    // Remove connection state listener
+    connectionProvider.removeListener(_handleConnectionStateChange);
+    // Clear location service callbacks
+    locationTrackingService.onPositionUpdate = null;
+    locationTrackingService.onBroadcastSent = null;
+    locationTrackingService.onError = null;
+    locationTrackingService.onTrackingStateChanged = null;
+    super.dispose();
   }
 }

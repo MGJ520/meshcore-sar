@@ -21,6 +21,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
   final FocusNode _focusNode = FocusNode();
   bool _isLoggingIn = false;
   bool _obscurePassword = true;
+  bool _isDisposed = false; // Track disposal state for async callbacks
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _passwordController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -245,15 +247,15 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
         '   Messages will be fetched when onMessageWaiting callback is triggered',
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.loggedInSuccessfully),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      // Check both _isDisposed flag and mounted to handle race conditions
+      if (_isDisposed || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.loggedInSuccessfully),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     };
 
     connectionProvider.onLoginFail = (publicKeyPrefix) {
@@ -263,15 +265,15 @@ class _RoomLoginSheetState extends State<RoomLoginSheet> {
 
       debugPrint('❌ [RoomLogin] Login failed - incorrect password');
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.loginFailed),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      // Check both _isDisposed flag and mounted to handle race conditions
+      if (_isDisposed || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.loginFailed),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     };
 
     try {

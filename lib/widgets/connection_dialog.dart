@@ -22,6 +22,26 @@ class _ConnectionDialogState extends State<ConnectionDialog>
   int _totalToScan = 0;
   String? _connectingToServerUrl; // Track which server is being connected to
 
+  // Named listener method for proper cleanup
+  void _onTabChanged() {
+    if (_tabController.index == 1) {
+      // Switched to network tab
+      if (_networkScanner.hasCachedResults && _discoveredServers.isEmpty) {
+        // Load cached results
+        setState(() {
+          _discoveredServers.addAll(_networkScanner.cachedServers);
+        });
+        debugPrint(
+          '📦 [NetworkScanner] Loaded ${_discoveredServers.length} servers from cache',
+        );
+      } else if (!_networkScanner.isScanning &&
+          !_networkScanner.hasCachedResults) {
+        // No cache, start initial scan
+        _startNetworkScan();
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,25 +75,8 @@ class _ConnectionDialogState extends State<ConnectionDialog>
       }
     };
 
-    // Listen to tab changes
-    _tabController.addListener(() {
-      if (_tabController.index == 1) {
-        // Switched to network tab
-        if (_networkScanner.hasCachedResults && _discoveredServers.isEmpty) {
-          // Load cached results
-          setState(() {
-            _discoveredServers.addAll(_networkScanner.cachedServers);
-          });
-          debugPrint(
-            '📦 [NetworkScanner] Loaded ${_discoveredServers.length} servers from cache',
-          );
-        } else if (!_networkScanner.isScanning &&
-            !_networkScanner.hasCachedResults) {
-          // No cache, start initial scan
-          _startNetworkScan();
-        }
-      }
-    });
+    // Listen to tab changes using named method for proper cleanup
+    _tabController.addListener(_onTabChanged);
   }
 
   @override
@@ -84,6 +87,8 @@ class _ConnectionDialogState extends State<ConnectionDialog>
     );
     connectionProvider.stopScan();
     _networkScanner.stopScan();
+    // Remove listener before disposing to prevent memory leaks
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }

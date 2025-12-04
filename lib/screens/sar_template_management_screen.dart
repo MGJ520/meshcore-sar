@@ -24,6 +24,7 @@ class _SarTemplateManagementScreenState extends State<SarTemplateManagementScree
 
   Future<void> _initializeService() async {
     if (!_templateService.isInitialized) {
+      if (!mounted) return;
       setState(() => _isLoading = true);
       await _templateService.initialize();
       if (mounted) {
@@ -111,6 +112,7 @@ class _SarTemplateManagementScreenState extends State<SarTemplateManagementScree
   }
 
   Future<void> _importFromClipboard() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {

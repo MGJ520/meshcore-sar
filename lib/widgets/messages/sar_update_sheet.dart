@@ -231,6 +231,7 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
     try {
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return;
       if (!serviceEnabled) {
         setState(() {
           _locationError = 'Location services are disabled';
@@ -241,8 +242,10 @@ class _SarUpdateSheetState extends State<SarUpdateSheet> {
 
       // Check permissions
       LocationPermission permission = await Geolocator.checkPermission();
+      if (!mounted) return;
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        if (!mounted) return;
         if (permission == LocationPermission.denied) {
           setState(() {
             _locationError = 'Location permission denied';

@@ -73,10 +73,12 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
 
       // Save to temporary file
       final tempDir = await getTemporaryDirectory();
+      if (!context.mounted) return;
       final file = File('${tempDir.path}/ble_packets_${DateTime.now().millisecondsSinceEpoch}.csv');
       await file.writeAsString(buffer.toString());
 
       // Share the file
+      if (!context.mounted) return;
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'MeshCore BLE Packet Logs',
@@ -118,10 +120,12 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
 
       // Save to temporary file
       final tempDir = await getTemporaryDirectory();
+      if (!context.mounted) return;
       final file = File('${tempDir.path}/ble_packets_${DateTime.now().millisecondsSinceEpoch}.txt');
       await file.writeAsString(buffer.toString());
 
       // Share the file
+      if (!context.mounted) return;
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'MeshCore BLE Packet Logs',
@@ -147,27 +151,31 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
   }
 
   void _clearLogs(BuildContext context) {
+    final parentContext = context; // Store parent context for setState
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.clearAllData),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(AppLocalizations.of(dialogContext)!.clearAllData),
         content: const Text('Are you sure you want to clear all packet logs? This cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context)!.cancel),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(AppLocalizations.of(dialogContext)!.cancel),
           ),
           TextButton(
             onPressed: () {
               widget.bleService.clearPacketLogs();
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              if (!mounted) return;
               setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Packet logs cleared')),
-              );
+              if (parentContext.mounted) {
+                ScaffoldMessenger.of(parentContext).showSnackBar(
+                  const SnackBar(content: Text('Packet logs cleared')),
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(AppLocalizations.of(context)!.clear),
+            child: Text(AppLocalizations.of(dialogContext)!.clear),
           ),
         ],
       ),
@@ -381,6 +389,7 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
                       // Auto-scroll to bottom
                       if (_autoScroll && index == logs.length - 1) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.position.maxScrollExtent,

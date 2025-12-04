@@ -78,6 +78,9 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
   // MBTiles layers
   List<MapLayer> _mbtilesLayers = [];
 
+  // Store original location callback to restore in dispose
+  void Function(Position)? _originalLocationCallback;
+
   // WMS layers (Slovenian)
   late final MapLayer _slovenianAerialLayer;
   late final MapLayer _dtk25Layer;
@@ -128,6 +131,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
 
     // Listen to map provider for navigation requests
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return; // Check if widget is still mounted
       final mapProvider = context.read<MapProvider>();
       mapProvider.addListener(_handleMapNavigation);
       // Load WMS overlay state
@@ -146,13 +150,13 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
   /// Note: LocationTrackingService is initialized and started by AppProvider
   /// This method only adds map-specific callbacks for rotation and UI updates
   void _setupLocationCallbacks() {
-    // Store the original callback from AppProvider
-    final originalCallback = _locationService.onPositionUpdate;
+    // Store the original callback from AppProvider to restore in dispose
+    _originalLocationCallback = _locationService.onPositionUpdate;
 
     // Add map-specific callback that chains with the original
     _locationService.onPositionUpdate = (position) {
       // Call original callback first (AppProvider's logging)
-      originalCallback?.call(position);
+      _originalLocationCallback?.call(position);
 
       // Then handle map-specific logic - early exit if not mounted or disposing
       if (!mounted || _isDisposing) {
@@ -437,8 +441,8 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     mapProvider.removeListener(_handleMapNavigation);
 
     // DO NOT stop location tracking - it's managed by AppProvider
-    // Just clear the map-specific callback
-    _locationService.onPositionUpdate = null;
+    // Restore the original callback instead of setting to null
+    _locationService.onPositionUpdate = _originalLocationCallback;
     _mapController.dispose();
     _tileCache.dispose();
     super.dispose();

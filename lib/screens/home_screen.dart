@@ -279,6 +279,7 @@ class _HomeScreenState extends State<HomeScreen>
     final appProvider = context.watch<AppProvider>();
     if (_isMapEnabled != appProvider.isMapEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         _updateTabController(appProvider.isMapEnabled);
       });
     }

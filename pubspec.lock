@@ -132,11 +132,9 @@ packages:
   codec2_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: HEAD
-      resolved-ref: "8b0c621bd84deb50d98ad4f2c4b819e0268210d4"
-      url: "https://github.com/dz0ny/codec2_flutter.git"
-    source: git
+      path: "vendor/codec2_flutter_ios_only"
+      relative: true
+    source: path
     version: "0.1.0"
   collection:
     dependency: transitive

@@ -14,6 +14,7 @@ class LocalePreferences {
     Locale('es'), // Spanish
     Locale('fr'), // French
     Locale('it'), // Italian
+    Locale('el'), // Greek
   ];
 
   /// Get the saved locale or return null to use system locale
@@ -61,6 +62,8 @@ class LocalePreferences {
         return 'Français';
       case 'it':
         return 'Italiano';
+      case 'el':
+        return 'Greek';
       default:
         return locale.languageCode;
     }
@@ -83,6 +86,8 @@ class LocalePreferences {
         return 'Français';
       case 'it':
         return 'Italiano';
+      case 'el':
+        return 'Ελληνικά';
       default:
         return locale.languageCode;
     }

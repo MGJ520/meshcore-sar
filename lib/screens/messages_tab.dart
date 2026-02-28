@@ -54,7 +54,7 @@ class _MessagesTabState extends State<MessagesTab> {
   bool _isRecording = false;
   bool _isSendingVoice = false;
   static const int _maxVoicePackets = 10;
-  bool get _voiceSupported => Platform.isIOS || Platform.isMacOS;
+  bool get _voiceSupported => Platform.isIOS;
   StreamSubscription<Int16List>? _voiceStreamSub;
   String? _currentVoiceSessionId;
   final List<Int16List> _recordedChunks = [];

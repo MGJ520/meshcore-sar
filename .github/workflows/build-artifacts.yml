@@ -12,6 +12,7 @@ permissions:
 env:
   FLUTTER_VERSION: "3.35.6"
   APP_NAME: meshcore-sar
+  ANDROID_NDK_VERSION: "27.0.12077973"
 
 jobs:
   build-android:
@@ -28,12 +29,23 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Cache Android NDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/${{ env.ANDROID_NDK_VERSION }}
+            /usr/local/lib/android/sdk/licenses
+          key: ${{ runner.os }}-android-ndk-${{ env.ANDROID_NDK_VERSION }}
 
       - name: Install dependencies
         run: flutter pub get
@@ -188,6 +200,56 @@ jobs:
           path: "${{ env.APP_NAME }}-*-macos.dmg"
           if-no-files-found: error
 
+  build-ios:
+    name: Build iOS Archive (Manual Signing)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS app (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package iOS unsigned artifacts
+        run: |
+          RAW_TAG="${{ github.event.release.tag_name || github.ref_name }}"
+          TAG="${RAW_TAG//\//-}"
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Runner.app not found at $APP_PATH"
+            exit 1
+          fi
+
+          mkdir -p ios_payload/Payload
+          cp -R "$APP_PATH" ios_payload/Payload/
+          (
+            cd ios_payload
+            zip -qry "../${APP_NAME}-${TAG}-ios-unsigned.ipa" Payload
+          )
+          rm -rf ios_payload
+
+          zip -qry "${APP_NAME}-${TAG}-ios-runner-app.zip" "$APP_PATH"
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ios
+          path: |
+            "${{ env.APP_NAME }}-*-ios-unsigned.ipa"
+            "${{ env.APP_NAME }}-*-ios-runner-app.zip"
+          if-no-files-found: error
+
   upload-release-assets:
     name: Upload Assets To Release
     if: github.event_name == 'release'
@@ -197,6 +259,7 @@ jobs:
       - build-linux
       - build-windows
       - build-macos
+      - build-ios
 
     steps:
       - name: Download all build artifacts
@@ -216,11 +279,20 @@ jobs:
             - Linux (`.tar.gz`)
             - macOS (`.dmg`)
             - Windows (`.zip`)
+            - iOS unsigned (`-ios-unsigned.ipa`, `-ios-runner-app.zip`)
 
             Windows status: currently unusable. The BLE stack on Windows is broken, so BLE features do not work.
+
+            iOS manual signing and install:
+            1. Download `*-ios-unsigned.ipa` (or `*-ios-runner-app.zip`) from this release.
+            2. Re-sign it with your Apple Development/Distribution certificate and provisioning profile.
+            3. If you used `*-ios-runner-app.zip`, create a signed `.ipa` from `Runner.app` during signing.
+            4. Install the signed `.ipa` on your iPhone using Apple Configurator 2 or Xcode (Devices and Simulators).
           files: |
             dist/*.apk
             dist/*.tar.gz
             dist/*.zip
             dist/*.dmg
+            dist/*-ios-unsigned.ipa
+            dist/*-ios-runner-app.zip
           fail_on_unmatched_files: true

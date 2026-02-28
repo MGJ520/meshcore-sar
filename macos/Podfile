@@ -38,5 +38,13 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    # codec2_flutter uses ARM-specific register asm("sp") in debug_alloc.h that
+    # does not compile on x86_64 macOS. Voice messages are iOS-only, so exclude
+    # all C source files from the macOS codec2_flutter build entirely.
+    if target.name == 'codec2_flutter'
+      target.build_configurations.each do |config|
+        config.build_settings['EXCLUDED_SOURCE_FILE_NAMES'] = '*.c *.cpp'
+      end
+    end
   end
 end

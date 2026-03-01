@@ -705,9 +705,11 @@ packages:
   meshcore_client:
     dependency: "direct main"
     description:
-      path: "../meshcore_client"
-      relative: true
-    source: path
+      path: "."
+      ref: main
+      resolved-ref: "33b6588c206a1d81e6de8541b9bd86bd7d951c8d"
+      url: "https://github.com/dz0ny/meshcore_client.git"
+    source: git
     version: "0.1.0"
   meta:
     dependency: transitive

@@ -156,6 +156,25 @@ class MessagesProvider with ChangeNotifier {
           );
         }
 
+        // Check if it's a voice envelope/message and not already marked.
+        if (!enhancedMessage.isVoice) {
+          final envelope = VoiceEnvelope.tryParseText(enhancedMessage.text);
+          if (envelope != null) {
+            enhancedMessage = enhancedMessage.copyWith(
+              isVoice: true,
+              voiceId: envelope.sessionId,
+            );
+          } else if (VoicePacket.isVoiceText(enhancedMessage.text)) {
+            final pkt = VoicePacket.tryParseText(enhancedMessage.text);
+            if (pkt != null) {
+              enhancedMessage = enhancedMessage.copyWith(
+                isVoice: true,
+                voiceId: pkt.sessionId,
+              );
+            }
+          }
+        }
+
         _messages.add(enhancedMessage);
 
         // Extract SAR markers
@@ -182,20 +201,26 @@ class MessagesProvider with ChangeNotifier {
   /// This restores drawings that may be missing from DrawingProvider storage
   /// Should be called after both providers are initialized
   void syncDrawingsWithProvider(dynamic drawingProvider) {
-    debugPrint('🔄 [MessagesProvider] Syncing drawings with DrawingProvider...');
+    debugPrint(
+      '🔄 [MessagesProvider] Syncing drawings with DrawingProvider...',
+    );
     int restoredCount = 0;
 
     for (final message in _messages) {
       if (!message.isDrawing || message.drawingId == null) continue;
 
       // Check if drawing exists in DrawingProvider
-      final existingDrawing = drawingProvider.getDrawingById(message.drawingId!);
+      final existingDrawing = drawingProvider.getDrawingById(
+        message.drawingId!,
+      );
       if (existingDrawing != null) {
         continue; // Drawing already exists
       }
 
       // Drawing is missing, reconstruct from message text
-      debugPrint('🔧 [MessagesProvider] Restoring missing drawing: ${message.drawingId}');
+      debugPrint(
+        '🔧 [MessagesProvider] Restoring missing drawing: ${message.drawingId}',
+      );
       final drawing = DrawingMessageParser.parseDrawingMessage(
         message.text,
         senderName: message.senderName,
@@ -203,7 +228,9 @@ class MessagesProvider with ChangeNotifier {
       );
 
       if (drawing == null) {
-        debugPrint('⚠️ [MessagesProvider] Failed to parse drawing from message ${message.id}');
+        debugPrint(
+          '⚠️ [MessagesProvider] Failed to parse drawing from message ${message.id}',
+        );
         continue;
       }
 
@@ -214,11 +241,15 @@ class MessagesProvider with ChangeNotifier {
       if (restoredDrawing != null) {
         drawingProvider.addReceivedDrawing(restoredDrawing);
         restoredCount++;
-        debugPrint('✅ [MessagesProvider] Restored drawing ${message.drawingId}');
+        debugPrint(
+          '✅ [MessagesProvider] Restored drawing ${message.drawingId}',
+        );
       }
     }
 
-    debugPrint('✅ [MessagesProvider] Sync complete: restored $restoredCount drawings');
+    debugPrint(
+      '✅ [MessagesProvider] Sync complete: restored $restoredCount drawings',
+    );
   }
 
   /// Create a copy of a drawing with a specific ID
@@ -278,14 +309,22 @@ class MessagesProvider with ChangeNotifier {
       );
     }
 
-    // Check if it's a voice message (V:...) and not already marked
-    if (VoicePacket.isVoiceText(enhancedMessage.text) && !enhancedMessage.isVoice) {
-      final pkt = VoicePacket.tryParseText(enhancedMessage.text);
-      if (pkt != null) {
+    // Check if it's a voice message (VE1:/V:) and not already marked.
+    if (!enhancedMessage.isVoice) {
+      final envelope = VoiceEnvelope.tryParseText(enhancedMessage.text);
+      if (envelope != null) {
         enhancedMessage = enhancedMessage.copyWith(
           isVoice: true,
-          voiceId: pkt.sessionId,
+          voiceId: envelope.sessionId,
         );
+      } else if (VoicePacket.isVoiceText(enhancedMessage.text)) {
+        final pkt = VoicePacket.tryParseText(enhancedMessage.text);
+        if (pkt != null) {
+          enhancedMessage = enhancedMessage.copyWith(
+            isVoice: true,
+            voiceId: pkt.sessionId,
+          );
+        }
       }
     }
 
@@ -772,6 +811,25 @@ class MessagesProvider with ChangeNotifier {
       );
     }
 
+    // Check if it's a voice message (VE1:/V:) and not already marked.
+    if (!enhancedMessage.isVoice) {
+      final envelope = VoiceEnvelope.tryParseText(enhancedMessage.text);
+      if (envelope != null) {
+        enhancedMessage = enhancedMessage.copyWith(
+          isVoice: true,
+          voiceId: envelope.sessionId,
+        );
+      } else if (VoicePacket.isVoiceText(enhancedMessage.text)) {
+        final pkt = VoicePacket.tryParseText(enhancedMessage.text);
+        if (pkt != null) {
+          enhancedMessage = enhancedMessage.copyWith(
+            isVoice: true,
+            voiceId: pkt.sessionId,
+          );
+        }
+      }
+    }
+
     // Check for duplicates (shouldn't happen for sent messages, but be safe)
     if (_isDuplicate(enhancedMessage)) {
       debugPrint(
@@ -861,7 +919,9 @@ class MessagesProvider with ChangeNotifier {
         // Clamp at 20 seconds maximum
         final scaledTimeout = suggestedTimeoutMs * 5;
         final effectiveTimeout = scaledTimeout > 20000 ? 20000 : scaledTimeout;
-        debugPrint('  ⏱️ Radio suggested ${suggestedTimeoutMs}ms, using ${effectiveTimeout}ms (5x${scaledTimeout > 20000 ? ', clamped at 20s' : ''}) for grouped message');
+        debugPrint(
+          '  ⏱️ Radio suggested ${suggestedTimeoutMs}ms, using ${effectiveTimeout}ms (5x${scaledTimeout > 20000 ? ', clamped at 20s' : ''}) for grouped message',
+        );
 
         // Store ACK tag → List of (groupId, recipientPublicKey)
         // Multiple recipients can share the same ACK tag
@@ -869,8 +929,12 @@ class MessagesProvider with ChangeNotifier {
           _ackTagToRecipients[expectedAckTag] = [];
         }
         _ackTagToRecipients[expectedAckTag]!.add((groupId, recipientPublicKey));
-        debugPrint('  ✅ Added recipient to ACK tag $expectedAckTag → group $groupId, recipient ${recipientPublicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
-        debugPrint('  📊 Total recipients for ACK $expectedAckTag: ${_ackTagToRecipients[expectedAckTag]!.length}');
+        debugPrint(
+          '  ✅ Added recipient to ACK tag $expectedAckTag → group $groupId, recipient ${recipientPublicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}',
+        );
+        debugPrint(
+          '  📊 Total recipients for ACK $expectedAckTag: ${_ackTagToRecipients[expectedAckTag]!.length}',
+        );
 
         // Store the mapping so we can update the right recipient on delivery
         _pendingSentMessages[expectedAckTag] = Message(
@@ -892,7 +956,9 @@ class MessagesProvider with ChangeNotifier {
         _timeoutTimers[messageId] = Timer(
           Duration(milliseconds: effectiveTimeout),
           () {
-            debugPrint('⏱️ [MessagesProvider] Timeout for grouped message recipient (message $messageId)');
+            debugPrint(
+              '⏱️ [MessagesProvider] Timeout for grouped message recipient (message $messageId)',
+            );
             // Check if this specific recipient is still pending
             final recipients = _ackTagToRecipients[expectedAckTag];
             if (recipients != null && recipients.isNotEmpty) {
@@ -902,10 +968,13 @@ class MessagesProvider with ChangeNotifier {
               );
 
               if (recipientIndex >= 0) {
-                final (timeoutGroupId, timeoutRecipientKey) = recipients[recipientIndex];
+                final (timeoutGroupId, timeoutRecipientKey) =
+                    recipients[recipientIndex];
                 debugPrint('  ⚠️ Timeout fired - marking recipient as failed');
                 debugPrint('     Group: $timeoutGroupId');
-                debugPrint('     Recipient: ${timeoutRecipientKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
+                debugPrint(
+                  '     Recipient: ${timeoutRecipientKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}',
+                );
 
                 // Mark this specific recipient as failed
                 updateGroupedMessageRecipientStatus(
@@ -925,7 +994,9 @@ class MessagesProvider with ChangeNotifier {
                 _groupedMessageMapping.remove(messageId);
                 _timeoutTimers.remove(messageId);
               } else {
-                debugPrint('  ✅ ACK already received for this recipient - ignoring timeout');
+                debugPrint(
+                  '  ✅ ACK already received for this recipient - ignoring timeout',
+                );
               }
             } else {
               debugPrint('  ✅ All ACKs already received - ignoring timeout');
@@ -1032,6 +1103,9 @@ class MessagesProvider with ChangeNotifier {
       final updatedMessage = message.copyWith(
         echoCount: echoCount,
         firstEchoAt: message.firstEchoAt ?? DateTime.now(),
+        lastEchoSnrRaw: snrRaw.toSigned(8),
+        lastEchoRssiDbm: rssiDbm.toSigned(8),
+        lastEchoAt: DateTime.now(),
       );
       _messages[index] = updatedMessage;
 
@@ -1052,7 +1126,9 @@ class MessagesProvider with ChangeNotifier {
     int? roundTripTimeMs,
     DateTime? deliveredAt,
   }) {
-    debugPrint('🔄 [MessagesProvider] updateGroupedMessageRecipientStatus called');
+    debugPrint(
+      '🔄 [MessagesProvider] updateGroupedMessageRecipientStatus called',
+    );
     debugPrint('  Group ID: $groupId');
     debugPrint('  New status: $newStatus');
     debugPrint('  RTT: ${roundTripTimeMs}ms');
@@ -1060,7 +1136,9 @@ class MessagesProvider with ChangeNotifier {
     final index = _messages.indexWhere((m) => m.id == groupId);
     if (index == -1) {
       debugPrint('⚠️ [MessagesProvider] Grouped message not found: $groupId');
-      debugPrint('  Available message IDs: ${_messages.take(5).map((m) => m.id).join(", ")}');
+      debugPrint(
+        '  Available message IDs: ${_messages.take(5).map((m) => m.id).join(", ")}',
+      );
       return;
     }
 
@@ -1068,7 +1146,9 @@ class MessagesProvider with ChangeNotifier {
     debugPrint('  ✅ Found grouped message at index $index');
 
     if (!message.isGroupedMessage) {
-      debugPrint('⚠️ [MessagesProvider] Message is not a grouped message: $groupId');
+      debugPrint(
+        '⚠️ [MessagesProvider] Message is not a grouped message: $groupId',
+      );
       return;
     }
 
@@ -1094,7 +1174,11 @@ class MessagesProvider with ChangeNotifier {
           return recipient.copyWith(
             deliveryStatus: newStatus,
             roundTripTimeMs: roundTripTimeMs,
-            deliveredAt: deliveredAt ?? (newStatus == MessageDeliveryStatus.delivered ? DateTime.now() : null),
+            deliveredAt:
+                deliveredAt ??
+                (newStatus == MessageDeliveryStatus.delivered
+                    ? DateTime.now()
+                    : null),
           );
         }
       }
@@ -1103,10 +1187,14 @@ class MessagesProvider with ChangeNotifier {
 
     if (!recipientFound) {
       debugPrint('  ⚠️ Recipient not found in recipients list!');
-      debugPrint('  Looking for key: ${recipientPublicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
+      debugPrint(
+        '  Looking for key: ${recipientPublicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}',
+      );
       debugPrint('  Available recipients:');
       for (final r in message.recipients!) {
-        debugPrint('    - ${r.displayName}: ${r.publicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
+        debugPrint(
+          '    - ${r.displayName}: ${r.publicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}',
+        );
       }
     }
 
@@ -1115,14 +1203,26 @@ class MessagesProvider with ChangeNotifier {
 
     // Update overall message status based on recipients
     MessageDeliveryStatus overallStatus;
-    final allDelivered = updatedRecipients.every((r) => r.deliveryStatus == MessageDeliveryStatus.delivered);
-    final anyFailed = updatedRecipients.any((r) => r.deliveryStatus == MessageDeliveryStatus.failed);
-    final anySending = updatedRecipients.any((r) => r.deliveryStatus == MessageDeliveryStatus.sending);
+    final allDelivered = updatedRecipients.every(
+      (r) => r.deliveryStatus == MessageDeliveryStatus.delivered,
+    );
+    final anyFailed = updatedRecipients.any(
+      (r) => r.deliveryStatus == MessageDeliveryStatus.failed,
+    );
+    final anySending = updatedRecipients.any(
+      (r) => r.deliveryStatus == MessageDeliveryStatus.sending,
+    );
 
     debugPrint('  Status counts:');
-    debugPrint('    Delivered: ${updatedRecipients.where((r) => r.deliveryStatus == MessageDeliveryStatus.delivered).length}');
-    debugPrint('    Sent/Pending: ${updatedRecipients.where((r) => r.deliveryStatus == MessageDeliveryStatus.sent || r.deliveryStatus == MessageDeliveryStatus.sending).length}');
-    debugPrint('    Failed: ${updatedRecipients.where((r) => r.deliveryStatus == MessageDeliveryStatus.failed).length}');
+    debugPrint(
+      '    Delivered: ${updatedRecipients.where((r) => r.deliveryStatus == MessageDeliveryStatus.delivered).length}',
+    );
+    debugPrint(
+      '    Sent/Pending: ${updatedRecipients.where((r) => r.deliveryStatus == MessageDeliveryStatus.sent || r.deliveryStatus == MessageDeliveryStatus.sending).length}',
+    );
+    debugPrint(
+      '    Failed: ${updatedRecipients.where((r) => r.deliveryStatus == MessageDeliveryStatus.failed).length}',
+    );
 
     if (allDelivered) {
       overallStatus = MessageDeliveryStatus.delivered;
@@ -1148,9 +1248,7 @@ class MessagesProvider with ChangeNotifier {
     debugPrint(
       '🔍 [MessagesProvider] markMessageDelivered called with ACK: $ackCode, RTT: ${roundTripTimeMs}ms',
     );
-    debugPrint(
-      '  Checking recipient list for ACK $ackCode...',
-    );
+    debugPrint('  Checking recipient list for ACK $ackCode...');
 
     // Check if this ACK is for grouped message recipient(s)
     final recipients = _ackTagToRecipients[ackCode];
@@ -1158,13 +1256,18 @@ class MessagesProvider with ChangeNotifier {
       // Pop the first recipient from the list (FIFO order)
       // This matches the order in which messages were sent
       final (groupId, recipientPublicKey) = recipients.removeAt(0);
-      debugPrint('  ✅ Found recipient in list: group $groupId, recipient ${recipientPublicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}');
-      debugPrint('  📊 Remaining recipients for ACK $ackCode: ${recipients.length}');
+      debugPrint(
+        '  ✅ Found recipient in list: group $groupId, recipient ${recipientPublicKey.sublist(0, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join('')}',
+      );
+      debugPrint(
+        '  📊 Remaining recipients for ACK $ackCode: ${recipients.length}',
+      );
 
       // Find the message ID for this recipient to cancel its timeout
       String? messageIdToCancel;
       for (final entry in _groupedMessageMapping.entries) {
-        if (entry.value.$1 == groupId && _listEquals(entry.value.$2, recipientPublicKey)) {
+        if (entry.value.$1 == groupId &&
+            _listEquals(entry.value.$2, recipientPublicKey)) {
           messageIdToCancel = entry.key;
           break;
         }
@@ -1188,7 +1291,9 @@ class MessagesProvider with ChangeNotifier {
 
       // Clean up if no more recipients for this ACK
       if (recipients.isEmpty) {
-        debugPrint('  🧹 All recipients processed for ACK $ackCode, cleaning up');
+        debugPrint(
+          '  🧹 All recipients processed for ACK $ackCode, cleaning up',
+        );
         _ackTagToRecipients.remove(ackCode);
         _pendingSentMessages.remove(ackCode);
       }
@@ -1205,9 +1310,7 @@ class MessagesProvider with ChangeNotifier {
     }
 
     // Not a grouped message, check for single message
-    debugPrint(
-      '  Not in simple mapping, checking pending messages...',
-    );
+    debugPrint('  Not in simple mapping, checking pending messages...');
     debugPrint(
       '  Current pending messages: ${_pendingSentMessages.keys.toList()}',
     );

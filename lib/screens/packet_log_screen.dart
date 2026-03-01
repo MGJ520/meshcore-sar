@@ -9,10 +9,7 @@ import '../l10n/app_localizations.dart';
 class PacketLogScreen extends StatefulWidget {
   final MeshCoreBleService bleService;
 
-  const PacketLogScreen({
-    super.key,
-    required this.bleService,
-  });
+  const PacketLogScreen({super.key, required this.bleService});
 
   @override
   State<PacketLogScreen> createState() => _PacketLogScreenState();
@@ -56,16 +53,18 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       final logs = _filteredLogs;
       if (logs.isEmpty) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No logs to export')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No logs to export')));
         }
         return;
       }
 
       // Create CSV content
       final buffer = StringBuffer();
-      buffer.writeln('Timestamp,Direction,Size (bytes),Opcode Name,Code,Hex Data,Description');
+      buffer.writeln(
+        'Timestamp,Direction,Size (bytes),Opcode Name,Code,Hex Data,Description',
+      );
       for (final log in logs) {
         buffer.writeln(log.toCsvRow());
       }
@@ -73,7 +72,9 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       // Save to temporary file
       final tempDir = await getTemporaryDirectory();
       if (!context.mounted) return;
-      final file = File('${tempDir.path}/ble_packets_${DateTime.now().millisecondsSinceEpoch}.csv');
+      final file = File(
+        '${tempDir.path}/ble_packets_${DateTime.now().millisecondsSinceEpoch}.csv',
+      );
       await file.writeAsString(buffer.toString());
 
       // Share the file
@@ -87,9 +88,9 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
   }
@@ -99,9 +100,9 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       final logs = _filteredLogs;
       if (logs.isEmpty) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No logs to export')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No logs to export')));
         }
         return;
       }
@@ -122,7 +123,9 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       // Save to temporary file
       final tempDir = await getTemporaryDirectory();
       if (!context.mounted) return;
-      final file = File('${tempDir.path}/ble_packets_${DateTime.now().millisecondsSinceEpoch}.txt');
+      final file = File(
+        '${tempDir.path}/ble_packets_${DateTime.now().millisecondsSinceEpoch}.txt',
+      );
       await file.writeAsString(buffer.toString());
 
       // Share the file
@@ -136,9 +139,9 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
   }
@@ -159,7 +162,9 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(AppLocalizations.of(dialogContext)!.clearAllData),
-        content: const Text('Are you sure you want to clear all packet logs? This cannot be undone.'),
+        content: const Text(
+          'Are you sure you want to clear all packet logs? This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -204,11 +209,13 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
         actions: [
           // Direction filter
           PopupMenuButton<PacketDirection?>(
-            icon: Icon(_filterDirection == null
-                ? Icons.filter_list
-                : _filterDirection == PacketDirection.rx
-                    ? Icons.arrow_downward
-                    : Icons.arrow_upward),
+            icon: Icon(
+              _filterDirection == null
+                  ? Icons.filter_list
+                  : _filterDirection == PacketDirection.rx
+                  ? Icons.arrow_downward
+                  : Icons.arrow_upward,
+            ),
             tooltip: 'Filter by direction',
             onSelected: (direction) {
               setState(() {
@@ -220,12 +227,21 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
                 value: null,
                 child: Row(
                   children: [
-                    Icon(Icons.filter_list,
-                        color: _filterDirection == null ? Theme.of(context).colorScheme.primary : null),
+                    Icon(
+                      Icons.filter_list,
+                      color: _filterDirection == null
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
                     const SizedBox(width: 8),
-                    Text('All',
-                        style: TextStyle(
-                            fontWeight: _filterDirection == null ? FontWeight.bold : FontWeight.normal)),
+                    Text(
+                      'All',
+                      style: TextStyle(
+                        fontWeight: _filterDirection == null
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -233,15 +249,21 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
                 value: PacketDirection.rx,
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_downward,
-                        color: _filterDirection == PacketDirection.rx
-                            ? Theme.of(context).colorScheme.primary
-                            : null),
+                    Icon(
+                      Icons.arrow_downward,
+                      color: _filterDirection == PacketDirection.rx
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
                     const SizedBox(width: 8),
-                    Text('RX (Received)',
-                        style: TextStyle(
-                            fontWeight:
-                                _filterDirection == PacketDirection.rx ? FontWeight.bold : FontWeight.normal)),
+                    Text(
+                      'RX (Received)',
+                      style: TextStyle(
+                        fontWeight: _filterDirection == PacketDirection.rx
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -249,15 +271,21 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
                 value: PacketDirection.tx,
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_upward,
-                        color: _filterDirection == PacketDirection.tx
-                            ? Theme.of(context).colorScheme.primary
-                            : null),
+                    Icon(
+                      Icons.arrow_upward,
+                      color: _filterDirection == PacketDirection.tx
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
                     const SizedBox(width: 8),
-                    Text('TX (Sent)',
-                        style: TextStyle(
-                            fontWeight:
-                                _filterDirection == PacketDirection.tx ? FontWeight.bold : FontWeight.normal)),
+                    Text(
+                      'TX (Sent)',
+                      style: TextStyle(
+                        fontWeight: _filterDirection == PacketDirection.tx
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -265,7 +293,11 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
           ),
           // Auto-scroll toggle
           IconButton(
-            icon: Icon(_autoScroll ? Icons.vertical_align_bottom : Icons.vertical_align_center),
+            icon: Icon(
+              _autoScroll
+                  ? Icons.vertical_align_bottom
+                  : Icons.vertical_align_center,
+            ),
             tooltip: _autoScroll ? 'Disable auto-scroll' : 'Enable auto-scroll',
             onPressed: () {
               setState(() {
@@ -352,11 +384,7 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.list_alt,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.list_alt, size: 64, color: Colors.grey[400]),
                         const SizedBox(height: 16),
                         Text(
                           _searchQuery.isNotEmpty || _filterDirection != null
@@ -367,7 +395,8 @@ class _PacketLogScreenState extends State<PacketLogScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        if (_searchQuery.isNotEmpty || _filterDirection != null) ...[
+                        if (_searchQuery.isNotEmpty ||
+                            _filterDirection != null) ...[
                           const SizedBox(height: 8),
                           TextButton.icon(
                             onPressed: () {
@@ -420,15 +449,13 @@ class _PacketLogCard extends StatelessWidget {
   final BlePacketLog log;
   final VoidCallback onCopy;
 
-  const _PacketLogCard({
-    required this.log,
-    required this.onCopy,
-  });
+  const _PacketLogCard({required this.log, required this.onCopy});
 
   @override
   Widget build(BuildContext context) {
     final isRx = log.direction == PacketDirection.rx;
     final directionColor = isRx ? Colors.green : Colors.blue;
+    final rxInfo = log.logRxDataInfo;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -480,66 +507,167 @@ class _PacketLogCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Hex data
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hex: ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    Expanded(
-                      child: SelectableText(
-                        log.hexData,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy, size: 18),
-                      tooltip: 'Copy hex data',
-                      onPressed: onCopy,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Metadata
                 Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    _InfoChip(
-                      icon: Icons.schedule,
-                      label: log.timestamp.toIso8601String(),
+                    _FactCard(
+                      icon: isRx ? Icons.call_received : Icons.call_made,
+                      label: 'Direction',
+                      value: isRx ? 'RX' : 'TX',
+                      accent: directionColor,
                     ),
-                    _InfoChip(
-                      icon: Icons.data_usage,
-                      label: '${log.rawData.length} bytes',
+                    _FactCard(
+                      icon: Icons.data_object,
+                      label: 'Size',
+                      value: '${log.rawData.length} bytes',
+                    ),
+                    _FactCard(
+                      icon: Icons.schedule,
+                      label: 'Captured',
+                      value: _formatTimestamp(log.timestamp),
                     ),
                     if (log.responseCode != null)
-                      _InfoChip(
-                        icon: Icons.tag,
-                        label: log.opcodeDescription,
-                      ),
-                    // Show RSSI and SNR for LOG_RX_DATA packets
-                    if (log.logRxDataInfo?.rssiDbm != null)
-                      _InfoChip(
-                        icon: Icons.signal_cellular_alt,
-                        label: 'RSSI: ${log.logRxDataInfo!.rssiDbm} dBm',
-                      ),
-                    if (log.logRxDataInfo?.snrDb != null)
-                      _InfoChip(
-                        icon: Icons.waves,
-                        label: 'SNR: ${log.logRxDataInfo!.snrDb!.toStringAsFixed(1)} dB',
+                      _FactCard(
+                        icon: Icons.sell,
+                        label: 'Opcode',
+                        value: log.opcodeName,
                       ),
                   ],
+                ),
+                if (rxInfo?.rssiDbm != null || rxInfo?.snrDb != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Link Quality',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (rxInfo?.rssiDbm != null)
+                          _SignalMeter(
+                            label: 'RSSI',
+                            valueLabel: '${rxInfo!.rssiDbm} dBm',
+                            normalized: _normalizeRssi(
+                              rxInfo.rssiDbm!.toDouble(),
+                            ),
+                            color: _rssiColor(rxInfo.rssiDbm!.toDouble()),
+                          ),
+                        if (rxInfo?.snrDb != null) ...[
+                          const SizedBox(height: 8),
+                          _SignalMeter(
+                            label: 'SNR',
+                            valueLabel:
+                                '${rxInfo!.snrDb!.toStringAsFixed(1)} dB',
+                            normalized: _normalizeSnr(rxInfo.snrDb!),
+                            color: _snrColor(rxInfo.snrDb!),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).dividerColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.grid_view_rounded, size: 16),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Hex Explorer',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: onCopy,
+                            tooltip: 'Copy full hex',
+                            icon: const Icon(Icons.copy_all_rounded, size: 18),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (var i = 0; i < log.rawData.length; i++)
+                            _HexByteChip(
+                              index: i,
+                              value: log.rawData[i],
+                              onTap: () {
+                                _copyText(
+                                  context,
+                                  log.rawData[i]
+                                      .toRadixString(16)
+                                      .padLeft(2, '0')
+                                      .toUpperCase(),
+                                  'Byte ${i.toString().padLeft(2, '0')} copied',
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        title: const Text(
+                          'Raw stream',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: SelectableText(
+                              log.hexData,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -563,27 +691,176 @@ class _PacketLogCard extends StatelessWidget {
       return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}';
     }
   }
+
+  static void _copyText(BuildContext context, String text, String message) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+  }
+
+  static double _normalizeRssi(double rssi) {
+    return ((rssi + 120.0) / 70.0).clamp(0.0, 1.0);
+  }
+
+  static double _normalizeSnr(double snr) {
+    return ((snr + 20.0) / 40.0).clamp(0.0, 1.0);
+  }
+
+  static Color _rssiColor(double rssi) {
+    if (rssi >= -80) return Colors.green;
+    if (rssi >= -95) return Colors.amber;
+    return Colors.redAccent;
+  }
+
+  static Color _snrColor(double snr) {
+    if (snr >= 10) return Colors.green;
+    if (snr >= 0) return Colors.amber;
+    return Colors.redAccent;
+  }
 }
 
-class _InfoChip extends StatelessWidget {
+class _FactCard extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String value;
+  final Color? accent;
 
-  const _InfoChip({
+  const _FactCard({
     required this.icon,
     required this.label,
+    required this.value,
+    this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: 16),
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 11),
+    final tileColor = accent ?? Theme.of(context).colorScheme.primary;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 108),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: tileColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.all(4),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: tileColor),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignalMeter extends StatelessWidget {
+  final String label;
+  final String valueLabel;
+  final double normalized;
+  final Color color;
+
+  const _SignalMeter({
+    required this.label,
+    required this.valueLabel,
+    required this.normalized,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 42,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: normalized,
+              backgroundColor: color.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 74,
+          child: Text(
+            valueLabel,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HexByteChip extends StatelessWidget {
+  final int index;
+  final int value;
+  final VoidCallback onTap;
+
+  const _HexByteChip({
+    required this.index,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = value.toRadixString(16).padLeft(2, '0').toUpperCase();
+    return Tooltip(
+      message: 'Byte $index',
+      waitDuration: const Duration(milliseconds: 250),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

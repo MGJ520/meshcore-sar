@@ -7,14 +7,19 @@ enum VoicePacketMode {
   mode700c(0, '700C'),
   mode1200(1, '1200'),
   mode2400(2, '2400'),
-  mode1300(3, '1300');
+  mode1300(3, '1300'),
+  mode1400(4, '1400'),
+  mode1600(5, '1600'),
+  mode3200(6, '3200');
 
   const VoicePacketMode(this.id, this.label);
   final int id;
   final String label;
 
-  static VoicePacketMode fromId(int id) =>
-      VoicePacketMode.values.firstWhere((m) => m.id == id, orElse: () => VoicePacketMode.mode700c);
+  static VoicePacketMode fromId(int id) => VoicePacketMode.values.firstWhere(
+    (m) => m.id == id,
+    orElse: () => VoicePacketMode.mode1300,
+  );
 }
 
 /// A single Codec2-encoded chunk belonging to a multi-packet voice session.
@@ -27,8 +32,8 @@ enum VoicePacketMode {
 class VoicePacket {
   final String sessionId; // 8 hex chars (4 bytes)
   final VoicePacketMode mode;
-  final int index;         // 0-based
-  final int total;         // total packet count
+  final int index; // 0-based
+  final int total; // total packet count
   final Uint8List codec2Data;
 
   const VoicePacket({
@@ -89,7 +94,8 @@ class VoicePacket {
   // ── Binary format ────────────────────────────────────────────────────────
 
   static const int _binaryMagic = 0x56; // 'V'
-  static const int _binaryHeaderLen = 8; // magic(1)+session(4)+mode(1)+idx(1)+total(1)
+  static const int _binaryHeaderLen =
+      8; // magic(1)+session(4)+mode(1)+idx(1)+total(1)
 
   static bool isVoiceBinary(Uint8List payload) =>
       payload.isNotEmpty && payload[0] == _binaryMagic;
@@ -100,10 +106,12 @@ class VoicePacket {
     if (payload[0] != _binaryMagic) return null;
     try {
       final sessionBytes = payload.sublist(1, 5);
-      final sessionId = sessionBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      final sessionId = sessionBytes
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
       final modeId = payload[5];
-      final index  = payload[6];
-      final total  = payload[7];
+      final index = payload[6];
+      final total = payload[7];
       if (total < 1) return null;
       final codec2Data = payload.sublist(_binaryHeaderLen);
       return VoicePacket(
@@ -122,7 +130,10 @@ class VoicePacket {
   Uint8List encodeBinary() {
     final sessionBytes = Uint8List(4);
     for (var i = 0; i < 4; i++) {
-      sessionBytes[i] = int.parse(sessionId.substring(i * 2, i * 2 + 2), radix: 16);
+      sessionBytes[i] = int.parse(
+        sessionId.substring(i * 2, i * 2 + 2),
+        radix: 16,
+      );
     }
     final out = Uint8List(_binaryHeaderLen + codec2Data.length);
     out[0] = _binaryMagic;
@@ -143,7 +154,10 @@ class VoicePacket {
       VoicePacketMode.mode700c => 100,
       VoicePacketMode.mode1200 => 150,
       VoicePacketMode.mode1300 => 175,
+      VoicePacketMode.mode1400 => 175,
+      VoicePacketMode.mode1600 => 200,
       VoicePacketMode.mode2400 => 300,
+      VoicePacketMode.mode3200 => 400,
     };
     if (bps == 0) return 0;
     return (codec2Data.length * 1000 ~/ bps).clamp(0, 1500);
@@ -152,4 +166,202 @@ class VoicePacket {
   @override
   String toString() =>
       'VoicePacket($sessionId ${mode.label} [$index/${total - 1}] ${codec2Data.length}B)';
+}
+
+/// Lightweight public/direct message envelope advertising voice availability.
+///
+/// Text format:
+///   VE1:{sid}:{mode}:{total}:{durMs}:{senderKey6}:{ts}:{ver}
+/// Example:
+///   VE1:00112233:1:4:3200:aabbccddeeff:1234567890:1
+class VoiceEnvelope {
+  static const String _prefix = 'VE1:';
+
+  final String sessionId;
+  final VoicePacketMode mode;
+  final int total;
+  final int durationMs;
+  final String senderKey6;
+  final int timestampSec;
+  final int version;
+
+  const VoiceEnvelope({
+    required this.sessionId,
+    required this.mode,
+    required this.total,
+    required this.durationMs,
+    required this.senderKey6,
+    required this.timestampSec,
+    this.version = 1,
+  });
+
+  static bool isVoiceEnvelopeText(String text) => text.startsWith(_prefix);
+
+  static VoiceEnvelope? tryParseText(String text) {
+    if (!isVoiceEnvelopeText(text)) return null;
+    final body = text.substring(_prefix.length);
+    return _tryParseCompact(body);
+  }
+
+  static VoiceEnvelope? _tryParseCompact(String body) {
+    final parts = body.split(':');
+    if (parts.length != 7) return null;
+    try {
+      final sid = parts[0];
+      final mode = int.tryParse(parts[1]);
+      final total = int.tryParse(parts[2]);
+      final durMs = int.tryParse(parts[3]);
+      final senderKey6 = parts[4];
+      final ts = int.tryParse(parts[5]);
+      final ver = int.tryParse(parts[6]);
+
+      if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sid)) {
+        return null;
+      }
+      if (mode == null || mode < 0 || mode >= VoicePacketMode.values.length) {
+        return null;
+      }
+      if (total == null || total < 1 || total > 255) return null;
+      if (durMs == null || durMs < 0 || durMs > 10 * 60 * 1000) return null;
+      if (!RegExp(r'^[0-9a-fA-F]{12}$').hasMatch(senderKey6)) {
+        return null;
+      }
+      if (ts == null || ts <= 0) return null;
+      if (ver == null || ver != 1) return null;
+
+      return VoiceEnvelope(
+        sessionId: sid.toLowerCase(),
+        mode: VoicePacketMode.fromId(mode),
+        total: total,
+        durationMs: durMs,
+        senderKey6: senderKey6.toLowerCase(),
+        timestampSec: ts,
+        version: ver,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String encodeText() {
+    return '$_prefix${sessionId.toLowerCase()}:${mode.id}:$total:$durationMs:${senderKey6.toLowerCase()}:$timestampSec:$version';
+  }
+}
+
+/// Direct control-plane request to fetch voice packets for a session.
+///
+/// Text format:
+///   VR1:{sid}:{want}:{requesterKey6}:{ts}:{ver}
+/// Example:
+///   VR1:00112233:a:aabbccddeeff:1234567890:1
+class VoiceFetchRequest {
+  static const String _prefix = 'VR1:';
+
+  final String sessionId;
+  final String want;
+  final String requesterKey6;
+  final int timestampSec;
+  final int version;
+
+  const VoiceFetchRequest({
+    required this.sessionId,
+    this.want = 'all',
+    required this.requesterKey6,
+    required this.timestampSec,
+    this.version = 1,
+  });
+
+  static bool isVoiceFetchRequestText(String text) => text.startsWith(_prefix);
+
+  static VoiceFetchRequest? tryParseText(String text) {
+    if (!isVoiceFetchRequestText(text)) return null;
+    final body = text.substring(_prefix.length);
+    return _tryParseCompact(body);
+  }
+
+  static VoiceFetchRequest? _tryParseCompact(String body) {
+    final parts = body.split(':');
+    if (parts.length != 5) return null;
+    try {
+      final sid = parts[0];
+      final wantToken = parts[1];
+      final requesterKey6 = parts[2];
+      final ts = int.tryParse(parts[3]);
+      final ver = int.tryParse(parts[4]);
+      final normalizedWant = wantToken == 'a' ? 'all' : wantToken;
+
+      if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sid)) {
+        return null;
+      }
+      if (normalizedWant != 'all') return null;
+      if (!RegExp(r'^[0-9a-fA-F]{12}$').hasMatch(requesterKey6)) {
+        return null;
+      }
+      if (ts == null || ts <= 0) return null;
+      if (ver == null || ver != 1) return null;
+
+      return VoiceFetchRequest(
+        sessionId: sid.toLowerCase(),
+        want: normalizedWant,
+        requesterKey6: requesterKey6.toLowerCase(),
+        timestampSec: ts,
+        version: ver,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String encodeText() {
+    final wantToken = want == 'all' ? 'a' : want;
+    return '$_prefix${sessionId.toLowerCase()}:$wantToken:${requesterKey6.toLowerCase()}:$timestampSec:$version';
+  }
+}
+
+/// Builds a compact visual waveform from real voice packet bytes.
+///
+/// Note: This uses the encoded Codec2 packet bytes as the source so it works
+/// even before full PCM decode/playback is available.
+class VoiceWaveform {
+  static List<double> buildBarsFromPackets(
+    Iterable<VoicePacket?> packets, {
+    int bars = 24,
+  }) {
+    if (bars <= 0) return const [];
+
+    final merged = <int>[];
+    for (final pkt in packets) {
+      if (pkt == null || pkt.codec2Data.isEmpty) continue;
+      merged.addAll(pkt.codec2Data);
+    }
+    if (merged.isEmpty) return List<double>.filled(bars, 0.0);
+
+    final out = List<double>.filled(bars, 0.0);
+    for (var i = 0; i < bars; i++) {
+      final start = (i * merged.length) ~/ bars;
+      var end = ((i + 1) * merged.length) ~/ bars;
+      if (end <= start) end = start + 1;
+      if (end > merged.length) end = merged.length;
+
+      var sum = 0.0;
+      for (var j = start; j < end; j++) {
+        final centered = (merged[j] - 128).abs();
+        sum += centered / 127.0;
+      }
+      out[i] = (sum / (end - start)).clamp(0.0, 1.0);
+    }
+
+    // Light smoothing to avoid jittery adjacent bars.
+    if (bars > 2) {
+      final smoothed = List<double>.from(out);
+      for (var i = 1; i < bars - 1; i++) {
+        smoothed[i] = ((out[i - 1] + out[i] + out[i + 1]) / 3.0).clamp(
+          0.0,
+          1.0,
+        );
+      }
+      return smoothed;
+    }
+    return out;
+  }
 }

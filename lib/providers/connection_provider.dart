@@ -111,7 +111,8 @@ class ConnectionProvider with ChangeNotifier {
   // SSE client connection state
   bool get isSseClientConnecting => _sseClient.isConnecting;
   int get sseClientReconnectionAttempt => _sseClient.reconnectionAttempts;
-  int get sseClientMaxReconnectionAttempts => _sseClient.maxReconnectionAttempts;
+  int get sseClientMaxReconnectionAttempts =>
+      _sseClient.maxReconnectionAttempts;
 
   // Message sync state
   bool _noMoreMessages = false;
@@ -151,7 +152,8 @@ class ConnectionProvider with ChangeNotifier {
   Function(List<Contact>)? onContactsComplete;
   Function(Message)? onMessageReceived;
   Function(Uint8List publicKey, Uint8List lppData)? onTelemetryReceived;
-  Function(int channelIdx, String channelName, Uint8List secret, int? flags)? onChannelInfoReceived;
+  Function(int channelIdx, String channelName, Uint8List secret, int? flags)?
+  onChannelInfoReceived;
   Function(Uint8List publicKeyPrefix, int tag, Uint8List responseData)?
   onBinaryResponse;
   Function(Uint8List publicKey)? onContactDeleted;
@@ -310,17 +312,22 @@ class ConnectionProvider with ChangeNotifier {
     };
 
     _bleService.onContactsComplete = (contacts) {
-      debugPrint('📥 [Provider] Contacts sync complete: ${contacts.length} contacts');
+      debugPrint(
+        '📥 [Provider] Contacts sync complete: ${contacts.length} contacts',
+      );
       debugPrint('  Forwarding to AppProvider via onContactsComplete callback');
       onContactsComplete?.call(contacts);
     };
 
-    _bleService.onChannelInfoReceived = (int channelIdx, String channelName, Uint8List secret, int? flags) {
-      onChannelInfoReceived?.call(channelIdx, channelName, secret, flags);
-    };
+    _bleService.onChannelInfoReceived =
+        (int channelIdx, String channelName, Uint8List secret, int? flags) {
+          onChannelInfoReceived?.call(channelIdx, channelName, secret, flags);
+        };
 
     _bleService.onContactDeleted = (publicKey) {
-      debugPrint('⚠️ [Provider] Contact deleted by firmware (contacts full overwrite)');
+      debugPrint(
+        '⚠️ [Provider] Contact deleted by firmware (contacts full overwrite)',
+      );
       onContactDeleted?.call(publicKey);
     };
 
@@ -349,7 +356,9 @@ class ConnectionProvider with ChangeNotifier {
       debugPrint('  LPP data: ${lppData.length} bytes');
       // Mark ping as successful if this was a ping request
       _pingTracker.markPingSuccessful(publicKey);
-      debugPrint('  Forwarding to AppProvider via onTelemetryReceived callback');
+      debugPrint(
+        '  Forwarding to AppProvider via onTelemetryReceived callback',
+      );
       onTelemetryReceived?.call(publicKey, lppData);
     };
 
@@ -442,37 +451,42 @@ class ConnectionProvider with ChangeNotifier {
       onPathUpdated?.call(publicKey);
     };
 
-    _bleService
-        .onMessageSent = (expectedAckTag, suggestedTimeoutMs, isFloodMode, contactPublicKey) {
-      debugPrint(
-        '📥 [Provider] Message sent - ACK tag: $expectedAckTag, timeout: ${suggestedTimeoutMs}ms',
-      );
-
-      // Pop message ID from FIFO queue (matches send order)
-      final messageId = _messageDeliveryTracker.popPendingMessageId();
-
-      if (messageId != null) {
-        debugPrint('  ✅ Matched with message ID: $messageId');
-
-        // Check if approaching firmware limit (8 pending ACKs max)
-        if (_messageDeliveryTracker.shouldRateLimit) {
+    _bleService.onMessageSent =
+        (expectedAckTag, suggestedTimeoutMs, isFloodMode, contactPublicKey) {
           debugPrint(
-            '  ⚠️ WARNING: ${_messageDeliveryTracker.pendingCount} pending ACKs (firmware limit: 8)',
+            '📥 [Provider] Message sent - ACK tag: $expectedAckTag, timeout: ${suggestedTimeoutMs}ms',
           );
-          debugPrint('  ⚠️ Firmware may drop ACK tracking if limit exceeded!');
-        }
 
-        // Store the ACK tag to message ID mapping for delivery confirmation
-        _messageDeliveryTracker.mapAckTagToMessageId(expectedAckTag, messageId);
+          // Pop message ID from FIFO queue (matches send order)
+          final messageId = _messageDeliveryTracker.popPendingMessageId();
 
-        // Notify callback with message ID
-        onMessageSent?.call(messageId, expectedAckTag, suggestedTimeoutMs);
-      } else {
-        debugPrint(
-          '⚠️ [Provider] SENT response received but no pending message IDs',
-        );
-      }
-    };
+          if (messageId != null) {
+            debugPrint('  ✅ Matched with message ID: $messageId');
+
+            // Check if approaching firmware limit (8 pending ACKs max)
+            if (_messageDeliveryTracker.shouldRateLimit) {
+              debugPrint(
+                '  ⚠️ WARNING: ${_messageDeliveryTracker.pendingCount} pending ACKs (firmware limit: 8)',
+              );
+              debugPrint(
+                '  ⚠️ Firmware may drop ACK tracking if limit exceeded!',
+              );
+            }
+
+            // Store the ACK tag to message ID mapping for delivery confirmation
+            _messageDeliveryTracker.mapAckTagToMessageId(
+              expectedAckTag,
+              messageId,
+            );
+
+            // Notify callback with message ID
+            onMessageSent?.call(messageId, expectedAckTag, suggestedTimeoutMs);
+          } else {
+            debugPrint(
+              '⚠️ [Provider] SENT response received but no pending message IDs',
+            );
+          }
+        };
 
     _bleService.onMessageDelivered = (ackCode, roundTripTimeMs) {
       debugPrint(
@@ -527,7 +541,9 @@ class ConnectionProvider with ChangeNotifier {
 
       // Update SSE server with device name if running
       if (_sseServer.isRunning) {
-        _sseServer.setDeviceName(_deviceInfo.deviceName ?? _deviceInfo.selfName);
+        _sseServer.setDeviceName(
+          _deviceInfo.deviceName ?? _deviceInfo.selfName,
+        );
       }
     };
 
@@ -563,7 +579,9 @@ class ConnectionProvider with ChangeNotifier {
 
       // Update SSE server with device name if running
       if (_sseServer.isRunning) {
-        _sseServer.setDeviceName(_deviceInfo.deviceName ?? _deviceInfo.selfName);
+        _sseServer.setDeviceName(
+          _deviceInfo.deviceName ?? _deviceInfo.selfName,
+        );
       }
     };
 
@@ -755,11 +773,15 @@ class ConnectionProvider with ChangeNotifier {
   void _startAckCleanupTimer() {
     _stopAckCleanupTimer(); // Cancel any existing timer first
 
-    debugPrint('🧹 [ConnectionProvider] Starting ACK cleanup timer (1 minute interval)');
+    debugPrint(
+      '🧹 [ConnectionProvider] Starting ACK cleanup timer (1 minute interval)',
+    );
     _ackCleanupTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       final cleanedCount = _messageDeliveryTracker.cleanupStaleAcks();
       if (cleanedCount > 0) {
-        debugPrint('🧹 [ConnectionProvider] Cleaned up $cleanedCount stale ACK mappings');
+        debugPrint(
+          '🧹 [ConnectionProvider] Cleaned up $cleanedCount stale ACK mappings',
+        );
       }
     });
   }
@@ -811,7 +833,9 @@ class ConnectionProvider with ChangeNotifier {
       await _bleService.getContactByKey(publicKey);
     } catch (e) {
       _error = 'Failed to get contact: $e';
-      debugPrint('⚠️ [Provider] Failed to get contact by key, falling back to full contact sync');
+      debugPrint(
+        '⚠️ [Provider] Failed to get contact by key, falling back to full contact sync',
+      );
       // Fallback to full contact sync if command not supported
       await _bleService.getContacts();
       notifyListeners();
@@ -902,7 +926,7 @@ class ConnectionProvider with ChangeNotifier {
       // If not cached, query the device
       await _bleService.getChannel(channelIdx);
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       // Check again after query
       if (getChannelInfo != null) {
         final channel = getChannelInfo!(channelIdx);
@@ -911,7 +935,7 @@ class ConnectionProvider with ChangeNotifier {
           return channelName == null || channelName.isEmpty;
         }
       }
-      
+
       // If still no info, assume it's empty
       return true;
     } catch (e) {
@@ -953,7 +977,7 @@ class ConnectionProvider with ChangeNotifier {
           return i;
         }
       }
-      
+
       debugPrint('   ❌ All slots (1-${maxChannels - 1}) are in use');
       return null;
     } catch (e) {
@@ -986,7 +1010,7 @@ class ConnectionProvider with ChangeNotifier {
 
       // Determine channel type
       final bool isHashChannel = channelName.startsWith('#');
-      
+
       // Check for duplicate channels
       int? existingSlot;
       if (getChannelInfo != null) {
@@ -998,12 +1022,18 @@ class ConnectionProvider with ChangeNotifier {
             if (existingName != null && existingName.isNotEmpty) {
               // For hash channels (#name), check exact match to prevent duplicates
               if (isHashChannel && existingName == channelName) {
-                debugPrint('  ⚠️  Hash channel "$channelName" already exists in slot $i');
-                throw Exception('Channel "$channelName" already exists. Hash channels cannot be duplicated.');
+                debugPrint(
+                  '  ⚠️  Hash channel "$channelName" already exists in slot $i',
+                );
+                throw Exception(
+                  'Channel "$channelName" already exists. Hash channels cannot be duplicated.',
+                );
               }
               // For private channels, check name match to allow overwrite
               else if (!isHashChannel && existingName == channelName) {
-                debugPrint('  ℹ️  Private channel "$channelName" found in slot $i - will overwrite');
+                debugPrint(
+                  '  ℹ️  Private channel "$channelName" found in slot $i - will overwrite',
+                );
                 existingSlot = i;
                 break;
               }
@@ -1022,7 +1052,9 @@ class ConnectionProvider with ChangeNotifier {
         // Find next empty slot for new channel
         final emptySlot = await findNextEmptyChannelSlot();
         if (emptySlot == null) {
-          throw Exception('All channel slots are in use (maximum 39 custom channels)');
+          throw Exception(
+            'All channel slots are in use (maximum 39 custom channels)',
+          );
         }
         slotIdx = emptySlot;
         debugPrint('  Using empty slot: $slotIdx (new channel)');
@@ -1049,7 +1081,9 @@ class ConnectionProvider with ChangeNotifier {
         secret: secretBytes,
       );
 
-      debugPrint('✅ [Provider] Channel ${existingSlot != null ? 'updated' : 'created'} successfully in slot $slotIdx');
+      debugPrint(
+        '✅ [Provider] Channel ${existingSlot != null ? 'updated' : 'created'} successfully in slot $slotIdx',
+      );
 
       // Small delay to allow the response to propagate
       await Future.delayed(const Duration(milliseconds: 100));
@@ -1088,7 +1122,9 @@ class ConnectionProvider with ChangeNotifier {
       // Delete channel on device (sets empty name and zeroed secret)
       await _bleService.deleteChannel(channelIdx);
 
-      debugPrint('✅ [Provider] Channel deleted successfully from slot $channelIdx');
+      debugPrint(
+        '✅ [Provider] Channel deleted successfully from slot $channelIdx',
+      );
 
       // Small delay to allow the response to propagate
       await Future.delayed(const Duration(milliseconds: 100));
@@ -1169,7 +1205,9 @@ class ConnectionProvider with ChangeNotifier {
       debugPrint(
         '⚠️ [ConnectionProvider] Rate limit hit: $pendingCount pending ACKs (max 7)',
       );
-      debugPrint('⚠️ Firmware only tracks 8 ACKs - waiting for delivery confirmations...');
+      debugPrint(
+        '⚠️ Firmware only tracks 8 ACKs - waiting for delivery confirmations...',
+      );
 
       // Wait briefly for some ACKs to arrive, then proceed anyway
       // (User action shouldn't be blocked forever)
@@ -1304,7 +1342,11 @@ class ConnectionProvider with ChangeNotifier {
         // Track for echo detection
         // The BLE handler will capture the packet via LOG_RX_DATA and associate it
         debugPrint('  Calling trackSentChannelMessage...');
-        _bleService.trackSentChannelMessage(messageId);
+        _bleService.trackSentChannelMessage(
+          messageId,
+          channelIdx: channelIdx,
+          plainText: text,
+        );
         debugPrint('  trackSentChannelMessage completed');
 
         // Small delay to ensure the message is in the MessagesProvider list
@@ -2022,7 +2064,9 @@ class ConnectionProvider with ChangeNotifier {
         // Convert hex string to Uint8List
         final bytes = <int>[];
         for (int i = 0; i < recipientPublicKey.length; i += 2) {
-          bytes.add(int.parse(recipientPublicKey.substring(i, i + 2), radix: 16));
+          bytes.add(
+            int.parse(recipientPublicKey.substring(i, i + 2), radix: 16),
+          );
         }
         return await sendTextMessage(
           contactPublicKey: Uint8List.fromList(bytes),
@@ -2107,7 +2151,9 @@ class ConnectionProvider with ChangeNotifier {
     }
 
     try {
-      debugPrint('🔌 [ConnectionProvider] Connecting to SSE server: $serverUrl');
+      debugPrint(
+        '🔌 [ConnectionProvider] Connecting to SSE server: $serverUrl',
+      );
       _sseClientServerUrl = serverUrl;
 
       // Wire up callbacks
@@ -2122,11 +2168,17 @@ class ConnectionProvider with ChangeNotifier {
       };
 
       _sseClient.onConnectionStateChanged = (isConnected) {
-        debugPrint('🔔 [ConnectionProvider] SSE client connection state changed: $isConnected');
+        debugPrint(
+          '🔔 [ConnectionProvider] SSE client connection state changed: $isConnected',
+        );
         if (isConnected) {
-          debugPrint('✅ [ConnectionProvider] SSE client connected - updating UI state');
+          debugPrint(
+            '✅ [ConnectionProvider] SSE client connected - updating UI state',
+          );
         } else {
-          debugPrint('❌ [ConnectionProvider] SSE client disconnected - updating UI state');
+          debugPrint(
+            '❌ [ConnectionProvider] SSE client disconnected - updating UI state',
+          );
         }
         _deviceInfo = _deviceInfo.copyWith(
           connectionState: isConnected
@@ -2142,15 +2194,21 @@ class ConnectionProvider with ChangeNotifier {
         notifyListeners();
       };
 
-      debugPrint('📌 [ConnectionProvider] SSE callbacks registered, starting connection...');
+      debugPrint(
+        '📌 [ConnectionProvider] SSE callbacks registered, starting connection...',
+      );
       await _sseClient.connect(serverUrl: serverUrl, authToken: authToken);
 
       _connectionMode = ConnectionMode.sseClient;
       notifyListeners();
 
       debugPrint('✅ [ConnectionProvider] Connected to SSE server');
-      debugPrint('📊 [ConnectionProvider] SSE client state: isConnected=${_sseClient.isConnected}');
-      debugPrint('📊 [ConnectionProvider] DeviceInfo state: connectionState=${_deviceInfo.connectionState}, isConnected=${_deviceInfo.isConnected}');
+      debugPrint(
+        '📊 [ConnectionProvider] SSE client state: isConnected=${_sseClient.isConnected}',
+      );
+      debugPrint(
+        '📊 [ConnectionProvider] DeviceInfo state: connectionState=${_deviceInfo.connectionState}, isConnected=${_deviceInfo.isConnected}',
+      );
     } catch (e) {
       _error = 'Failed to connect to SSE server: $e';
       debugPrint('❌ [ConnectionProvider] Failed to connect to SSE server: $e');
@@ -2206,10 +2264,7 @@ class ConnectionProvider with ChangeNotifier {
       throw Exception('Not connected to SSE server');
     }
 
-    await _sseClient.sendChannelMessage(
-      channelIdx: channelIdx,
-      text: text,
-    );
+    await _sseClient.sendChannelMessage(channelIdx: channelIdx, text: text);
   }
 
   /// Get SSE client connection status

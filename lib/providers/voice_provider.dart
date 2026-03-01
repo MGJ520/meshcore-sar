@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/contact.dart';
 import '../utils/voice_message_parser.dart';
 import '../services/voice_codec_service.dart';
 import '../services/voice_player_service.dart';
@@ -32,8 +35,10 @@ class VoiceSession {
 
 /// Manages incoming voice packet sessions and coordinates playback.
 class VoiceProvider with ChangeNotifier {
+  static const String _voiceSessionsStorageKey = 'stored_voice_sessions_v1';
   final VoiceCodecService _codec;
   final VoicePlayerService _player;
+  late final StreamSubscription<void> _playerEventsSub;
 
   /// Active sessions keyed by sessionId.
   final Map<String, VoiceSession> _sessions = {};
@@ -41,18 +46,52 @@ class VoiceProvider with ChangeNotifier {
   /// Currently playing session ID, or null.
   String? _playingSessionId;
 
+  /// Hook for sending a raw voice payload to a destination contact path.
+  Future<void> Function({
+    required Uint8List contactPath,
+    required int contactPathLen,
+    required Uint8List payload,
+  })?
+  sendRawPacketCallback;
+
+  final Map<String, _OutgoingVoiceSession> _outgoingSessions = {};
+
   VoiceProvider({
     required VoiceCodecService codec,
     required VoicePlayerService player,
-  })  : _codec = codec,
-        _player = player;
+  }) : _codec = codec,
+       _player = player {
+    _playerEventsSub = _player.events.listen((_) {
+      if (_playingSessionId != null &&
+          !_player.isPlaying &&
+          _player.duration.inMilliseconds > 0 &&
+          _player.position >= _player.duration) {
+        _playingSessionId = null;
+      }
+      notifyListeners();
+    });
+    _restorePersistedVoiceData();
+  }
 
   // ── Session accessors ────────────────────────────────────────────────────
 
   VoiceSession? session(String sessionId) => _sessions[sessionId];
-  bool isComplete(String sessionId) => _sessions[sessionId]?.isComplete ?? false;
-  bool isPlaying(String sessionId) =>
-      _playingSessionId == sessionId && _player.isPlaying;
+  bool isComplete(String sessionId) =>
+      _sessions[sessionId]?.isComplete ?? false;
+  bool isPlaying(String sessionId) => _playingSessionId == sessionId;
+  Duration get playbackPosition => _player.position;
+  Duration get playbackDuration => _player.duration;
+
+  double playbackProgress(String sessionId) {
+    if (_playingSessionId != sessionId) return 0.0;
+    final totalMs = _player.duration.inMilliseconds;
+    if (totalMs <= 0) return 0.0;
+    final posMs = _player.position.inMilliseconds.clamp(0, totalMs);
+    return posMs / totalMs;
+  }
+
+  bool hasOutgoingSession(String sessionId) =>
+      _outgoingSessions.containsKey(sessionId);
 
   // ── Packet reception ─────────────────────────────────────────────────────
 
@@ -74,8 +113,59 @@ class VoiceProvider with ChangeNotifier {
     }
 
     final justComplete = session.isComplete;
+    _persistVoiceData();
     notifyListeners();
     return justComplete;
+  }
+
+  /// Cache encoded packets for deferred voice serving.
+  void cacheOutgoingSession(String sessionId, List<VoicePacket> packets) {
+    if (packets.isEmpty) return;
+    _outgoingSessions[sessionId] = _OutgoingVoiceSession(
+      sessionId: sessionId,
+      packets: List<VoicePacket>.from(packets),
+    );
+    _persistVoiceData();
+  }
+
+  /// Stream a cached voice session to a requester over raw direct packets.
+  Future<bool> serveSessionTo({
+    required String sessionId,
+    required Contact requester,
+  }) async {
+    final cached = _outgoingSessions[sessionId];
+    if (cached == null) {
+      debugPrint(
+        '⚠️ [VoiceProvider] No cached outgoing session for $sessionId',
+      );
+      return false;
+    }
+    if (sendRawPacketCallback == null) {
+      debugPrint('⚠️ [VoiceProvider] sendRawPacketCallback is not set');
+      return false;
+    }
+    if (requester.outPathLen < 0) {
+      debugPrint(
+        '⚠️ [VoiceProvider] Requester ${requester.advName} has no direct path',
+      );
+      return false;
+    }
+
+    for (final packet in cached.packets) {
+      try {
+        await sendRawPacketCallback!(
+          contactPath: requester.outPath,
+          contactPathLen: requester.outPathLen,
+          payload: packet.encodeBinary(),
+        );
+      } catch (e, st) {
+        debugPrint(
+          '❌ [VoiceProvider] Failed serving packet for $sessionId: $e\n$st',
+        );
+        return false;
+      }
+    }
+    return true;
   }
 
   // ── Playback ─────────────────────────────────────────────────────────────
@@ -85,11 +175,15 @@ class VoiceProvider with ChangeNotifier {
   Future<void> play(String sessionId) async {
     final session = _sessions[sessionId];
     if (session == null) {
-      debugPrint('❌ [VoiceProvider] play($sessionId) — session not found, known: ${_sessions.keys.toList()}');
+      debugPrint(
+        '❌ [VoiceProvider] play($sessionId) — session not found, known: ${_sessions.keys.toList()}',
+      );
       return;
     }
 
-    debugPrint('🎙️ [VoiceProvider] play($sessionId): ${session.receivedCount}/${session.total} packets, mode=${session.mode.label}');
+    debugPrint(
+      '🎙️ [VoiceProvider] play($sessionId): ${session.receivedCount}/${session.total} packets, mode=${session.mode.label}',
+    );
 
     try {
       final pcm = await _codec.decodePackets(session.packets, session.mode);
@@ -99,7 +193,6 @@ class VoiceProvider with ChangeNotifier {
       await _player.play(pcm);
     } catch (e, st) {
       debugPrint('❌ [VoiceProvider] Playback error: $e\n$st');
-    } finally {
       if (_playingSessionId == sessionId) {
         _playingSessionId = null;
         notifyListeners();
@@ -113,9 +206,127 @@ class VoiceProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> clearStoredVoiceData() async {
+    _sessions.clear();
+    _outgoingSessions.clear();
+    _playingSessionId = null;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_voiceSessionsStorageKey);
+    } catch (e) {
+      debugPrint('❌ [VoiceProvider] Failed to clear stored voice data: $e');
+    }
+  }
+
+  Future<void> _persistVoiceData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = <String, dynamic>{
+        'incoming': _sessions.values
+            .map(
+              (session) => {
+                'sessionId': session.sessionId,
+                'modeId': session.mode.id,
+                'total': session.total,
+                'packets': session.packets
+                    .map((p) => p?.encodeText())
+                    .toList(),
+              },
+            )
+            .toList(),
+        'outgoing': _outgoingSessions.values
+            .map(
+              (session) => {
+                'sessionId': session.sessionId,
+                'packets': session.packets.map((p) => p.encodeText()).toList(),
+              },
+            )
+            .toList(),
+      };
+      await prefs.setString(_voiceSessionsStorageKey, jsonEncode(payload));
+    } catch (e) {
+      debugPrint('❌ [VoiceProvider] Failed to persist voice data: $e');
+    }
+  }
+
+  Future<void> _restorePersistedVoiceData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_voiceSessionsStorageKey);
+      if (raw == null || raw.isEmpty) return;
+
+      final parsed = jsonDecode(raw) as Map<String, dynamic>;
+
+      final incoming = parsed['incoming'] as List<dynamic>? ?? const [];
+      for (final item in incoming) {
+        final map = item as Map<String, dynamic>;
+        final sessionId = map['sessionId'] as String?;
+        final modeId = map['modeId'] as int?;
+        final total = map['total'] as int?;
+        if (sessionId == null || modeId == null || total == null || total <= 0) {
+          continue;
+        }
+        final mode = VoicePacketMode.fromId(modeId);
+        final session = VoiceSession(
+          sessionId: sessionId,
+          mode: mode,
+          total: total,
+        );
+        final packets = map['packets'] as List<dynamic>? ?? const [];
+        for (var i = 0; i < packets.length && i < session.total; i++) {
+          final encoded = packets[i] as String?;
+          if (encoded == null || encoded.isEmpty) continue;
+          final packet = VoicePacket.tryParseText(encoded);
+          if (packet != null && packet.index < session.total) {
+            session.packets[packet.index] = packet;
+          }
+        }
+        _sessions[sessionId] = session;
+      }
+
+      final outgoing = parsed['outgoing'] as List<dynamic>? ?? const [];
+      for (final item in outgoing) {
+        final map = item as Map<String, dynamic>;
+        final sessionId = map['sessionId'] as String?;
+        if (sessionId == null || sessionId.isEmpty) continue;
+        final packetsRaw = map['packets'] as List<dynamic>? ?? const [];
+        final packets = <VoicePacket>[];
+        for (final encoded in packetsRaw) {
+          final packet = VoicePacket.tryParseText((encoded ?? '') as String);
+          if (packet != null) packets.add(packet);
+        }
+        if (packets.isNotEmpty) {
+          _outgoingSessions[sessionId] = _OutgoingVoiceSession(
+            sessionId: sessionId,
+            packets: packets,
+          );
+        }
+      }
+
+      notifyListeners();
+      debugPrint(
+        '🎙️ [VoiceProvider] Restored ${_sessions.length} incoming and ${_outgoingSessions.length} outgoing voice sessions',
+      );
+    } catch (e) {
+      debugPrint('❌ [VoiceProvider] Failed to restore voice data: $e');
+    }
+  }
+
   @override
   void dispose() {
+    _playerEventsSub.cancel();
     _player.dispose();
     super.dispose();
   }
+}
+
+class _OutgoingVoiceSession {
+  final String sessionId;
+  final List<VoicePacket> packets;
+
+  const _OutgoingVoiceSession({
+    required this.sessionId,
+    required this.packets,
+  });
 }

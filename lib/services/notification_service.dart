@@ -69,7 +69,7 @@ class NotificationService {
 
       // Initialize plugin
       await _notificationsPlugin.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: _onNotificationResponse,
       );
 
@@ -286,10 +286,10 @@ class NotificationService {
 
       // Show notification
       await _notificationsPlugin.show(
-        notificationId,
-        title,
-        body,
-        notificationDetails,
+        id: notificationId,
+        title: title,
+        body: body,
+        notificationDetails: notificationDetails,
         payload: 'sar:${type.name}:$coordinates',
       );
 
@@ -457,10 +457,10 @@ class NotificationService {
 
       // Show notification
       await _notificationsPlugin.show(
-        notificationId,
-        title,
-        body,
-        notificationDetails,
+        id: notificationId,
+        title: title,
+        body: body,
+        notificationDetails: notificationDetails,
         payload: 'message:${isChannelMessage ? "channel" : "contact"}',
       );
 
@@ -487,7 +487,7 @@ class NotificationService {
   /// Cancel specific notification
   Future<void> cancel(int id) async {
     try {
-      await _notificationsPlugin.cancel(id);
+      await _notificationsPlugin.cancel(id: id);
       debugPrint('✅ [NotificationService] Cancelled notification: $id');
     } catch (e) {
       debugPrint('❌ [NotificationService] Error canceling notification: $e');
@@ -601,10 +601,10 @@ class NotificationService {
 
       // Show notification
       await _notificationsPlugin.show(
-        _updateNotificationId,
-        title,
-        body,
-        notificationDetails,
+        id: _updateNotificationId,
+        title: title,
+        body: body,
+        notificationDetails: notificationDetails,
         payload: 'update:$downloadUrl',
       );
 

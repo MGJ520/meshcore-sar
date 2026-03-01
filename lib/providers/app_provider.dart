@@ -35,6 +35,11 @@ class AppProvider with ChangeNotifier {
   bool _isMapEnabled = true;
   bool get isMapEnabled => _isMapEnabled;
 
+  bool _isVoiceSilenceTrimmingEnabled = true;
+  bool get isVoiceSilenceTrimmingEnabled => _isVoiceSilenceTrimmingEnabled;
+  bool _isVoiceBandPassFilterEnabled = true;
+  bool get isVoiceBandPassFilterEnabled => _isVoiceBandPassFilterEnabled;
+
   AppProvider({
     required this.connectionProvider,
     required this.contactsProvider,
@@ -49,6 +54,8 @@ class AppProvider with ChangeNotifier {
     _initializeLocationTracking();
     _loadSimpleMode();
     _loadMapEnabled();
+    _loadVoiceSilenceTrimmingEnabled();
+    _loadVoiceBandPassFilterEnabled();
     _syncDrawingsOnStartup(); // Sync drawings immediately after providers load
     _isInitialized = true;
   }
@@ -118,6 +125,54 @@ class AppProvider with ChangeNotifier {
     }
   }
 
+  /// Load voice silence trimming setting from shared preferences.
+  Future<void> _loadVoiceSilenceTrimmingEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isVoiceSilenceTrimmingEnabled =
+          prefs.getBool('voice_silence_trimming_enabled') ?? true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading voice silence trimming setting: $e');
+    }
+  }
+
+  /// Toggle voice silence trimming on/off.
+  Future<void> toggleVoiceSilenceTrimmingEnabled(bool enabled) async {
+    try {
+      _isVoiceSilenceTrimmingEnabled = enabled;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('voice_silence_trimming_enabled', enabled);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving voice silence trimming setting: $e');
+    }
+  }
+
+  /// Load voice band-pass filter setting from shared preferences.
+  Future<void> _loadVoiceBandPassFilterEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isVoiceBandPassFilterEnabled =
+          prefs.getBool('voice_band_pass_filter_enabled') ?? true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading voice band-pass filter setting: $e');
+    }
+  }
+
+  /// Toggle voice band-pass filter on/off.
+  Future<void> toggleVoiceBandPassFilterEnabled(bool enabled) async {
+    try {
+      _isVoiceBandPassFilterEnabled = enabled;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('voice_band_pass_filter_enabled', enabled);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving voice band-pass filter setting: $e');
+    }
+  }
+
   /// Initialize tile cache service
   Future<void> _initializeTileCache() async {
     try {
@@ -165,6 +220,20 @@ class AppProvider with ChangeNotifier {
   void _setupCallbacks() {
     // Monitor connection state changes to start/stop location tracking
     connectionProvider.addListener(_handleConnectionStateChange);
+
+    voiceProvider.sendRawPacketCallback =
+        ({
+          required Uint8List contactPath,
+          required int contactPathLen,
+          required Uint8List payload,
+        }) async {
+          await connectionProvider.sendRawVoicePacket(
+            contactPath: contactPath,
+            contactPathLen: contactPathLen,
+            payload: payload,
+          );
+        };
+
     // When a contact is received from BLE
     connectionProvider.onContactReceived = (contact) {
       // Pass device public key to filter out our own contact
@@ -300,6 +369,43 @@ class AppProvider with ChangeNotifier {
         }
       }
 
+      // Voice control plane: request sender to stream raw voice packets.
+      final voiceFetchRequest = VoiceFetchRequest.tryParseText(
+        enrichedMessage.text,
+      );
+      if (voiceFetchRequest != null) {
+        final senderPrefix = enrichedMessage.senderPublicKeyPrefix;
+        if (senderPrefix == null) {
+          debugPrint(
+            '⚠️ [AppProvider] Voice fetch request without sender prefix',
+          );
+          return;
+        }
+        final senderPrefixHex = senderPrefix
+            .take(6)
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join('');
+        if (senderPrefixHex.toLowerCase() !=
+            voiceFetchRequest.requesterKey6.toLowerCase()) {
+          debugPrint('⚠️ [AppProvider] Voice fetch requester key mismatch');
+          return;
+        }
+        final requester = contactsProvider.findContactByPrefix(senderPrefix);
+        if (requester == null) {
+          debugPrint(
+            '⚠️ [AppProvider] Voice fetch requester contact not found',
+          );
+          return;
+        }
+        unawaited(
+          voiceProvider.serveSessionTo(
+            sessionId: voiceFetchRequest.sessionId,
+            requester: requester,
+          ),
+        );
+        return;
+      }
+
       // Check if message is a drawing broadcast
       if (DrawingMessageParser.isDrawingMessage(enrichedMessage.text)) {
         debugPrint('🎨 [AppProvider] Drawing message received, parsing...');
@@ -336,6 +442,33 @@ class AppProvider with ChangeNotifier {
         } else {
           debugPrint('⚠️ [AppProvider] Failed to parse drawing message');
         }
+        return;
+      }
+
+      // Voice envelope message (new public/direct on-demand format).
+      final voiceEnvelope = VoiceEnvelope.tryParseText(enrichedMessage.text);
+      if (voiceEnvelope != null) {
+        enrichedMessage = enrichedMessage.copyWith(
+          isVoice: true,
+          voiceId: voiceEnvelope.sessionId,
+        );
+        messagesProvider.addMessage(
+          enrichedMessage,
+          contactLookup: (name) {
+            try {
+              final contact = contactsProvider.contacts.firstWhere(
+                (c) => c.advName == name,
+              );
+              return contact.publicKeyHex.isNotEmpty &&
+                      contact.publicKeyHex.length >= 12
+                  ? contact.publicKeyHex.substring(0, 12)
+                  : '';
+            } catch (_) {
+              return '';
+            }
+          },
+        );
+        connectionProvider.broadcastMessageToSseClients(enrichedMessage);
         return;
       }
 
@@ -726,13 +859,16 @@ class AppProvider with ChangeNotifier {
   ///
   /// Binary voice packets arrive without a chat message, so we synthesise one
   /// to give the user a playable bubble in the message list.
-  void _handleIncomingVoicePacket(VoicePacket pkt, {required bool justComplete}) {
+  void _handleIncomingVoicePacket(
+    VoicePacket pkt, {
+    required bool justComplete,
+  }) {
     final sessionId = pkt.sessionId;
 
     // Check if a placeholder for this session already exists
-    final existing = messagesProvider.messages.where(
-      (m) => m.isVoice && m.voiceId == sessionId,
-    ).firstOrNull;
+    final existing = messagesProvider.messages
+        .where((m) => m.isVoice && m.voiceId == sessionId)
+        .firstOrNull;
 
     if (existing != null) {
       // Already have a placeholder — no need to add another
@@ -748,7 +884,9 @@ class AppProvider with ChangeNotifier {
       pathLen: 0,
       textType: MessageTextType.plain,
       senderTimestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      text: '', // no text — displayed as VoiceMessageBubble
+      // Persist the first real packet in legacy V: text form so UI/debug paths
+      // can reconstruct packet metadata from actual data.
+      text: pkt.encodeText(),
       receivedAt: DateTime.now(),
       deliveryStatus: MessageDeliveryStatus.received,
       isVoice: true,
@@ -845,6 +983,7 @@ class AppProvider with ChangeNotifier {
   void clearAllData() {
     contactsProvider.clearContacts();
     messagesProvider.clearAll();
+    unawaited(voiceProvider.clearStoredVoiceData());
     notifyListeners();
   }
 

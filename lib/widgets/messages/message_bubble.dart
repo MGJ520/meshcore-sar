@@ -11,12 +11,14 @@ import '../../providers/messages_provider.dart';
 import '../../providers/contacts_provider.dart';
 import '../../providers/connection_provider.dart';
 import '../../providers/drawing_provider.dart';
+import '../../providers/voice_provider.dart';
 import '../contacts/direct_message_sheet.dart';
 import '../drawing_minimap_preview.dart';
 import '../../services/sar_template_service.dart';
 import '../../utils/toast_logger.dart';
 import '../../utils/sar_message_parser.dart';
 import '../../utils/key_comparison.dart';
+import '../../utils/voice_message_parser.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/message_extensions.dart';
 import 'voice_message_bubble.dart';
@@ -264,6 +266,15 @@ class _MessageBubbleState extends State<MessageBubble> {
                   _hideDrawingFromMap(context);
                 },
               ),
+            // Technical details option
+            ListTile(
+              leading: const Icon(Icons.data_object),
+              title: const Text('Technical details'),
+              onTap: () {
+                Navigator.pop(context);
+                _showTechnicalDetails(context);
+              },
+            ),
             // Delete message option
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
@@ -279,6 +290,534 @@ class _MessageBubbleState extends State<MessageBubble> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showTechnicalDetails(BuildContext context) {
+    final connectionProvider = context.read<ConnectionProvider>();
+    final contactsProvider = context.read<ContactsProvider>();
+    final voiceProvider = context.read<VoiceProvider>();
+    final selfPublicKey = connectionProvider.deviceInfo.publicKey;
+    final isOwnMessage =
+        widget.message.isSentMessage ||
+        widget.message.isFromSelf(selfPublicKey);
+
+    String? senderName;
+    if (widget.message.senderPublicKeyPrefix != null) {
+      final senderKeyHex = widget.message.senderPublicKeyPrefix!
+          .sublist(
+            0,
+            widget.message.senderPublicKeyPrefix!.length < 6
+                ? widget.message.senderPublicKeyPrefix!.length
+                : 6,
+          )
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join('');
+      final senderContact = contactsProvider.contacts
+          .where((c) => c.publicKeyHex.startsWith(senderKeyHex))
+          .firstOrNull;
+      senderName = senderContact?.advName;
+    }
+
+    String? recipientName;
+    if (widget.message.recipientPublicKey != null) {
+      final recipientKeyHex = widget.message.recipientPublicKey!
+          .sublist(
+            0,
+            widget.message.recipientPublicKey!.length < 6
+                ? widget.message.recipientPublicKey!.length
+                : 6,
+          )
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join('');
+      final recipientContact = contactsProvider.contacts
+          .where((c) => c.publicKeyHex.startsWith(recipientKeyHex))
+          .firstOrNull;
+      recipientName = recipientContact?.advName;
+    }
+
+    final envelope = VoiceEnvelope.tryParseText(widget.message.text);
+    final legacyVoicePacket = VoicePacket.tryParseText(widget.message.text);
+    final voiceSession = widget.message.voiceId != null
+        ? voiceProvider.session(widget.message.voiceId!)
+        : null;
+
+    final senderPrefixHex = widget.message.senderPublicKeyPrefix
+        ?.map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join('');
+    final recipientKey = widget.message.recipientPublicKey;
+    final recipientPrefixHex = recipientKey
+        ?.sublist(0, recipientKey.length < 6 ? recipientKey.length : 6)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join('');
+    final snrDb = widget.message.lastEchoSnrRaw != null
+        ? (widget.message.lastEchoSnrRaw!.toSigned(8) / 4.0)
+        : null;
+
+    final rawLines = <String>[
+      'Message ID: ${widget.message.id}',
+      'Type: ${widget.message.messageType.name}',
+      'Text type: ${widget.message.textType.name}',
+      'Own message: $isOwnMessage',
+      'Sent message: ${widget.message.isSentMessage}',
+      'Read: ${widget.message.isRead}',
+      'Status: ${widget.message.deliveryStatus.name}',
+      'Path length (nodes/hops): ${widget.message.pathLen}',
+      'Sender timestamp: ${widget.message.senderTimestamp} (${widget.message.sentAt.toIso8601String()})',
+      'Received at: ${widget.message.receivedAt.toIso8601String()}',
+      'Channel index: ${widget.message.channelIdx ?? '-'}',
+      'Echo count: ${widget.message.echoCount}',
+      'Last echo RSSI: ${widget.message.lastEchoRssiDbm ?? '-'}',
+      'Last echo SNR: ${snrDb?.toStringAsFixed(2) ?? '-'}',
+      'Expected ACK tag: ${widget.message.expectedAckTag ?? '-'}',
+      'Suggested timeout ms: ${widget.message.suggestedTimeoutMs ?? '-'}',
+      'Round-trip ms: ${widget.message.roundTripTimeMs ?? '-'}',
+      'Retry attempt: ${widget.message.retryAttempt}',
+      'Used flood fallback: ${widget.message.usedFloodFallback}',
+      'Sender key prefix: ${senderPrefixHex ?? '-'}',
+      'Sender name: ${senderName ?? widget.message.senderName ?? '-'}',
+      'Recipient key prefix: ${recipientPrefixHex ?? '-'}',
+      'Recipient name: ${recipientName ?? '-'}',
+      'Drawing flag: ${widget.message.isDrawing}',
+      'Drawing ID: ${widget.message.drawingId ?? '-'}',
+      'SAR flag: ${widget.message.isSarMarker}',
+      'Voice flag: ${widget.message.isVoice}',
+      'Voice ID: ${widget.message.voiceId ?? '-'}',
+      'Text length: ${widget.message.text.length}',
+    ];
+
+    if (widget.message.isVoice) {
+      rawLines.add('--- Voice Technical ---');
+      if (envelope != null) {
+        rawLines.add('Envelope format: VE1 compact');
+        rawLines.add(
+          'Voice mode: ${envelope.mode.label} (id=${envelope.mode.id})',
+        );
+        rawLines.add('Segments total (envelope): ${envelope.total}');
+        rawLines.add(
+          'Estimated duration ms (envelope): ${envelope.durationMs}',
+        );
+        rawLines.add('Envelope senderKey6: ${envelope.senderKey6}');
+        rawLines.add('Envelope ts: ${envelope.timestampSec}');
+        rawLines.add('Envelope ver: ${envelope.version}');
+      } else if (legacyVoicePacket != null) {
+        rawLines.add('Envelope format: legacy V packet');
+        rawLines.add(
+          'Legacy segment index/total: ${legacyVoicePacket.index + 1}/${legacyVoicePacket.total}',
+        );
+        rawLines.add(
+          'Legacy codec mode: ${legacyVoicePacket.mode.label} (id=${legacyVoicePacket.mode.id})',
+        );
+      } else {
+        rawLines.add('Envelope format: unknown');
+      }
+
+      if (voiceSession != null) {
+        rawLines.add('Session present locally: yes');
+        rawLines.add('Session mode: ${voiceSession.mode.label}');
+        rawLines.add(
+          'Session segments received/total: ${voiceSession.receivedCount}/${voiceSession.total}',
+        );
+        rawLines.add('Session complete: ${voiceSession.isComplete}');
+        rawLines.add(
+          'Session estimated duration s: ${voiceSession.estimatedDurationSeconds.toStringAsFixed(2)}',
+        );
+      } else {
+        rawLines.add('Session present locally: no');
+      }
+    }
+
+    void copyField(String label, String value) {
+      Clipboard.setData(ClipboardData(text: value));
+      ToastLogger.success(context, '$label copied');
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Message technical details'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _techBadge(
+                      context,
+                      icon: Icons.message,
+                      label: widget.message.messageType.name.toUpperCase(),
+                    ),
+                    _techBadge(
+                      context,
+                      icon: Icons.route,
+                      label:
+                          '${widget.message.pathLen} hop${widget.message.pathLen == 1 ? '' : 's'}',
+                    ),
+                    _techBadge(
+                      context,
+                      icon: Icons.account_tree_outlined,
+                      label:
+                          '${widget.message.echoCount} node${widget.message.echoCount == 1 ? '' : 's'}',
+                    ),
+                    if (widget.message.channelIdx != null)
+                      _techBadge(
+                        context,
+                        icon: Icons.group_work,
+                        label: 'CH ${widget.message.channelIdx}',
+                      ),
+                  ],
+                ),
+                if (widget.message.lastEchoRssiDbm != null ||
+                    snrDb != null) ...[
+                  const SizedBox(height: 12),
+                  _techSection(
+                    context,
+                    icon: Icons.network_check,
+                    title: 'Link quality',
+                    child: Column(
+                      children: [
+                        if (widget.message.lastEchoRssiDbm != null)
+                          _signalRow(
+                            context,
+                            label: 'RSSI',
+                            valueLabel: '${widget.message.lastEchoRssiDbm} dBm',
+                            normalized:
+                                ((widget.message.lastEchoRssiDbm!.toDouble() +
+                                            120.0) /
+                                        70.0)
+                                    .clamp(0.0, 1.0),
+                            color: widget.message.lastEchoRssiDbm! >= -80
+                                ? Colors.green
+                                : widget.message.lastEchoRssiDbm! >= -95
+                                ? Colors.amber
+                                : Colors.redAccent,
+                          ),
+                        if (snrDb != null) ...[
+                          const SizedBox(height: 8),
+                          _signalRow(
+                            context,
+                            label: 'SNR',
+                            valueLabel: '${snrDb.toStringAsFixed(1)} dB',
+                            normalized: ((snrDb + 20.0) / 40.0).clamp(0.0, 1.0),
+                            color: snrDb >= 10
+                                ? Colors.green
+                                : snrDb >= 0
+                                ? Colors.amber
+                                : Colors.redAccent,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _techSection(
+                  context,
+                  icon: Icons.tune,
+                  title: 'Delivery',
+                  child: Column(
+                    children: [
+                      _detailRow(
+                        context,
+                        label: 'Status',
+                        value: widget.message.deliveryStatus.name,
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Expected ACK tag',
+                        value: widget.message.expectedAckTag?.toString() ?? '-',
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Round-trip',
+                        value: widget.message.roundTripTimeMs != null
+                            ? '${widget.message.roundTripTimeMs} ms'
+                            : '-',
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Retry attempt',
+                        value: widget.message.retryAttempt.toString(),
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Flood fallback',
+                        value: widget.message.usedFloodFallback ? 'Yes' : 'No',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _techSection(
+                  context,
+                  icon: Icons.badge,
+                  title: 'Identity',
+                  child: Column(
+                    children: [
+                      _detailRow(
+                        context,
+                        label: 'Message ID',
+                        value: widget.message.id,
+                        onCopy: () =>
+                            copyField('Message ID', widget.message.id),
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Sender',
+                        value: senderName ?? widget.message.senderName ?? '-',
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Sender key',
+                        value: senderPrefixHex ?? '-',
+                        onCopy: senderPrefixHex != null
+                            ? () => copyField('Sender key', senderPrefixHex)
+                            : null,
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Recipient',
+                        value: recipientName ?? '-',
+                      ),
+                      _detailRow(
+                        context,
+                        label: 'Recipient key',
+                        value: recipientPrefixHex ?? '-',
+                        onCopy: recipientPrefixHex != null
+                            ? () =>
+                                  copyField('Recipient key', recipientPrefixHex)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+                if (widget.message.isVoice) ...[
+                  const SizedBox(height: 12),
+                  _techSection(
+                    context,
+                    icon: Icons.graphic_eq,
+                    title: 'Voice',
+                    child: Column(
+                      children: [
+                        _detailRow(
+                          context,
+                          label: 'Voice ID',
+                          value: widget.message.voiceId ?? '-',
+                        ),
+                        _detailRow(
+                          context,
+                          label: 'Envelope',
+                          value: envelope != null
+                              ? 'VE1 compact'
+                              : legacyVoicePacket != null
+                              ? 'Legacy V packet'
+                              : 'Unknown',
+                        ),
+                        if (voiceSession != null)
+                          _detailRow(
+                            context,
+                            label: 'Session progress',
+                            value:
+                                '${voiceSession.receivedCount}/${voiceSession.total} segments',
+                          ),
+                        if (voiceSession != null)
+                          _detailRow(
+                            context,
+                            label: 'Complete',
+                            value: voiceSession.isComplete ? 'Yes' : 'No',
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  title: const Text(
+                    'Raw dump',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SelectableText(
+                        rawLines.join('\n'),
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context)!.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _techSection(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _techBadge(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(
+    BuildContext context, {
+    required String label,
+    required String value,
+    VoidCallback? onCopy,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+            ),
+          ),
+          if (onCopy != null)
+            IconButton(
+              onPressed: onCopy,
+              icon: const Icon(Icons.copy, size: 14),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Copy $label',
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _signalRow(
+    BuildContext context, {
+    required String label,
+    required String valueLabel,
+    required double normalized,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 42,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: normalized,
+              backgroundColor: color.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 74,
+          child: Text(
+            valueLabel,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
   }
 
@@ -592,6 +1131,177 @@ class _MessageBubbleState extends State<MessageBubble> {
         return Colors.red;
       case MessageDeliveryStatus.received:
         return Colors.grey;
+    }
+  }
+
+  Widget _buildChannelEchoStatus(BuildContext context, Message message) {
+    final statusColor = _getDeliveryStatusColor(message.deliveryStatus);
+    final hasEcho = message.echoCount > 0;
+
+    if (!hasEcho) {
+      return Text(
+        message.getLocalizedDeliveryStatus(context),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: statusColor,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    final rssi = message.lastEchoRssiDbm;
+    final snr = message.lastEchoSnrRaw != null
+        ? message.lastEchoSnrRaw!.toSigned(8) / 4.0
+        : null;
+    final quality = _linkQualityLabel(rssi, snr);
+    final qualityColor = _linkQualityColor(quality);
+
+    return Wrap(
+      spacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _techChip(
+          context,
+          icon: Icons.hub_outlined,
+          label: 'x${message.echoCount}',
+          color: statusColor,
+        ),
+        if (message.expectedAckTag != null)
+          _techChip(
+            context,
+            icon: Icons.tag,
+            label:
+                'ACK ${message.expectedAckTag!.toRadixString(16).toUpperCase()}',
+            color: Colors.indigo,
+          ),
+        _techChip(
+          context,
+          icon: Icons.bolt,
+          label: quality,
+          color: qualityColor,
+        ),
+        if (message.lastEchoRssiDbm != null)
+          _signalCapsule(
+            context,
+            icon: Icons.network_cell,
+            label: message.lastEchoRssiDbm!.toString(),
+            filled: _rssiScore(message.lastEchoRssiDbm!),
+            color: Colors.blueGrey,
+          ),
+        if (message.lastEchoSnrRaw != null)
+          _signalCapsule(
+            context,
+            icon: Icons.graphic_eq,
+            label: (message.lastEchoSnrRaw!.toSigned(8) / 4.0).toStringAsFixed(
+              1,
+            ),
+            filled: _snrScore(message.lastEchoSnrRaw!.toSigned(8) / 4.0),
+            color: Colors.teal,
+          ),
+      ],
+    );
+  }
+
+  Widget _techChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 2),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _signalCapsule(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required int filled,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(5, (i) {
+              final active = i < filled;
+              return Container(
+                width: 3,
+                height: (4 + i).toDouble(),
+                margin: const EdgeInsets.symmetric(horizontal: 0.5),
+                decoration: BoxDecoration(
+                  color: active ? color : color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _rssiScore(int rssiDbm) => ((rssiDbm + 120) / 10).round().clamp(0, 5);
+
+  int _snrScore(double snrDb) => ((snrDb + 5.0) / 5.0).round().clamp(0, 5);
+
+  String _linkQualityLabel(int? rssiDbm, double? snrDb) {
+    var score = 0;
+    if (rssiDbm != null) score += _rssiScore(rssiDbm);
+    if (snrDb != null) score += _snrScore(snrDb);
+    if (score >= 8) return 'Excellent';
+    if (score >= 6) return 'Good';
+    if (score >= 4) return 'Fair';
+    return 'Weak';
+  }
+
+  Color _linkQualityColor(String quality) {
+    switch (quality) {
+      case 'Excellent':
+        return Colors.green;
+      case 'Good':
+        return Colors.lightGreen;
+      case 'Fair':
+        return Colors.orange;
+      default:
+        return Colors.redAccent;
     }
   }
 
@@ -1265,7 +1975,7 @@ class _MessageBubbleState extends State<MessageBubble> {
               // Show single message delivery status
               else
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.max,
                   children: [
                     Icon(
                       _getDeliveryStatusIcon(message.deliveryStatus),
@@ -1273,11 +1983,26 @@ class _MessageBubbleState extends State<MessageBubble> {
                       color: _getDeliveryStatusColor(message.deliveryStatus),
                     ),
                     const SizedBox(width: 3),
-                    Text(
-                      message.getLocalizedDeliveryStatus(context),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: _getDeliveryStatusColor(message.deliveryStatus),
-                        fontStyle: FontStyle.italic,
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child:
+                            message.isChannelMessage &&
+                                message.deliveryStatus ==
+                                    MessageDeliveryStatus.sent
+                            ? _buildChannelEchoStatus(context, message)
+                            : Text(
+                                message.getLocalizedDeliveryStatus(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: _getDeliveryStatusColor(
+                                        message.deliveryStatus,
+                                      ),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                              ),
                       ),
                     ),
                     // Show retry button for failed messages

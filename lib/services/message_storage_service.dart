@@ -133,20 +133,30 @@ class MessageStorageService {
       // Echo detection for channel messages
       'echoCount': message.echoCount,
       'firstEchoAtMillis': message.firstEchoAt?.millisecondsSinceEpoch,
+      'lastEchoSnrRaw': message.lastEchoSnrRaw,
+      'lastEchoRssiDbm': message.lastEchoRssiDbm,
+      'lastEchoAtMillis': message.lastEchoAt?.millisecondsSinceEpoch,
       // Drawing message tracking
       'isDrawing': message.isDrawing,
       'drawingId': message.drawingId,
+      // Voice message tracking
+      'isVoice': message.isVoice,
+      'voiceId': message.voiceId,
       // Message grouping (for bulk sends)
       'groupId': message.groupId,
-      'recipients': message.recipients?.map((r) => {
-        'publicKey': base64Encode(r.publicKey),
-        'displayName': r.displayName,
-        'deliveryStatus': r.deliveryStatus.name,
-        'expectedAckTag': r.expectedAckTag,
-        'roundTripTimeMs': r.roundTripTimeMs,
-        'deliveredAtMillis': r.deliveredAt?.millisecondsSinceEpoch,
-        'sentAtMillis': r.sentAt.millisecondsSinceEpoch,
-      }).toList(),
+      'recipients': message.recipients
+          ?.map(
+            (r) => {
+              'publicKey': base64Encode(r.publicKey),
+              'displayName': r.displayName,
+              'deliveryStatus': r.deliveryStatus.name,
+              'expectedAckTag': r.expectedAckTag,
+              'roundTripTimeMs': r.roundTripTimeMs,
+              'deliveredAtMillis': r.deliveredAt?.millisecondsSinceEpoch,
+              'sentAtMillis': r.sentAt.millisecondsSinceEpoch,
+            },
+          )
+          .toList(),
     };
   }
 
@@ -216,34 +226,46 @@ class MessageStorageService {
                 json['firstEchoAtMillis'] as int,
               )
             : null,
+        lastEchoSnrRaw: json['lastEchoSnrRaw'] as int?,
+        lastEchoRssiDbm: json['lastEchoRssiDbm'] as int?,
+        lastEchoAt: json['lastEchoAtMillis'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                json['lastEchoAtMillis'] as int,
+              )
+            : null,
         // Drawing message tracking
         isDrawing: json['isDrawing'] as bool? ?? false,
         drawingId: json['drawingId'] as String?,
+        // Voice message tracking
+        isVoice: json['isVoice'] as bool? ?? false,
+        voiceId: json['voiceId'] as String?,
         // Message grouping
         groupId: json['groupId'] as String?,
         recipients: json['recipients'] != null
             ? (json['recipients'] as List<dynamic>)
-                .map((r) => MessageRecipient(
-                  publicKey: Uint8List.fromList(
-                    base64Decode(r['publicKey'] as String),
-                  ),
-                  displayName: r['displayName'] as String,
-                  deliveryStatus: MessageDeliveryStatus.values.firstWhere(
-                    (e) => e.name == r['deliveryStatus'],
-                    orElse: () => MessageDeliveryStatus.sending,
-                  ),
-                  expectedAckTag: r['expectedAckTag'] as int?,
-                  roundTripTimeMs: r['roundTripTimeMs'] as int?,
-                  deliveredAt: r['deliveredAtMillis'] != null
-                      ? DateTime.fromMillisecondsSinceEpoch(
-                          r['deliveredAtMillis'] as int,
-                        )
-                      : null,
-                  sentAt: DateTime.fromMillisecondsSinceEpoch(
-                    r['sentAtMillis'] as int,
-                  ),
-                ))
-                .toList()
+                  .map(
+                    (r) => MessageRecipient(
+                      publicKey: Uint8List.fromList(
+                        base64Decode(r['publicKey'] as String),
+                      ),
+                      displayName: r['displayName'] as String,
+                      deliveryStatus: MessageDeliveryStatus.values.firstWhere(
+                        (e) => e.name == r['deliveryStatus'],
+                        orElse: () => MessageDeliveryStatus.sending,
+                      ),
+                      expectedAckTag: r['expectedAckTag'] as int?,
+                      roundTripTimeMs: r['roundTripTimeMs'] as int?,
+                      deliveredAt: r['deliveredAtMillis'] != null
+                          ? DateTime.fromMillisecondsSinceEpoch(
+                              r['deliveredAtMillis'] as int,
+                            )
+                          : null,
+                      sentAt: DateTime.fromMillisecondsSinceEpoch(
+                        r['sentAtMillis'] as int,
+                      ),
+                    ),
+                  )
+                  .toList()
             : null,
       );
     } catch (e) {

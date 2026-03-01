@@ -8,6 +8,9 @@ export 'package:codec2_flutter/codec2_flutter.dart' show Codec2Mode;
 /// Maps [VoicePacketMode] to the [Codec2Mode] enum from the FFI plugin.
 Codec2Mode codec2ModeFor(VoicePacketMode pktMode) {
   switch (pktMode) {
+    case VoicePacketMode.mode3200: return Codec2Mode.mode3200;
+    case VoicePacketMode.mode1600: return Codec2Mode.mode1600;
+    case VoicePacketMode.mode1400: return Codec2Mode.mode1400;
     case VoicePacketMode.mode700c: return Codec2Mode.mode700c;
     case VoicePacketMode.mode1200: return Codec2Mode.mode1200;
     case VoicePacketMode.mode1300: return Codec2Mode.mode1300;

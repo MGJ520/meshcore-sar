@@ -446,6 +446,22 @@ class ContactsProvider with ChangeNotifier {
     return null;
   }
 
+  /// Find contact by first 6-byte public key prefix.
+  Contact? findContactByPrefix(Uint8List prefix) {
+    return _findContactByPrefix(prefix);
+  }
+
+  /// Find contact by 12-hex-char public key prefix.
+  Contact? findContactByPrefixHex(String prefixHex) {
+    if (!RegExp(r'^[0-9a-fA-F]{12}$').hasMatch(prefixHex)) return null;
+    final bytes = Uint8List(6);
+    for (var i = 0; i < 6; i++) {
+      final start = i * 2;
+      bytes[i] = int.parse(prefixHex.substring(start, start + 2), radix: 16);
+    }
+    return _findContactByPrefix(bytes);
+  }
+
   /// Find contact by public key
   Contact? findContactByKey(Uint8List publicKey) {
     final keyHex = publicKey

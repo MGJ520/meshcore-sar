@@ -19,6 +19,8 @@ extension MessageVoiceExtension on Message {
   /// Returns null for non-voice messages.
   VoicePacketMode? get voicePacketMode {
     if (!isVoice || text.isEmpty) return null;
+    final envelope = VoiceEnvelope.tryParseText(text);
+    if (envelope != null) return envelope.mode;
     final pkt = VoicePacket.tryParseText(text);
     return pkt?.mode;
   }

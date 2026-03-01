@@ -44,6 +44,7 @@ dependencies:
   meshcore_client:
     git:
       url: https://github.com/dz0ny/meshcore_client.git
+      ref: main
 
   # Codec2 ultra-low-bitrate speech codec (FFI plugin)
   codec2_flutter:
@@ -98,14 +99,14 @@ dependencies:
   shared_preferences: ^2.3.3
 
   # Package info
-  package_info_plus: ^8.1.2
+  package_info_plus: ^9.0.0
 
   # Background services
   flutter_background_service: ^5.0.13
 
   # Notifications
-  flutter_local_notifications: ^19.5.0
-  timezone: ^0.10.0
+  flutter_local_notifications: ^21.0.0-dev.2
+  timezone: ^0.11.0
 
   # Vibration
   vibration: ^3.1.4

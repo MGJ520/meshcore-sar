@@ -76,11 +76,14 @@ class SseServerService {
   static shelf.Middleware get _corsHeaders {
     return shelf.createMiddleware(
       responseHandler: (shelf.Response response) {
-        return response.change(headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Origin, Content-Type, Authorization',
-        });
+        return response.change(
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers':
+                'Origin, Content-Type, Authorization',
+          },
+        );
       },
     );
   }
@@ -95,7 +98,9 @@ class SseServerService {
     _config = config;
 
     try {
-      debugPrint('🚀 [SseServer] Starting server on ${config.host}:${config.port}');
+      debugPrint(
+        '🚀 [SseServer] Starting server on ${config.host}:${config.port}',
+      );
 
       // Create shelf handler with CORS support
       final handler = const shelf.Pipeline()
@@ -104,11 +109,7 @@ class SseServerService {
           .addHandler(_handleRequest);
 
       // Start HTTP server
-      _server = await io.serve(
-        handler,
-        config.host,
-        config.port,
-      );
+      _server = await io.serve(handler, config.host, config.port);
 
       debugPrint('✅ [SseServer] Server started on ${config.getServerUrl()}');
 
@@ -127,7 +128,9 @@ class SseServerService {
   /// Register Bonjour/mDNS service for network discovery
   Future<void> _registerBonjourService(SseServerConfig config) async {
     try {
-      debugPrint('📡 [SseServer] Registering Bonjour service ${NetworkScannerService.serviceType}...');
+      debugPrint(
+        '📡 [SseServer] Registering Bonjour service ${NetworkScannerService.serviceType}...',
+      );
 
       _bonjourRegistration = await register(
         const Service(
@@ -148,7 +151,9 @@ class SseServerService {
             port: config.port,
           ),
         );
-        debugPrint('✅ [SseServer] Bonjour service registered on port ${config.port}');
+        debugPrint(
+          '✅ [SseServer] Bonjour service registered on port ${config.port}',
+        );
       }
     } catch (e) {
       debugPrint('⚠️ [SseServer] Failed to register Bonjour service: $e');
@@ -168,20 +173,28 @@ class SseServerService {
   /// Clean up dead/closed connections
   void _cleanupDeadConnections() {
     // Clean up message streams
-    final deadMessageStreams = _messageStreams.where((s) => s.isClosed).toList();
+    final deadMessageStreams = _messageStreams
+        .where((s) => s.isClosed)
+        .toList();
     for (final stream in deadMessageStreams) {
       _messageStreams.remove(stream);
     }
 
     // Clean up contact streams
-    final deadContactStreams = _contactStreams.where((s) => s.isClosed).toList();
+    final deadContactStreams = _contactStreams
+        .where((s) => s.isClosed)
+        .toList();
     for (final stream in deadContactStreams) {
       _contactStreams.remove(stream);
     }
 
     if (deadMessageStreams.isNotEmpty || deadContactStreams.isNotEmpty) {
-      debugPrint('🧹 [SseServer] Cleaned up ${deadMessageStreams.length} dead message streams, ${deadContactStreams.length} dead contact streams');
-      debugPrint('   Active: ${_messageStreams.length} message clients, ${_contactStreams.length} contact clients');
+      debugPrint(
+        '🧹 [SseServer] Cleaned up ${deadMessageStreams.length} dead message streams, ${deadContactStreams.length} dead contact streams',
+      );
+      debugPrint(
+        '   Active: ${_messageStreams.length} message clients, ${_contactStreams.length} contact clients',
+      );
     }
   }
 
@@ -269,7 +282,9 @@ class SseServerService {
   /// Handle SSE messages stream
   shelf.Response _handleSseMessages(shelf.Request request) {
     return request.hijack((channel) async {
-      debugPrint('📥 [SseServer] New SSE client connected (messages) via hijack');
+      debugPrint(
+        '📥 [SseServer] New SSE client connected (messages) via hijack',
+      );
 
       // Set up the sink for sending data
       final sink = utf8.encoder.startChunkedConversion(channel.sink);
@@ -297,7 +312,9 @@ class SseServerService {
       }
 
       // Start keep-alive timer
-      final keepAliveTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      final keepAliveTimer = Timer.periodic(const Duration(seconds: 30), (
+        timer,
+      ) {
         try {
           sink.add(': keepalive\n\n');
         } catch (e) {
@@ -337,7 +354,9 @@ class SseServerService {
   /// Handle SSE contacts stream
   shelf.Response _handleSseContacts(shelf.Request request) {
     return request.hijack((channel) async {
-      debugPrint('📥 [SseServer] New SSE client connected (contacts) via hijack');
+      debugPrint(
+        '📥 [SseServer] New SSE client connected (contacts) via hijack',
+      );
 
       // Set up the sink for sending data
       final sink = utf8.encoder.startChunkedConversion(channel.sink);
@@ -365,7 +384,9 @@ class SseServerService {
       }
 
       // Start keep-alive timer
-      final keepAliveTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      final keepAliveTimer = Timer.periodic(const Duration(seconds: 30), (
+        timer,
+      ) {
         try {
           sink.add(': keepalive\n\n');
         } catch (e) {
@@ -432,7 +453,9 @@ class SseServerService {
   }
 
   /// Handle POST channel message request
-  Future<shelf.Response> _handlePostChannelMessage(shelf.Request request) async {
+  Future<shelf.Response> _handlePostChannelMessage(
+    shelf.Request request,
+  ) async {
     try {
       final body = await request.readAsString();
       final json = jsonDecode(body) as Map<String, dynamic>;
@@ -442,7 +465,9 @@ class SseServerService {
 
       if (onSendChannelMessage == null) {
         return shelf.Response.internalServerError(
-          body: jsonEncode({'error': 'Send channel message callback not configured'}),
+          body: jsonEncode({
+            'error': 'Send channel message callback not configured',
+          }),
         );
       }
 
@@ -574,10 +599,7 @@ class SseServerService {
 </body>
 </html>
 ''';
-    return shelf.Response.ok(
-      html,
-      headers: {'content-type': 'text/html'},
-    );
+    return shelf.Response.ok(html, headers: {'content-type': 'text/html'});
   }
 
   /// Broadcast a new message to all SSE clients
@@ -599,7 +621,9 @@ class SseServerService {
         try {
           stream.add(event);
         } catch (e) {
-          debugPrint('⚠️ [SseServer] Failed to send to stream, marking as dead: $e');
+          debugPrint(
+            '⚠️ [SseServer] Failed to send to stream, marking as dead: $e',
+          );
           deadStreams.add(stream);
         }
       }
@@ -608,14 +632,20 @@ class SseServerService {
     // Remove dead streams
     for (final stream in deadStreams) {
       _messageStreams.remove(stream);
-      stream.close().catchError((e) => debugPrint('⚠️ [SseServer] Error closing dead stream: $e'));
+      stream.close().catchError(
+        (e) => debugPrint('⚠️ [SseServer] Error closing dead stream: $e'),
+      );
     }
 
     if (deadStreams.isNotEmpty) {
-      debugPrint('🧹 [SseServer] Removed ${deadStreams.length} dead message streams during broadcast');
+      debugPrint(
+        '🧹 [SseServer] Removed ${deadStreams.length} dead message streams during broadcast',
+      );
     }
 
-    debugPrint('📢 [SseServer] Broadcasted message to ${_messageStreams.length} clients');
+    debugPrint(
+      '📢 [SseServer] Broadcasted message to ${_messageStreams.length} clients',
+    );
   }
 
   /// Broadcast a new or updated contact to all SSE clients
@@ -634,7 +664,9 @@ class SseServerService {
         try {
           stream.add(event);
         } catch (e) {
-          debugPrint('⚠️ [SseServer] Failed to send to stream, marking as dead: $e');
+          debugPrint(
+            '⚠️ [SseServer] Failed to send to stream, marking as dead: $e',
+          );
           deadStreams.add(stream);
         }
       }
@@ -643,14 +675,20 @@ class SseServerService {
     // Remove dead streams
     for (final stream in deadStreams) {
       _contactStreams.remove(stream);
-      stream.close().catchError((e) => debugPrint('⚠️ [SseServer] Error closing dead stream: $e'));
+      stream.close().catchError(
+        (e) => debugPrint('⚠️ [SseServer] Error closing dead stream: $e'),
+      );
     }
 
     if (deadStreams.isNotEmpty) {
-      debugPrint('🧹 [SseServer] Removed ${deadStreams.length} dead contact streams during broadcast');
+      debugPrint(
+        '🧹 [SseServer] Removed ${deadStreams.length} dead contact streams during broadcast',
+      );
     }
 
-    debugPrint('📢 [SseServer] Broadcasted contact to ${_contactStreams.length} clients');
+    debugPrint(
+      '📢 [SseServer] Broadcasted contact to ${_contactStreams.length} clients',
+    );
   }
 
   /// Format SSE event
@@ -694,6 +732,9 @@ class SseServerService {
       'isRead': message.isRead,
       'echoCount': message.echoCount,
       'firstEchoAt': message.firstEchoAt?.toIso8601String(),
+      'lastEchoSnrRaw': message.lastEchoSnrRaw,
+      'lastEchoRssiDbm': message.lastEchoRssiDbm,
+      'lastEchoAt': message.lastEchoAt?.toIso8601String(),
       'isDrawing': message.isDrawing,
       'drawingId': message.drawingId,
     };

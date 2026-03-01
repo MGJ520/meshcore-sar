@@ -12,6 +12,7 @@ import '../providers/app_provider.dart';
 import '../services/location_tracking_service.dart';
 import '../services/locale_preferences.dart';
 import '../services/update_checker_service.dart';
+import '../services/voice_bitrate_preferences.dart';
 import '../utils/sample_data_generator.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
@@ -45,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingSampleData = false;
   bool _showRxTxIndicators = true;
   bool _isCheckingForUpdates = false;
+  int _voiceBitrate = VoiceBitratePreferences.defaultBitrate;
   final LocationTrackingService _locationService = LocationTrackingService();
 
   @override
@@ -55,6 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadPackageInfo();
     _initializeLocationService();
     _loadRxTxPreference();
+    _loadVoiceBitratePreference();
   }
 
   @override
@@ -87,6 +90,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveRxTxPreference(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('show_rx_tx_indicators', value);
+  }
+
+  Future<void> _loadVoiceBitratePreference() async {
+    final value = await VoiceBitratePreferences.getBitrate();
+    if (!mounted) return;
+    setState(() {
+      _voiceBitrate = value;
+    });
+  }
+
+  Future<void> _saveVoiceBitratePreference(int value) async {
+    await VoiceBitratePreferences.setBitrate(value);
+    if (!mounted) return;
+    setState(() {
+      _voiceBitrate = value;
+    });
+  }
+
+  String _voiceBitrateSubtitle(int bitrate) {
+    return '$bitrate bps';
   }
 
   Future<void> _initializeLocationService() async {
@@ -550,6 +573,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLanguageDialog(),
           ),
+          const Divider(),
+
+          // Voice Settings Section
+          _buildSectionHeader('Voice'),
+          Consumer<AppProvider>(
+            builder: (context, appProvider, child) => _buildVoiceStatsCard(
+              bitrate: _voiceBitrate,
+              bandPassEnabled: appProvider.isVoiceBandPassFilterEnabled,
+              silenceTrimEnabled: appProvider.isVoiceSilenceTrimmingEnabled,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.graphic_eq),
+            title: const Text('Voice bitrate'),
+            subtitle: Text(_voiceBitrateSubtitle(_voiceBitrate)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showVoiceBitrateDialog,
+          ),
+          Consumer<AppProvider>(
+            builder: (context, appProvider, child) => SwitchListTile(
+              secondary: const Icon(Icons.tune),
+              title: const Text('Band-pass filter voice'),
+              subtitle: const Text(
+                'Keeps speech frequencies and cuts low/high noise',
+              ),
+              value: appProvider.isVoiceBandPassFilterEnabled,
+              onChanged: (value) async {
+                await appProvider.toggleVoiceBandPassFilterEnabled(value);
+              },
+            ),
+          ),
+          Consumer<AppProvider>(
+            builder: (context, appProvider, child) => SwitchListTile(
+              secondary: const Icon(Icons.content_cut),
+              title: const Text('Trim silence in voice messages'),
+              subtitle: const Text(
+                'Removes long silent parts before sending voice',
+              ),
+              value: appProvider.isVoiceSilenceTrimmingEnabled,
+              onChanged: (value) async {
+                await appProvider.toggleVoiceSilenceTrimmingEnabled(value);
+              },
+            ),
+          ),
+          const Divider(),
+
+          // Templates Section
+          _buildSectionHeader('Templates'),
           ListTile(
             leading: const Icon(Icons.location_searching),
             title: Text(AppLocalizations.of(context)!.sarTemplates),
@@ -708,7 +779,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(
               AppLocalizations.of(context)!.sampleDataDescription,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -761,6 +834,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: Theme.of(context).colorScheme.primary,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceStatsCard({
+    required int bitrate,
+    required bool bandPassEnabled,
+    required bool silenceTrimEnabled,
+  }) {
+    final supported = VoiceBitratePreferences.supportedBitrates;
+    final minBitrate = supported.reduce((a, b) => a < b ? a : b).toDouble();
+    final maxBitrate = supported.reduce((a, b) => a > b ? a : b).toDouble();
+    final normalized = maxBitrate > minBitrate
+        ? ((bitrate - minBitrate) / (maxBitrate - minBitrate)).clamp(0.0, 1.0)
+        : 1.0;
+    final enabledCount = (bandPassEnabled ? 1 : 0) + (silenceTrimEnabled ? 1 : 0);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Voice Processing Stats',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Bitrate: $bitrate bps',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: normalized,
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _voiceStatChip(
+                    label: 'Band-pass',
+                    enabled: bandPassEnabled,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _voiceStatChip(
+                    label: 'Silence trim',
+                    enabled: silenceTrimEnabled,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Processing enabled: $enabledCount/2',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _voiceStatChip({required String label, required bool enabled}) {
+    final color = enabled ? Colors.green : Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            enabled ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -828,7 +997,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ],
                   ),
-                  subtitle: Text(AppLocalizations.of(context)!.safeAllClearMode),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.safeAllClearMode,
+                  ),
                   value: AppThemeMode.sarGreen,
                 ),
                 RadioListTile<AppThemeMode>(
@@ -855,7 +1026,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(),
                 RadioListTile<AppThemeMode>(
                   title: Text(AppLocalizations.of(context)!.autoSystem),
-                  subtitle: Text(AppLocalizations.of(context)!.followSystemTheme),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.followSystemTheme,
+                  ),
                   value: AppThemeMode.system,
                 ),
               ],
@@ -900,6 +1073,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 }),
               ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context)!.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVoiceBitrateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Voice bitrate'),
+        content: SingleChildScrollView(
+          child: RadioGroup<int>(
+            groupValue: _voiceBitrate,
+            onChanged: (value) {
+              if (value != null) {
+                _saveVoiceBitratePreference(value);
+              }
+              Navigator.pop(context);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: VoiceBitratePreferences.supportedBitrates
+                  .map(
+                    (bitrate) => RadioListTile<int>(
+                      value: bitrate,
+                      title: Text('$bitrate bps'),
+                      subtitle: bitrate == VoiceBitratePreferences.defaultBitrate
+                          ? const Text('Default')
+                          : null,
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ),

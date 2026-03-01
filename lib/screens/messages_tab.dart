@@ -19,6 +19,7 @@ import '../widgets/messages/sar_update_sheet.dart';
 import '../widgets/messages/recipient_selector_sheet.dart';
 import '../widgets/messages/message_bubble.dart';
 import '../services/message_destination_preferences.dart';
+import '../services/voice_bitrate_preferences.dart';
 import '../services/voice_recorder_service.dart';
 import '../services/voice_codec_service.dart';
 import '../utils/toast_logger.dart';
@@ -54,11 +55,15 @@ class _MessagesTabState extends State<MessagesTab> {
   bool _isRecording = false;
   bool _isSendingVoice = false;
   static const int _maxVoicePackets = 10;
+  static const double _silenceRmsThreshold = 500.0;
+  static const double _silencePeakThreshold = 1400.0;
+  static const int _maxInteriorSilentChunks = 1;
   bool get _voiceSupported => Platform.isIOS;
   StreamSubscription<Int16List>? _voiceStreamSub;
   String? _currentVoiceSessionId;
   final List<Int16List> _recordedChunks = [];
   VoicePacketMode? _activeVoiceMode;
+  int _selectedVoiceBitrate = VoiceBitratePreferences.defaultBitrate;
 
   @override
   void initState() {
@@ -66,10 +71,19 @@ class _MessagesTabState extends State<MessagesTab> {
     _textController.addListener(_updateCharacterCount);
     // Load saved message destination
     _loadSavedDestination();
+    _loadVoiceBitrate();
     // Mark all messages as read when tab is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MessagesProvider>().markAllAsRead();
       _checkForNavigationRequest();
+    });
+  }
+
+  Future<void> _loadVoiceBitrate() async {
+    final bitrate = await VoiceBitratePreferences.getBitrate();
+    if (!mounted) return;
+    setState(() {
+      _selectedVoiceBitrate = bitrate;
     });
   }
 
@@ -409,6 +423,15 @@ class _MessagesTabState extends State<MessagesTab> {
   Future<void> _startVoiceRecording() async {
     if (_isSendingVoice || _isRecording) return;
     debugPrint('🎙️ [Voice] _startVoiceRecording called');
+    // Read fresh bitrate preference so settings changes apply immediately.
+    final selectedBitrate = await VoiceBitratePreferences.getBitrate();
+    if (mounted) {
+      setState(() {
+        _selectedVoiceBitrate = selectedBitrate;
+      });
+    } else {
+      _selectedVoiceBitrate = selectedBitrate;
+    }
     final hasPermission = await _voiceRecorder.requestPermission();
     debugPrint('🎙️ [Voice] hasPermission=$hasPermission');
     if (!hasPermission) {
@@ -418,6 +441,7 @@ class _MessagesTabState extends State<MessagesTab> {
     }
 
     if (!mounted) return;
+    final appProvider = context.read<AppProvider>();
     final connectionProvider = context.read<ConnectionProvider>();
     debugPrint(
       '🎙️ [Voice] isConnected=${connectionProvider.deviceInfo.isConnected}',
@@ -434,8 +458,9 @@ class _MessagesTabState extends State<MessagesTab> {
       (_) => rng.nextInt(256),
     ).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-    final radioBwKhz = connectionProvider.deviceInfo.radioBw ?? 125;
-    _activeVoiceMode = voiceModeForBandwidth(radioBwKhz * 1000);
+    _activeVoiceMode = VoiceBitratePreferences.toVoiceMode(
+      _selectedVoiceBitrate,
+    );
     final packetDuration = Duration(
       milliseconds: codec2ModeFor(_activeVoiceMode!).packetDurationMs,
     );
@@ -448,7 +473,10 @@ class _MessagesTabState extends State<MessagesTab> {
     setState(() => _isRecording = true);
 
     try {
-      final stream = _voiceRecorder.startCapture(chunkDuration: packetDuration);
+      final stream = _voiceRecorder.startCapture(
+        chunkDuration: packetDuration,
+        enableBandPassFilter: appProvider.isVoiceBandPassFilterEnabled,
+      );
       debugPrint('🎙️ [Voice] capture started, listening for chunks...');
       _voiceStreamSub = stream.listen(
         (pcmChunk) {
@@ -477,6 +505,9 @@ class _MessagesTabState extends State<MessagesTab> {
 
   Future<void> _stopAndSendVoice() async {
     if (!_isRecording) return;
+    final trimSilenceEnabled = context
+        .read<AppProvider>()
+        .isVoiceSilenceTrimmingEnabled;
     debugPrint(
       '🎙️ [Voice] _stopAndSendVoice: ${_recordedChunks.length} chunks buffered',
     );
@@ -485,10 +516,15 @@ class _MessagesTabState extends State<MessagesTab> {
     _voiceStreamSub = null;
     await _voiceRecorder.stopCapture();
 
-    final chunks = List<Int16List>.from(_recordedChunks);
+    final rawChunks = List<Int16List>.from(_recordedChunks);
+    final chunks = trimSilenceEnabled ? _trimSilence(rawChunks) : rawChunks;
     final sessionId = _currentVoiceSessionId;
     final mode = _activeVoiceMode;
     _recordedChunks.clear();
+
+    debugPrint(
+      '🎙️ [Voice] silence trim enabled=$trimSilenceEnabled: raw=${rawChunks.length} chunks -> kept=${chunks.length} chunks',
+    );
 
     if (mounted) {
       setState(() {
@@ -498,7 +534,12 @@ class _MessagesTabState extends State<MessagesTab> {
     }
 
     if (chunks.isEmpty || sessionId == null || mode == null || !mounted) {
-      if (mounted) setState(() { _isSendingVoice = false; _currentVoiceSessionId = null; });
+      if (mounted) {
+        setState(() {
+          _isSendingVoice = false;
+          _currentVoiceSessionId = null;
+        });
+      }
       return;
     }
 
@@ -511,7 +552,9 @@ class _MessagesTabState extends State<MessagesTab> {
     } catch (e, st) {
       debugPrint('❌ [Voice] _encodeAndSendAllPackets threw: $e\n$st');
     } finally {
-      debugPrint('🎙️ [Voice] _stopAndSendVoice finally: resetting _isSendingVoice');
+      debugPrint(
+        '🎙️ [Voice] _stopAndSendVoice finally: resetting _isSendingVoice',
+      );
       if (mounted) {
         setState(() {
           _isSendingVoice = false;
@@ -532,10 +575,13 @@ class _MessagesTabState extends State<MessagesTab> {
     final messagesProvider = context.read<MessagesProvider>();
     final voiceProvider = context.read<VoiceProvider>();
 
-    // Insert the chat placeholder before sending (so it appears immediately)
+    // Insert the chat placeholder before sending (so it appears immediately).
     final msgId = 'voice_${sessionId}_sent';
     final devicePublicKey = connectionProvider.deviceInfo.publicKey;
-    final senderPublicKeyPrefix = devicePublicKey?.sublist(0, 6);
+    final senderPublicKeyPrefix =
+        devicePublicKey != null && devicePublicKey.length >= 6
+        ? devicePublicKey.sublist(0, 6)
+        : null;
     final isChannel =
         _destinationType ==
         MessageDestinationPreferences.destinationTypeChannel;
@@ -558,8 +604,9 @@ class _MessagesTabState extends State<MessagesTab> {
     );
     messagesProvider.addSentMessage(sentMsg);
 
+    final encodedPackets = <VoicePacket>[];
     debugPrint(
-      '🎙️ [Voice] encoding+sending $total packets, mode=${mode.label}, session=$sessionId',
+      '🎙️ [Voice] encoding $total packets for deferred voice fetch, mode=${mode.label}, session=$sessionId',
     );
     for (var i = 0; i < total; i++) {
       if (!mounted) return;
@@ -576,42 +623,125 @@ class _MessagesTabState extends State<MessagesTab> {
           codec2Data: codec2Data,
         );
 
+        encodedPackets.add(packet);
         voiceProvider.addPacket(packet);
-
-        if (!isChannel &&
-            _selectedRecipient != null &&
-            _selectedRecipient!.outPathLen >= 0) {
-          debugPrint(
-            '🎙️ [Voice] packet $i → binary (raw data), pathLen=${_selectedRecipient!.outPathLen}',
-          );
-          await connectionProvider.sendRawVoicePacket(
-            contactPath: _selectedRecipient!.outPath,
-            contactPathLen: _selectedRecipient!.outPathLen,
-            payload: packet.encodeBinary(),
-          );
-        } else {
-          final channelIdx = isChannel
-              ? (_selectedRecipient?.publicKey[1] ?? 0)
-              : 0;
-          final text = packet.encodeText();
-          debugPrint(
-            '🎙️ [Voice] packet $i → text ch=$channelIdx len=${text.length}: $text',
-          );
-          await connectionProvider.sendChannelMessage(
-            channelIdx: channelIdx,
-            text: text,
-          );
-        }
-        debugPrint('🎙️ [Voice] packet $i sent ok');
       } catch (e, st) {
-        debugPrint('❌ [Voice] packet $i send error: $e\n$st');
+        debugPrint('❌ [Voice] packet $i encode error: $e\n$st');
       }
     }
-    debugPrint('🎙️ [Voice] all packets sent for session $sessionId');
+
+    if (encodedPackets.isEmpty) {
+      debugPrint('❌ [Voice] No packets encoded for session $sessionId');
+      messagesProvider.markMessageFailed(msgId);
+      return;
+    }
+
+    voiceProvider.cacheOutgoingSession(sessionId, encodedPackets);
+
+    if (senderPublicKeyPrefix == null || senderPublicKeyPrefix.length < 6) {
+      debugPrint('❌ [Voice] Missing device public key prefix for envelope');
+      messagesProvider.markMessageFailed(msgId);
+      return;
+    }
+
+    final senderKey6 = senderPublicKeyPrefix
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join('');
+    final durationMs = encodedPackets.fold<int>(
+      0,
+      (sum, p) => sum + p.durationMs,
+    );
+    final envelope = VoiceEnvelope(
+      sessionId: sessionId,
+      mode: mode,
+      total: encodedPackets.length,
+      durationMs: durationMs,
+      senderKey6: senderKey6,
+      timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      version: 1,
+    );
+    final envelopeText = envelope.encodeText();
+
+    try {
+      if (isChannel) {
+        final channelIdx = _selectedRecipient?.publicKey[1] ?? 0;
+        await connectionProvider.sendChannelMessage(
+          channelIdx: channelIdx,
+          text: envelopeText,
+          messageId: msgId,
+        );
+      } else if (_selectedRecipient != null) {
+        final sentSuccessfully = await connectionProvider.sendTextMessage(
+          contactPublicKey: _selectedRecipient!.publicKey,
+          text: envelopeText,
+          messageId: msgId,
+          contact: _selectedRecipient,
+        );
+        if (!sentSuccessfully) {
+          messagesProvider.markMessageFailed(msgId);
+          return;
+        }
+      } else {
+        // Fallback to public channel if destination cannot be resolved.
+        await connectionProvider.sendChannelMessage(
+          channelIdx: 0,
+          text: envelopeText,
+          messageId: msgId,
+        );
+      }
+    } catch (e, st) {
+      debugPrint('❌ [Voice] envelope send error: $e\n$st');
+      messagesProvider.markMessageFailed(msgId);
+      return;
+    }
+
+    debugPrint('🎙️ [Voice] envelope sent for session $sessionId');
     // Mark the placeholder message as "sent" (ackTag=0, timeout=0 = no ACK tracking).
     // addSentMessage() forces deliveryStatus.sending; we upgrade it here so the
     // bubble shows "Sent" instead of "Sending" once all packets are on the wire.
+    // For channels this is also set by the onMessageSent callback, but this is harmless.
     messagesProvider.markMessageSent(msgId, 0, 0);
+  }
+
+  List<Int16List> _trimSilence(List<Int16List> chunks) {
+    if (chunks.isEmpty) return chunks;
+
+    final isSilent = chunks.map(_isSilentChunk).toList();
+    final firstVoice = isSilent.indexWhere((silent) => !silent);
+    if (firstVoice == -1) return const [];
+
+    final lastVoice = isSilent.lastIndexWhere((silent) => !silent);
+    if (lastVoice < firstVoice) return const [];
+
+    final trimmed = <Int16List>[];
+    var interiorSilentRun = 0;
+    for (var i = firstVoice; i <= lastVoice; i++) {
+      if (isSilent[i]) {
+        interiorSilentRun++;
+        if (interiorSilentRun <= _maxInteriorSilentChunks) {
+          trimmed.add(chunks[i]);
+        }
+      } else {
+        interiorSilentRun = 0;
+        trimmed.add(chunks[i]);
+      }
+    }
+    return trimmed;
+  }
+
+  bool _isSilentChunk(Int16List chunk) {
+    if (chunk.isEmpty) return true;
+
+    var sumSquares = 0.0;
+    var peak = 0;
+    for (final sample in chunk) {
+      final absSample = sample.abs();
+      if (absSample > peak) peak = absSample;
+      sumSquares += sample * sample;
+    }
+
+    final rms = math.sqrt(sumSquares / chunk.length);
+    return rms < _silenceRmsThreshold && peak < _silencePeakThreshold;
   }
 
   // ── SAR dialog ─────────────────────────────────────────────────────────────
@@ -1181,7 +1311,8 @@ class _MessagesTabState extends State<MessagesTab> {
                               : Theme.of(context).textTheme.bodySmall?.color,
                         ),
                         suffixIcon: GestureDetector(
-                          onLongPressStart: (_voiceSupported && !_isSendingVoice)
+                          onLongPressStart:
+                              (_voiceSupported && !_isSendingVoice)
                               ? (_) => _startVoiceRecording()
                               : null,
                           onLongPressEnd: (_voiceSupported && _isRecording)
@@ -1223,8 +1354,8 @@ class _MessagesTabState extends State<MessagesTab> {
                                 : (_isSendingVoice
                                       ? 'Sending voice...'
                                       : _voiceSupported
-                                          ? 'Send (long press to record voice)'
-                                          : 'Send'),
+                                      ? 'Send (long press to record voice)'
+                                      : 'Send'),
                           ),
                         ),
                       ),

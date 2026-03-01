@@ -21,7 +21,8 @@ class SseClientService {
   StreamSubscription? _contactSubscription;
   bool _isConnected = false;
   bool _isConnecting = false;
-  bool _hasConnectedBefore = false; // Track if we've ever successfully connected
+  bool _hasConnectedBefore =
+      false; // Track if we've ever successfully connected
   Timer? _reconnectTimer;
   Timer? _heartbeatTimer;
   int _reconnectAttempts = 0;
@@ -56,10 +57,7 @@ class SseClientService {
   String? get serverUrl => _serverUrl;
 
   /// Connect to SSE server
-  Future<void> connect({
-    required String serverUrl,
-    String? authToken,
-  }) async {
+  Future<void> connect({required String serverUrl, String? authToken}) async {
     if (_isConnected) {
       debugPrint('⚠️ [SseClient] Already connected');
       return;
@@ -69,14 +67,18 @@ class SseClientService {
     _authToken = authToken;
     _isConnecting = true;
 
-    debugPrint('🔌 [SseClient] Connecting to $serverUrl (attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts)');
+    debugPrint(
+      '🔌 [SseClient] Connecting to $serverUrl (attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts)',
+    );
 
     try {
       // Create a new HTTP client with custom configuration for SSE streaming
       // Using IOClient with custom HttpClient for better control over connection settings
       final ioHttpClient = io.HttpClient();
       ioHttpClient.connectionTimeout = const Duration(seconds: 10);
-      ioHttpClient.idleTimeout = const Duration(hours: 1); // Keep SSE connections alive
+      ioHttpClient.idleTimeout = const Duration(
+        hours: 1,
+      ); // Keep SSE connections alive
       _httpClient = io_client.IOClient(ioHttpClient);
 
       // Test server availability
@@ -90,7 +92,9 @@ class SseClientService {
 
       // Subscribe to SSE streams
       debugPrint('🔗 [SseClient] Subscribing to message stream...');
-      debugPrint('🔗 [SseClient] Using HTTP client type: ${_httpClient.runtimeType}');
+      debugPrint(
+        '🔗 [SseClient] Using HTTP client type: ${_httpClient.runtimeType}',
+      );
       await _subscribeToMessages();
       debugPrint('🔗 [SseClient] Subscribing to contact stream...');
       await _subscribeToContacts();
@@ -149,9 +153,9 @@ class SseClientService {
     final url = Uri.parse('$_serverUrl/api/status');
 
     try {
-      final response = await http.get(url, headers: _getHeaders()).timeout(
-        const Duration(seconds: 5),
-      );
+      final response = await http
+          .get(url, headers: _getHeaders())
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode != 200) {
         throw Exception('Server returned ${response.statusCode}');
@@ -179,7 +183,8 @@ class SseClientService {
 
     if (errorStr.contains('Connection refused')) {
       return 'Server not available at $host:$port. The server may be offline or not running.';
-    } else if (errorStr.contains('TimeoutException') || errorStr.contains('timed out')) {
+    } else if (errorStr.contains('TimeoutException') ||
+        errorStr.contains('timed out')) {
       return 'Connection to $host:$port timed out. Check your network connection.';
     } else if (errorStr.contains('SocketException')) {
       return 'Network error connecting to $host:$port. Check your network connection.';
@@ -195,18 +200,22 @@ class SseClientService {
   Future<void> _fetchMessageHistory() async {
     try {
       final url = Uri.parse('$_serverUrl/api/messages/history');
-      final response = await http.get(url, headers: _getHeaders()).timeout(
-        const Duration(seconds: 10),
-      );
+      final response = await http
+          .get(url, headers: _getHeaders())
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to fetch message history: ${response.statusCode}');
+        throw Exception(
+          'Failed to fetch message history: ${response.statusCode}',
+        );
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final messages = data['messages'] as List;
 
-      debugPrint('📥 [SseClient] Received ${messages.length} messages from history');
+      debugPrint(
+        '📥 [SseClient] Received ${messages.length} messages from history',
+      );
 
       for (final msgJson in messages) {
         try {
@@ -226,9 +235,9 @@ class SseClientService {
   Future<void> _fetchContacts() async {
     try {
       final url = Uri.parse('$_serverUrl/api/contacts');
-      final response = await http.get(url, headers: _getHeaders()).timeout(
-        const Duration(seconds: 10),
-      );
+      final response = await http
+          .get(url, headers: _getHeaders())
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw Exception('Failed to fetch contacts: ${response.statusCode}');
@@ -270,45 +279,63 @@ class SseClientService {
       debugPrint('📡 [SseClient] Sending message stream request to $url');
       debugPrint('📡 [SseClient] Request headers: ${request.headers}');
 
-      final streamedResponse = await _httpClient!.send(request).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint('❌ [SseClient] Timeout waiting for response headers');
-          throw TimeoutException('Message stream connection timed out after 10 seconds');
-        },
+      final streamedResponse = await _httpClient!
+          .send(request)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint('❌ [SseClient] Timeout waiting for response headers');
+              throw TimeoutException(
+                'Message stream connection timed out after 10 seconds',
+              );
+            },
+          );
+
+      debugPrint(
+        '📡 [SseClient] Received response with status: ${streamedResponse.statusCode}',
+      );
+      debugPrint(
+        '📡 [SseClient] Response headers: ${streamedResponse.headers}',
+      );
+      debugPrint(
+        '📡 [SseClient] Response content length: ${streamedResponse.contentLength}',
+      );
+      debugPrint(
+        '📡 [SseClient] Response is redirect: ${streamedResponse.isRedirect}',
       );
 
-      debugPrint('📡 [SseClient] Received response with status: ${streamedResponse.statusCode}');
-      debugPrint('📡 [SseClient] Response headers: ${streamedResponse.headers}');
-      debugPrint('📡 [SseClient] Response content length: ${streamedResponse.contentLength}');
-      debugPrint('📡 [SseClient] Response is redirect: ${streamedResponse.isRedirect}');
-
       if (streamedResponse.statusCode != 200) {
-        throw Exception('SSE messages subscription failed: ${streamedResponse.statusCode}');
+        throw Exception(
+          'SSE messages subscription failed: ${streamedResponse.statusCode}',
+        );
       }
 
-      debugPrint('📡 [SseClient] Message stream response received, status: ${streamedResponse.statusCode}');
+      debugPrint(
+        '📡 [SseClient] Message stream response received, status: ${streamedResponse.statusCode}',
+      );
       debugPrint('📡 [SseClient] Setting up stream listener...');
 
       _messageSubscription = streamedResponse.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen(
-        (line) {
-          debugPrint('📨 [SseClient] Received line: "$line"');
-          _handleSseLine(line, 'message');
-        },
-        onError: (error, stackTrace) {
-          debugPrint('❌ [SseClient] Message stream error: $error');
-          debugPrint('   Stack trace: $stackTrace');
-          _handleDisconnect();
-        },
-        onDone: () {
-          debugPrint('⚠️ [SseClient] Message stream closed (onDone called)');
-          _handleDisconnect();
-        },
-        cancelOnError: false,
-      );
+            (line) {
+              debugPrint('📨 [SseClient] Received line: "$line"');
+              _handleSseLine(line, 'message');
+            },
+            onError: (error, stackTrace) {
+              debugPrint('❌ [SseClient] Message stream error: $error');
+              debugPrint('   Stack trace: $stackTrace');
+              _handleDisconnect();
+            },
+            onDone: () {
+              debugPrint(
+                '⚠️ [SseClient] Message stream closed (onDone called)',
+              );
+              _handleDisconnect();
+            },
+            cancelOnError: false,
+          );
 
       debugPrint('✅ [SseClient] Message stream listener set up successfully');
     } catch (e) {
@@ -332,39 +359,49 @@ class SseClientService {
       request.headers['Cache-Control'] = 'no-cache';
 
       debugPrint('📡 [SseClient] Sending contact stream request to $url');
-      final streamedResponse = await _httpClient!.send(request).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException('Contact stream connection timed out after 10 seconds');
-        },
-      );
+      final streamedResponse = await _httpClient!
+          .send(request)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw TimeoutException(
+                'Contact stream connection timed out after 10 seconds',
+              );
+            },
+          );
 
       if (streamedResponse.statusCode != 200) {
-        throw Exception('SSE contacts subscription failed: ${streamedResponse.statusCode}');
+        throw Exception(
+          'SSE contacts subscription failed: ${streamedResponse.statusCode}',
+        );
       }
 
-      debugPrint('📡 [SseClient] Contact stream response received, status: ${streamedResponse.statusCode}');
+      debugPrint(
+        '📡 [SseClient] Contact stream response received, status: ${streamedResponse.statusCode}',
+      );
       debugPrint('📡 [SseClient] Setting up contact stream listener...');
 
       _contactSubscription = streamedResponse.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen(
-        (line) {
-          debugPrint('📨 [SseClient] Received contact line: "$line"');
-          _handleSseLine(line, 'contact');
-        },
-        onError: (error, stackTrace) {
-          debugPrint('❌ [SseClient] Contact stream error: $error');
-          debugPrint('   Stack trace: $stackTrace');
-          _handleDisconnect();
-        },
-        onDone: () {
-          debugPrint('⚠️ [SseClient] Contact stream closed (onDone called)');
-          _handleDisconnect();
-        },
-        cancelOnError: false,
-      );
+            (line) {
+              debugPrint('📨 [SseClient] Received contact line: "$line"');
+              _handleSseLine(line, 'contact');
+            },
+            onError: (error, stackTrace) {
+              debugPrint('❌ [SseClient] Contact stream error: $error');
+              debugPrint('   Stack trace: $stackTrace');
+              _handleDisconnect();
+            },
+            onDone: () {
+              debugPrint(
+                '⚠️ [SseClient] Contact stream closed (onDone called)',
+              );
+              _handleDisconnect();
+            },
+            cancelOnError: false,
+          );
 
       debugPrint('✅ [SseClient] Contact stream listener set up successfully');
     } catch (e) {
@@ -423,7 +460,9 @@ class SseClientService {
     _reconnectAttempts++;
     final delay = _reconnectDelay * _reconnectAttempts;
 
-    debugPrint('🔄 [SseClient] Scheduling reconnect attempt $_reconnectAttempts in ${delay.inSeconds}s');
+    debugPrint(
+      '🔄 [SseClient] Scheduling reconnect attempt $_reconnectAttempts in ${delay.inSeconds}s',
+    );
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, () {
@@ -436,7 +475,9 @@ class SseClientService {
   /// Start heartbeat to detect connection loss
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (
+      timer,
+    ) async {
       try {
         await _checkServerStatus();
       } catch (e) {
@@ -457,17 +498,16 @@ class SseClientService {
 
     try {
       final url = Uri.parse('$_serverUrl/api/messages');
-      final response = await http.post(
-        url,
-        headers: {
-          ..._getHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'recipientPublicKey': recipientPublicKey,
-          'text': text,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            url,
+            headers: {..._getHeaders(), 'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'recipientPublicKey': recipientPublicKey,
+              'text': text,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw Exception('Send message failed: ${response.statusCode}');
@@ -492,17 +532,13 @@ class SseClientService {
 
     try {
       final url = Uri.parse('$_serverUrl/api/messages/channel');
-      final response = await http.post(
-        url,
-        headers: {
-          ..._getHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'channelIdx': channelIdx,
-          'text': text,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            url,
+            headers: {..._getHeaders(), 'Content-Type': 'application/json'},
+            body: jsonEncode({'channelIdx': channelIdx, 'text': text}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw Exception('Send channel message failed: ${response.statusCode}');
@@ -521,10 +557,9 @@ class SseClientService {
 
     try {
       final url = Uri.parse('$_serverUrl/api/contacts/sync');
-      final response = await http.post(
-        url,
-        headers: _getHeaders(),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(url, headers: _getHeaders())
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw Exception('Contact sync failed: ${response.statusCode}');
@@ -555,7 +590,9 @@ class SseClientService {
         orElse: () => MessageType.contact,
       ),
       senderPublicKeyPrefix: json['senderPublicKeyPrefix'] != null
-          ? Uint8List.fromList((json['senderPublicKeyPrefix'] as List).cast<int>())
+          ? Uint8List.fromList(
+              (json['senderPublicKeyPrefix'] as List).cast<int>(),
+            )
           : null,
       channelIdx: json['channelIdx'] as int?,
       pathLen: json['pathLen'] as int,
@@ -596,6 +633,11 @@ class SseClientService {
       echoCount: json['echoCount'] as int? ?? 0,
       firstEchoAt: json['firstEchoAt'] != null
           ? DateTime.parse(json['firstEchoAt'] as String)
+          : null,
+      lastEchoSnrRaw: json['lastEchoSnrRaw'] as int?,
+      lastEchoRssiDbm: json['lastEchoRssiDbm'] as int?,
+      lastEchoAt: json['lastEchoAt'] != null
+          ? DateTime.parse(json['lastEchoAt'] as String)
           : null,
       isDrawing: json['isDrawing'] as bool? ?? false,
       drawingId: json['drawingId'] as String?,

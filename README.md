@@ -1,61 +1,45 @@
 # MeshCore SAR
 
-Flutter app for Search and Rescue operations over a [MeshCore](https://github.com/meshcore-dev) mesh radio network via Bluetooth Low Energy.
+Field-ready Search and Rescue app for teams using [MeshCore](https://github.com/meshcore-dev) over Bluetooth Low Energy.
 
-## What It Does
+MeshCore SAR helps teams coordinate in low-connectivity and no-connectivity environments.
 
-MeshCore SAR helps teams coordinate in low-connectivity or no-connectivity environments using mesh radio + BLE.
+## Highlights
 
-- Send text messages to contacts, rooms, and channels
-- Share voice clips and field images
-- Track team movement and location updates
-- Work with offline maps and field overlays
-- Mark and share SAR points of interest
+- Mesh messaging for direct and group coordination
+- On-demand voice and image sharing optimized for low bandwidth
+- Offline-first maps with field overlays and tactical markers
+- GPS tracking, trails, and shareable map drawings
 
-## Core Features
+## Feature Overview
 
-### Messaging
+| Area | What you get |
+|---|---|
+| Messaging | Direct and group chat over mesh, with contact/room awareness from live telemetry |
+| Voice | Push-to-talk voice clips, fetched on demand when play is pressed, auto-play on completion |
+| Images | Camera/gallery image sending, auto-compression, tap-to-load receiving, full-screen viewer |
+| Maps | Street/topo/satellite/terrain layers, offline tile downloads, optional MBTiles import |
+| SAR Operations | Team markers with freshness indicators, SAR markers for incidents and staging points |
+| Tracking | Continuous GPS updates, personal trails, distance/duration trail stats |
+| Trail Interop | GPX export/import for trail sharing and reuse |
+| Tactical Drawing | Line/rectangle drawing, distance measurement, drawing sharing to channel/room |
 
-- Direct and group chat over mesh
-- Contact and room awareness from live mesh telemetry
-- Message overlays integrated with map and tactical tools
+## Voice, Image, and Maps
 
 ### Voice
-
-- Push-to-talk voice clips optimized for low bandwidth
-- Voice is fetched on demand when someone presses play
-- Automatic playback when fetch completes
-- Works well for short field updates where text is too slow
+- Designed for short, urgent field communication
+- Playback requests are on-demand to reduce unnecessary mesh traffic
+- Useful when typing is impractical during operations
 
 ### Images
+- Built for constrained links with pre-send optimization
+- Receiver controls when to fetch payload by tapping the placeholder
+- Supports quick visual verification in the field
 
-- Capture from camera or pick from gallery
-- Automatic compression before sending (optimized for mesh transport)
-- Receiver sees a placeholder and taps to load the image
-- Full-screen image viewer for quick field inspection
-
-### Maps & Navigation
-
-- Multiple base maps (street, topo, satellite, terrain)
-- Offline tile download for selected areas
-- Optional MBTiles import for custom/offline map packages
-- Team member markers with freshness indicators
-- SAR markers (person found, fire, staging, custom object markers)
-- Compass-assisted orientation and target direction UI
-
-### Tracking & Trails
-
-- Continuous GPS tracking with configurable update thresholds
-- Personal trail recording with distance and duration stats
-- Contact trail visibility controls
-- GPX export/import for trail sharing and reuse
-
-### Tactical Drawing
-
-- Draw lines/rectangles directly on map
-- Distance measurement mode
-- Share drawings to channel/room
-- Toggle received drawings and SAR marker visibility
+### Maps
+- Supports online and offline workflows
+- Adds SAR context with markers, overlays, and orientation tools
+- Combines location, messaging, and tactical layers in one workflow
 
 ## Permissions (App Use)
 

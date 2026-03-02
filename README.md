@@ -1,15 +1,37 @@
-# MeshCore SAR
+<p align="center">
+  <img src="./icon.png" alt="MeshCore SAR icon" width="120" />
+</p>
 
-Field-ready Search and Rescue app for teams using [MeshCore](https://github.com/meshcore-dev) over Bluetooth Low Energy.
+<h1 align="center">MeshCore SAR</h1>
 
-MeshCore SAR helps teams coordinate in low-connectivity and no-connectivity environments.
+<p align="center">
+  Field-ready Search and Rescue coordination over <a href="https://github.com/meshcore-dev">MeshCore</a> + BLE
+</p>
+
+<p align="center">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue" />
+  <img alt="Mode" src="https://img.shields.io/badge/offline-first-success" />
+  <img alt="Use case" src="https://img.shields.io/badge/use%20case-SAR-orange" />
+</p>
+
+MeshCore SAR helps teams coordinate in low-connectivity or no-connectivity environments with messaging, voice, images, maps, and live location context in one app.
 
 ## Highlights
 
-- Mesh messaging for direct and group coordination
-- On-demand voice and image sharing optimized for low bandwidth
-- Offline-first maps with field overlays and tactical markers
-- GPS tracking, trails, and shareable map drawings
+- Fast mesh messaging for direct and group coordination
+- On-demand voice and image transfer optimized for constrained links
+- Offline-first mapping with tactical overlays and SAR markers
+- Live team tracking, trails, and shareable map drawings
+
+## Screenshots
+
+<p align="center">
+  <img src="./screenshots/ios/IMG_2953.PNG" alt="Map view with live team context" width="19%" />
+  <img src="./screenshots/ios/IMG_2954.PNG" alt="Compass and navigation view" width="19%" />
+  <img src="./screenshots/ios/IMG_2955.PNG" alt="Contacts and repeaters list" width="19%" />
+  <img src="./screenshots/ios/IMG_2956.PNG" alt="Messages with voice and image cards" width="19%" />
+  <img src="./screenshots/ios/IMG_2957.PNG" alt="Quick actions sheet for SAR, voice, and image" width="19%" />
+</p>
 
 ## Feature Overview
 
@@ -27,19 +49,25 @@ MeshCore SAR helps teams coordinate in low-connectivity and no-connectivity envi
 ## Voice, Image, and Maps
 
 ### Voice
-- Designed for short, urgent field communication
-- Playback requests are on-demand to reduce unnecessary mesh traffic
-- Useful when typing is impractical during operations
+- Built for short, urgent field communication
+- On-demand playback fetch reduces unnecessary mesh traffic
+- Ideal when typing is impractical during active operations
 
 ### Images
-- Built for constrained links with pre-send optimization
-- Receiver controls when to fetch payload by tapping the placeholder
-- Supports quick visual verification in the field
+- Pre-send optimization for constrained links
+- Tap-to-load receiving keeps channels lightweight
+- Full-screen view supports rapid field verification
 
 ### Maps
-- Supports online and offline workflows
-- Adds SAR context with markers, overlays, and orientation tools
-- Combines location, messaging, and tactical layers in one workflow
+- Works in both online and offline workflows
+- SAR context with team markers, incident markers, and orientation tools
+- Combines location, messaging, and tactical layers in one place
+
+## Built For
+
+- Search and Rescue field teams
+- Incident command and coordination roles
+- Operators working in weak/no cellular coverage
 
 ## Permissions (App Use)
 

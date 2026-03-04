@@ -48,7 +48,9 @@ class AppProvider with ChangeNotifier {
   bool get isVoiceLimiterEnabled => _isVoiceLimiterEnabled;
 
   static const Duration _packetRetryDelay = Duration(milliseconds: 1200);
+  static const Duration _imageFragmentTimeout = Duration(seconds: 10);
   static const int _maxPacketRetryAttempts = 4;
+  static const int _maxImageRetryAttempts = 5;
   final Map<String, String> _voiceSessionSenderKey6 = {};
   final Map<String, String> _imageSessionSenderKey6 = {};
   final Map<String, Timer> _voiceMissingRetryTimers = {};
@@ -597,6 +599,13 @@ class AppProvider with ChangeNotifier {
             .senderKey6
             .toLowerCase();
         imageProvider.registerEnvelope(imageEnvelope);
+        // Start 10s idle timer immediately so we request fragments even if
+        // none arrive at all (sender may need an explicit IR1 pull request).
+        _scheduleImageMissingRetry(
+          imageEnvelope.sessionId,
+          justComplete: false,
+          newSession: true,
+        );
         messagesProvider.addMessage(
           enrichedMessage,
           contactLookup: (name) {
@@ -1094,9 +1103,16 @@ class AppProvider with ChangeNotifier {
     });
   }
 
+  /// Called on every received fragment (and when IE1 envelope arrives).
+  /// Debounces a 10s idle timeout — if no fragment arrives within the window,
+  /// sends IR1 requesting only the still-missing indices (partial resume).
+  /// The attempt counter is NOT reset per-fragment; it only resets when a new
+  /// session starts (IE1 received), so retries are bounded even when fragments
+  /// trickle in slowly.
   void _scheduleImageMissingRetry(
     String sessionId, {
     required bool justComplete,
+    bool newSession = false,
   }) {
     if (justComplete || imageProvider.isComplete(sessionId)) {
       _imageMissingRetryTimers.remove(sessionId)?.cancel();
@@ -1104,9 +1120,12 @@ class AppProvider with ChangeNotifier {
       return;
     }
 
-    _imageMissingRetryAttempts[sessionId] = 0;
+    // Reset attempt counter only when a brand-new session starts (IE1 arrived).
+    if (newSession) _imageMissingRetryAttempts[sessionId] = 0;
+
+    // Debounce: restart the 10s idle timer on every received fragment.
     _imageMissingRetryTimers[sessionId]?.cancel();
-    _imageMissingRetryTimers[sessionId] = Timer(_packetRetryDelay, () {
+    _imageMissingRetryTimers[sessionId] = Timer(_imageFragmentTimeout, () {
       unawaited(_requestMissingImageFragments(sessionId));
     });
   }
@@ -1119,9 +1138,9 @@ class AppProvider with ChangeNotifier {
     }
 
     final attempt = _imageMissingRetryAttempts[sessionId] ?? 0;
-    if (attempt >= _maxPacketRetryAttempts) {
+    if (attempt >= _maxImageRetryAttempts) {
       debugPrint(
-        '⚠️ [AppProvider] Image re-request limit reached for $sessionId',
+        '⚠️ [AppProvider] Image re-request limit ($attempt) reached for $sessionId',
       );
       _imageMissingRetryTimers.remove(sessionId)?.cancel();
       return;
@@ -1145,6 +1164,11 @@ class AppProvider with ChangeNotifier {
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join('');
 
+    debugPrint(
+      '📷 [AppProvider] Requesting ${missing.length} missing fragments '
+      'for $sessionId (attempt ${attempt + 1}/$_maxImageRetryAttempts): $missing',
+    );
+
     final request = ImageFetchRequest(
       sessionId: sessionId,
       want: 'missing',
@@ -1161,8 +1185,9 @@ class AppProvider with ChangeNotifier {
     if (!sent) return;
 
     _imageMissingRetryAttempts[sessionId] = attempt + 1;
+    // Wait another full timeout window for the sender to retransmit.
     _imageMissingRetryTimers[sessionId]?.cancel();
-    _imageMissingRetryTimers[sessionId] = Timer(_packetRetryDelay, () {
+    _imageMissingRetryTimers[sessionId] = Timer(_imageFragmentTimeout, () {
       unawaited(_requestMissingImageFragments(sessionId));
     });
   }

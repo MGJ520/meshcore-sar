@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_avif/flutter_avif.dart';
@@ -31,6 +32,13 @@ class ImageMessageBubble extends StatefulWidget {
 class _ImageMessageBubbleState extends State<ImageMessageBubble> {
   bool _isRequesting = false;
   String? _errorText;
+  Timer? _requestTimeoutTimer;
+
+  @override
+  void dispose() {
+    _requestTimeoutTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,8 +184,6 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
     var sender = _resolveSender(envelope);
     if (sender == null) {
       final conn = context.read<ConnectionProvider>();
-      // Retry once after refreshing contacts; resumable sessions may outlive
-      // the in-memory contact cache.
       await conn.getContacts();
       if (!mounted) return;
       sender = _resolveSender(envelope);
@@ -188,6 +194,7 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
     }
 
     final conn = context.read<ConnectionProvider>();
+    final imageProvider = context.read<ip.ImageProvider>();
     final deviceKey = conn.deviceInfo.publicKey;
     if (deviceKey == null || deviceKey.length < 6) {
       setState(() => _errorText = 'Device key unavailable');
@@ -198,11 +205,24 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         .sublist(0, 6)
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join();
-    final request = ImageFetchRequest(
-      sessionId: envelope.sessionId,
-      requesterKey6: requesterKey6,
-      timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    );
+
+    // If we already have some fragments, request only what's missing.
+    final missing = imageProvider.missingFragmentIndices(envelope.sessionId);
+    final isPartialResume = missing.isNotEmpty &&
+        missing.length < envelope.total;
+    final request = isPartialResume
+        ? ImageFetchRequest(
+            sessionId: envelope.sessionId,
+            want: 'missing',
+            missingIndices: missing,
+            requesterKey6: requesterKey6,
+            timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          )
+        : ImageFetchRequest(
+            sessionId: envelope.sessionId,
+            requesterKey6: requesterKey6,
+            timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          );
 
     setState(() {
       _isRequesting = true;
@@ -219,7 +239,16 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
         _isRequesting = false;
         _errorText = 'Image unavailable right now';
       });
+      return;
     }
+
+    // Reset after 30s so user can retry if transfer stalls.
+    _requestTimeoutTimer?.cancel();
+    _requestTimeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted && _isRequesting && !imageProvider.isComplete(envelope.sessionId)) {
+        setState(() => _isRequesting = false);
+      }
+    });
   }
 
   Contact? _resolveSender(ImageEnvelope envelope) {

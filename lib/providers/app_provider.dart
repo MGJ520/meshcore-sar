@@ -48,15 +48,10 @@ class AppProvider with ChangeNotifier {
   bool get isVoiceLimiterEnabled => _isVoiceLimiterEnabled;
 
   static const Duration _packetRetryDelay = Duration(milliseconds: 1200);
-  static const Duration _imageFragmentTimeout = Duration(seconds: 10);
   static const int _maxPacketRetryAttempts = 4;
-  static const int _maxImageRetryAttempts = 5;
   final Map<String, String> _voiceSessionSenderKey6 = {};
-  final Map<String, String> _imageSessionSenderKey6 = {};
   final Map<String, Timer> _voiceMissingRetryTimers = {};
-  final Map<String, Timer> _imageMissingRetryTimers = {};
   final Map<String, int> _voiceMissingRetryAttempts = {};
-  final Map<String, int> _imageMissingRetryAttempts = {};
 
   AppProvider({
     required this.connectionProvider,
@@ -595,17 +590,7 @@ class AppProvider with ChangeNotifier {
       // Image envelope (IE1): announce image availability.
       final imageEnvelope = ImageEnvelope.tryParse(enrichedMessage.text);
       if (imageEnvelope != null) {
-        _imageSessionSenderKey6[imageEnvelope.sessionId] = imageEnvelope
-            .senderKey6
-            .toLowerCase();
         imageProvider.registerEnvelope(imageEnvelope);
-        // Start 10s idle timer immediately so we request fragments even if
-        // none arrive at all (sender may need an explicit IR1 pull request).
-        _scheduleImageMissingRetry(
-          imageEnvelope.sessionId,
-          justComplete: false,
-          newSession: true,
-        );
         messagesProvider.addMessage(
           enrichedMessage,
           contactLookup: (name) {
@@ -692,12 +677,11 @@ class AppProvider with ChangeNotifier {
         if (frag == null) return;
         debugPrint('📷 [AppProvider] Binary image fragment received: $frag');
         final session = imageProvider.session(frag.sessionId);
-        final justComplete = imageProvider.addFragment(
+        imageProvider.addFragment(
           frag,
           width: session?.width ?? 0,
           height: session?.height ?? 0,
         );
-        _scheduleImageMissingRetry(frag.sessionId, justComplete: justComplete);
         return;
       }
 
@@ -1103,94 +1087,6 @@ class AppProvider with ChangeNotifier {
     });
   }
 
-  /// Called on every received fragment (and when IE1 envelope arrives).
-  /// Debounces a 10s idle timeout — if no fragment arrives within the window,
-  /// sends IR1 requesting only the still-missing indices (partial resume).
-  /// The attempt counter is NOT reset per-fragment; it only resets when a new
-  /// session starts (IE1 received), so retries are bounded even when fragments
-  /// trickle in slowly.
-  void _scheduleImageMissingRetry(
-    String sessionId, {
-    required bool justComplete,
-    bool newSession = false,
-  }) {
-    if (justComplete || imageProvider.isComplete(sessionId)) {
-      _imageMissingRetryTimers.remove(sessionId)?.cancel();
-      _imageMissingRetryAttempts.remove(sessionId);
-      return;
-    }
-
-    // Reset attempt counter only when a brand-new session starts (IE1 arrived).
-    if (newSession) _imageMissingRetryAttempts[sessionId] = 0;
-
-    // Debounce: restart the 10s idle timer on every received fragment.
-    _imageMissingRetryTimers[sessionId]?.cancel();
-    _imageMissingRetryTimers[sessionId] = Timer(_imageFragmentTimeout, () {
-      unawaited(_requestMissingImageFragments(sessionId));
-    });
-  }
-
-  Future<void> _requestMissingImageFragments(String sessionId) async {
-    if (imageProvider.isComplete(sessionId)) {
-      _imageMissingRetryTimers.remove(sessionId)?.cancel();
-      _imageMissingRetryAttempts.remove(sessionId);
-      return;
-    }
-
-    final attempt = _imageMissingRetryAttempts[sessionId] ?? 0;
-    if (attempt >= _maxImageRetryAttempts) {
-      debugPrint(
-        '⚠️ [AppProvider] Image re-request limit ($attempt) reached for $sessionId',
-      );
-      _imageMissingRetryTimers.remove(sessionId)?.cancel();
-      return;
-    }
-
-    final senderKey6 = _imageSessionSenderKey6[sessionId];
-    if (senderKey6 == null) return;
-    final sender = _resolveContactByPrefixHex(senderKey6);
-    final deviceKey = connectionProvider.deviceInfo.publicKey;
-    if (sender == null || deviceKey == null || deviceKey.length < 6) return;
-
-    final missing = imageProvider.missingFragmentIndices(sessionId);
-    if (missing.isEmpty) {
-      _imageMissingRetryTimers.remove(sessionId)?.cancel();
-      _imageMissingRetryAttempts.remove(sessionId);
-      return;
-    }
-
-    final requesterKey6 = deviceKey
-        .sublist(0, 6)
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join('');
-
-    debugPrint(
-      '📷 [AppProvider] Requesting ${missing.length} missing fragments '
-      'for $sessionId (attempt ${attempt + 1}/$_maxImageRetryAttempts): $missing',
-    );
-
-    final request = ImageFetchRequest(
-      sessionId: sessionId,
-      want: 'missing',
-      missingIndices: missing,
-      requesterKey6: requesterKey6,
-      timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    );
-
-    final sent = await connectionProvider.sendTextMessage(
-      contactPublicKey: sender.publicKey,
-      text: request.encode(),
-      contact: sender,
-    );
-    if (!sent) return;
-
-    _imageMissingRetryAttempts[sessionId] = attempt + 1;
-    // Wait another full timeout window for the sender to retransmit.
-    _imageMissingRetryTimers[sessionId]?.cancel();
-    _imageMissingRetryTimers[sessionId] = Timer(_imageFragmentTimeout, () {
-      unawaited(_requestMissingImageFragments(sessionId));
-    });
-  }
 
   /// Insert or update a voice placeholder message for binary raw-data packets.
   ///
@@ -1325,15 +1221,9 @@ class AppProvider with ChangeNotifier {
     for (final timer in _voiceMissingRetryTimers.values) {
       timer.cancel();
     }
-    for (final timer in _imageMissingRetryTimers.values) {
-      timer.cancel();
-    }
     _voiceMissingRetryTimers.clear();
-    _imageMissingRetryTimers.clear();
     _voiceMissingRetryAttempts.clear();
-    _imageMissingRetryAttempts.clear();
     _voiceSessionSenderKey6.clear();
-    _imageSessionSenderKey6.clear();
     notifyListeners();
   }
 
@@ -1363,9 +1253,6 @@ class AppProvider with ChangeNotifier {
     // Dispose the location tracking service to stop GPS stream and clean up resources
     locationTrackingService.dispose();
     for (final timer in _voiceMissingRetryTimers.values) {
-      timer.cancel();
-    }
-    for (final timer in _imageMissingRetryTimers.values) {
       timer.cancel();
     }
     super.dispose();

@@ -248,6 +248,16 @@ Fallback defaults are used when radio params are unavailable: `SF10`, `BW250kHz`
 - Raw return path requires a valid direct route to requester.
 - Available on iOS and Android (`image_picker` + `flutter_avif`).
 
+### 11.1 Raw Binary Routing Semantics
+
+- Image fragment payloads use companion command `CMD_SEND_RAW_DATA` (`25` / `0x19`).
+- Companion push back to the app is `PUSH_CODE_RAW_DATA` (`0x84`).
+- Over-the-air packet type for this flow is `PAYLOAD_TYPE_RAW_CUSTOM` (`0x0F`).
+- This flow is direct-route only, not flood/broadcast:
+  - it is sent to one destination path;
+  - only nodes on that path relay it;
+  - it is **not** received by everyone in the mesh.
+
 ## 12. High-Level Sequence
 
 ```mermaid

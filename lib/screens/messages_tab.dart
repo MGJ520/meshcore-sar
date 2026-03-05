@@ -769,8 +769,6 @@ class _MessagesTabState extends State<MessagesTab> {
     final connectionProvider = context.read<ConnectionProvider>();
     final messagesProvider = context.read<MessagesProvider>();
     final voiceProvider = context.read<VoiceProvider>();
-
-    // Insert the chat placeholder before sending (so it appears immediately).
     final msgId = 'voice_${sessionId}_sent';
     final devicePublicKey = connectionProvider.deviceInfo.publicKey;
     final senderPublicKeyPrefix =
@@ -782,24 +780,6 @@ class _MessagesTabState extends State<MessagesTab> {
         MessageDestinationPreferences.destinationTypeChannel;
     final recipient = _selectedRecipient;
     final channelIdx = isChannel ? (recipient?.publicKey[1] ?? 0) : null;
-    final sentMsg = Message(
-      id: msgId,
-      messageType: (!isChannel && recipient != null)
-          ? MessageType.contact
-          : MessageType.channel,
-      senderPublicKeyPrefix: senderPublicKeyPrefix,
-      pathLen: 0,
-      textType: MessageTextType.plain,
-      senderTimestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      text: '',
-      receivedAt: DateTime.now(),
-      deliveryStatus: MessageDeliveryStatus.sent,
-      isVoice: true,
-      voiceId: sessionId,
-      channelIdx: channelIdx,
-      recipientPublicKey: isChannel ? null : recipient?.publicKey,
-    );
-    messagesProvider.addSentMessage(sentMsg);
 
     final encodedPackets = <VoicePacket>[];
     debugPrint(
@@ -858,6 +838,26 @@ class _MessagesTabState extends State<MessagesTab> {
       version: 1,
     );
     final envelopeText = envelope.encodeText();
+
+    // Insert placeholder with real VE1 envelope text so technical details are populated.
+    final sentMsg = Message(
+      id: msgId,
+      messageType: (!isChannel && recipient != null)
+          ? MessageType.contact
+          : MessageType.channel,
+      senderPublicKeyPrefix: senderPublicKeyPrefix,
+      pathLen: 0,
+      textType: MessageTextType.plain,
+      senderTimestamp: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      text: envelopeText,
+      receivedAt: DateTime.now(),
+      deliveryStatus: MessageDeliveryStatus.sent,
+      isVoice: true,
+      voiceId: sessionId,
+      channelIdx: channelIdx,
+      recipientPublicKey: isChannel ? null : recipient?.publicKey,
+    );
+    messagesProvider.addSentMessage(sentMsg);
 
     try {
       if (isChannel) {

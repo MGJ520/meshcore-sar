@@ -15,6 +15,7 @@ import '../../providers/voice_provider.dart';
 import '../../providers/image_provider.dart' as ip;
 import '../contacts/direct_message_sheet.dart';
 import '../drawing_minimap_preview.dart';
+import '../../models/ble_packet_log.dart';
 import '../../services/sar_template_service.dart';
 import '../../utils/toast_logger.dart';
 import '../../utils/sar_message_parser.dart';
@@ -425,9 +426,21 @@ class _MessageBubbleState extends State<MessageBubble> {
         ?.sublist(0, recipientKey.length < 6 ? recipientKey.length : 6)
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join('');
-    final snrDb = widget.message.lastEchoSnrRaw != null
+    final matchedRxLog = _findBestMatchingRxLog(
+      connectionProvider.bleService.packetLogs,
+      widget.message,
+    );
+    final packetPathBytes = _extractPathBytesFromLog(matchedRxLog);
+    final packetPathHex = packetPathBytes
+        ?.map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join(':');
+    final snrDb =
+        matchedRxLog?.logRxDataInfo?.snrDb ??
+        (widget.message.lastEchoSnrRaw != null
         ? (widget.message.lastEchoSnrRaw!.toSigned(8) / 4.0)
-        : null;
+        : null);
+    final rssiDbm =
+        matchedRxLog?.logRxDataInfo?.rssiDbm ?? widget.message.lastEchoRssiDbm;
 
     final rawLines = <String>[
       'Message ID: ${widget.message.id}',
@@ -444,6 +457,9 @@ class _MessageBubbleState extends State<MessageBubble> {
       'Echo count: ${widget.message.echoCount}',
       'Last echo RSSI: ${widget.message.lastEchoRssiDbm ?? '-'}',
       'Last echo SNR: ${snrDb?.toStringAsFixed(2) ?? '-'}',
+      'Matched RX RSSI: ${rssiDbm ?? '-'}',
+      'Matched RX SNR: ${snrDb?.toStringAsFixed(2) ?? '-'}',
+      'Matched path bytes: ${packetPathHex ?? '-'}',
       'Expected ACK tag: ${widget.message.expectedAckTag ?? '-'}',
       'Suggested timeout ms: ${widget.message.suggestedTimeoutMs ?? '-'}',
       'Round-trip ms: ${widget.message.roundTripTimeMs ?? '-'}',
@@ -618,7 +634,8 @@ class _MessageBubbleState extends State<MessageBubble> {
                   ],
                 ),
                 if (widget.message.lastEchoRssiDbm != null ||
-                    snrDb != null) ...[
+                    snrDb != null ||
+                    rssiDbm != null) ...[
                   const SizedBox(height: 12),
                   _techSection(
                     context,
@@ -626,19 +643,19 @@ class _MessageBubbleState extends State<MessageBubble> {
                     title: l10n.linkQuality,
                     child: Column(
                       children: [
-                        if (widget.message.lastEchoRssiDbm != null)
+                        if (rssiDbm != null)
                           _signalRow(
                             context,
                             label: 'RSSI',
-                            valueLabel: '${widget.message.lastEchoRssiDbm} dBm',
+                            valueLabel: '$rssiDbm dBm',
                             normalized:
-                                ((widget.message.lastEchoRssiDbm!.toDouble() +
+                                ((rssiDbm.toDouble() +
                                             120.0) /
                                         70.0)
                                     .clamp(0.0, 1.0),
-                            color: widget.message.lastEchoRssiDbm! >= -80
+                            color: rssiDbm >= -80
                                 ? Colors.green
-                                : widget.message.lastEchoRssiDbm! >= -95
+                                : rssiDbm >= -95
                                 ? Colors.amber
                                 : Colors.redAccent,
                           ),
@@ -672,30 +689,37 @@ class _MessageBubbleState extends State<MessageBubble> {
                         label: l10n.status,
                         value: widget.message.deliveryStatus.name,
                       ),
-                      _detailRow(
-                        context,
-                        label: l10n.expectedAckTag,
-                        value: widget.message.expectedAckTag?.toString() ?? '-',
-                      ),
-                      _detailRow(
-                        context,
-                        label: l10n.roundTrip,
-                        value: widget.message.roundTripTimeMs != null
-                            ? '${widget.message.roundTripTimeMs} ms'
-                            : '-',
-                      ),
-                      _detailRow(
-                        context,
-                        label: l10n.retryAttempt,
-                        value: widget.message.retryAttempt.toString(),
-                      ),
-                      _detailRow(
-                        context,
-                        label: l10n.floodFallback,
-                        value: widget.message.usedFloodFallback
-                            ? l10n.yes
-                            : l10n.no,
-                      ),
+                      if (widget.message.expectedAckTag != null)
+                        _detailRow(
+                          context,
+                          label: l10n.expectedAckTag,
+                          value: widget.message.expectedAckTag!.toString(),
+                        ),
+                      if (widget.message.roundTripTimeMs != null)
+                        _detailRow(
+                          context,
+                          label: l10n.roundTrip,
+                          value: '${widget.message.roundTripTimeMs} ms',
+                        ),
+                      if (widget.message.retryAttempt > 0)
+                        _detailRow(
+                          context,
+                          label: l10n.retryAttempt,
+                          value: widget.message.retryAttempt.toString(),
+                        ),
+                      if (widget.message.usedFloodFallback)
+                        _detailRow(
+                          context,
+                          label: l10n.floodFallback,
+                          value: l10n.yes,
+                        ),
+                      if (packetPathHex != null)
+                        _detailRow(
+                          context,
+                          label: 'Path bytes',
+                          value: packetPathHex,
+                          onCopy: () => copyField(packetPathHex),
+                        ),
                     ],
                   ),
                 ),
@@ -715,29 +739,28 @@ class _MessageBubbleState extends State<MessageBubble> {
                       _detailRow(
                         context,
                         label: l10n.sender,
-                        value: senderName ?? widget.message.senderName ?? '-',
+                        value: senderName ?? widget.message.senderName ?? 'Unknown',
                       ),
-                      _detailRow(
-                        context,
-                        label: l10n.senderKey,
-                        value: senderPrefixHex ?? '-',
-                        onCopy: senderPrefixHex != null
-                            ? () => copyField(senderPrefixHex)
-                            : null,
-                      ),
-                      _detailRow(
-                        context,
-                        label: l10n.recipient,
-                        value: recipientName ?? '-',
-                      ),
-                      _detailRow(
-                        context,
-                        label: l10n.recipientKey,
-                        value: recipientPrefixHex ?? '-',
-                        onCopy: recipientPrefixHex != null
-                            ? () => copyField(recipientPrefixHex)
-                            : null,
-                      ),
+                      if (senderPrefixHex != null)
+                        _detailRow(
+                          context,
+                          label: l10n.senderKey,
+                          value: senderPrefixHex,
+                          onCopy: () => copyField(senderPrefixHex),
+                        ),
+                      if (recipientName != null)
+                        _detailRow(
+                          context,
+                          label: l10n.recipient,
+                          value: recipientName,
+                        ),
+                      if (recipientPrefixHex != null)
+                        _detailRow(
+                          context,
+                          label: l10n.recipientKey,
+                          value: recipientPrefixHex,
+                          onCopy: () => copyField(recipientPrefixHex),
+                        ),
                     ],
                   ),
                 ),
@@ -1018,6 +1041,48 @@ class _MessageBubbleState extends State<MessageBubble> {
         ),
       ],
     );
+  }
+
+  BlePacketLog? _findBestMatchingRxLog(List<BlePacketLog> logs, Message message) {
+    if (message.pathLen < 0 || message.pathLen >= 255) return null;
+    final expectedPayloadType = message.messageType == MessageType.channel
+        ? 0x05
+        : 0x02;
+    BlePacketLog? bestLog;
+    var bestDeltaMs = 999999999;
+
+    for (final log in logs) {
+      if (log.responseCode != 0x88) continue; // pushLogRxData
+      if (log.rawData.length < 6) continue;
+
+      // Logged frame format:
+      // [0]=response code 0x88, [1]=snrRaw, [2]=rssi, [3]=packet header, [4]=pathLen
+      final raw = log.rawData;
+      final payloadType = (raw[3] >> 2) & 0x0F;
+      final pathLen = raw[4];
+      if (payloadType != expectedPayloadType) continue;
+      if (pathLen != message.pathLen) continue;
+      if (raw.length < 5 + pathLen) continue;
+
+      final deltaMs =
+          (log.timestamp.difference(message.receivedAt).inMilliseconds).abs();
+      if (deltaMs < bestDeltaMs) {
+        bestDeltaMs = deltaMs;
+        bestLog = log;
+      }
+    }
+
+    if (bestDeltaMs > 30000) return null;
+    return bestLog;
+  }
+
+  List<int>? _extractPathBytesFromLog(BlePacketLog? log) {
+    if (log == null) return null;
+    final raw = log.rawData;
+    if (raw.length < 6) return null;
+    final pathLen = raw[4];
+    if (pathLen <= 0 || raw.length < 5 + pathLen) return null;
+    return raw.sublist(5, 5 + pathLen);
   }
 
   void _showReplySheet(BuildContext context) {

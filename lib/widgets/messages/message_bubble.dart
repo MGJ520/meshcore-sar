@@ -22,10 +22,12 @@ import '../../utils/sar_message_parser.dart';
 import '../../utils/key_comparison.dart';
 import '../../utils/voice_message_parser.dart';
 import '../../utils/image_message_parser.dart';
+import '../../utils/tictactoe_message_parser.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/message_extensions.dart';
 import 'voice_message_bubble.dart';
 import 'image_message_bubble.dart';
+import 'tictactoe_message_bubble.dart';
 import 'message_trace_sheet.dart';
 
 /// Reusable message bubble widget that displays messages with various types:
@@ -2180,6 +2182,11 @@ class _MessageBubbleState extends State<MessageBubble> {
             else if (ImageEnvelope.isEnvelope(message.text) &&
                 !widget.isCompact)
               ImageMessageBubble(message: message, isSentByMe: isOwnMessage)
+            // Tic-Tac-Toe control message content
+            else if (message.isContactMessage &&
+                TicTacToeMessageParser.isTicTacToe(message.text) &&
+                !widget.isCompact)
+              TicTacToeMessageBubble(message: message, isSentByMe: isOwnMessage)
             // Regular message content
             else if (!message.isDrawing || widget.isCompact)
               Text(message.text, style: Theme.of(context).textTheme.bodyMedium),

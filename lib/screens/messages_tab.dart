@@ -27,6 +27,7 @@ import '../utils/toast_logger.dart';
 import '../utils/key_comparison.dart';
 import '../utils/voice_message_parser.dart';
 import '../utils/image_message_parser.dart';
+import '../utils/tictactoe_message_parser.dart';
 import '../providers/image_provider.dart' as ip;
 import '../services/image_codec_service.dart';
 import '../services/image_preferences.dart';
@@ -426,6 +427,54 @@ class _MessagesTabState extends State<MessagesTab> {
       // Mark message as failed if sending failed
       messagesProvider.markMessageFailed(messageId);
     }
+  }
+
+  Future<void> _startTicTacToeGame() async {
+    if (!mounted) return;
+    if (_destinationType !=
+            MessageDestinationPreferences.destinationTypeContact ||
+        _selectedRecipient == null) {
+      ToastLogger.warning(
+        context,
+        'Tic-Tac-Toe works only in direct messages. Choose a contact first.',
+      );
+      return;
+    }
+
+    final connectionProvider = context.read<ConnectionProvider>();
+    final messagesProvider = context.read<MessagesProvider>();
+    final contactsProvider = context.read<ContactsProvider>();
+    if (!connectionProvider.deviceInfo.isConnected) {
+      ToastLogger.error(context, 'Not connected to device');
+      return;
+    }
+
+    final devicePublicKey = connectionProvider.deviceInfo.publicKey;
+    if (devicePublicKey == null || devicePublicKey.length < 6) {
+      ToastLogger.error(context, 'Device key unavailable');
+      return;
+    }
+
+    final gameId = List.generate(
+      8,
+      (_) => math.Random.secure().nextInt(16).toRadixString(16),
+    ).join();
+    final starterKey6 = devicePublicKey
+        .sublist(0, 6)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join('');
+    final startMessage = TicTacToeMessageParser.encodeStart(
+      gameId: gameId,
+      starterKey6: starterKey6,
+      timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    );
+
+    await _sendToRecipient(
+      startMessage,
+      connectionProvider,
+      messagesProvider,
+      contactsProvider,
+    );
   }
 
   // ── Image sending ───────────────────────────────────────────────────────────
@@ -1076,6 +1125,15 @@ class _MessagesTabState extends State<MessagesTab> {
                         Navigator.pop(sheetContext);
                         _pickAndSendImage(source: ImageSource.camera);
                       },
+              ),
+              ListTile(
+                leading: const Icon(Icons.grid_3x3),
+                title: const Text('Start Tic-Tac-Toe'),
+                subtitle: const Text('DM only'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _startTicTacToeGame();
+                },
               ),
             ],
           ),

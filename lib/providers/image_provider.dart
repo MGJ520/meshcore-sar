@@ -68,6 +68,12 @@ class ImageProvider with ChangeNotifier {
     required Uint8List payload,
   })?
   sendRawPacketCallback;
+  Future<bool> Function({
+    required String sessionId,
+    required int index,
+    Duration timeout,
+  })?
+  waitForFragmentAckCallback;
 
   ImageProvider() {
     _restore();
@@ -229,11 +235,25 @@ class ImageProvider with ChangeNotifier {
         continue;
       }
       try {
+        final ackFuture = waitForFragmentAckCallback?.call(
+          sessionId: sessionId,
+          index: fragment.index,
+          timeout: const Duration(seconds: 8),
+        );
         await sendRawPacketCallback!(
           contactPath: requester.outPath,
           contactPathLen: requester.outPathLen,
           payload: fragment.encodeBinary(),
         );
+        if (ackFuture != null) {
+          final acked = await ackFuture;
+          if (!acked) {
+            debugPrint(
+              '⚠️ [ImageProvider] ACK timeout for $sessionId#${fragment.index}',
+            );
+            return false;
+          }
+        }
       } catch (e, st) {
         debugPrint('❌ [ImageProvider] Serve error for $sessionId: $e\n$st');
         return false;

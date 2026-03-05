@@ -6,74 +6,122 @@ void main() {
   group('VoiceEnvelope', () {
     test('encodes and parses valid envelope', () {
       final env = VoiceEnvelope(
-        sessionId: 'deadbeef',
+        sessionId: '0000000a',
         mode: VoicePacketMode.mode1200,
         total: 4,
-        durationMs: 3200,
+        durationMs: 3000,
         senderKey6: 'aabbccddeeff',
         timestampSec: 1700000000,
       );
 
       final text = env.encodeText();
       expect(VoiceEnvelope.isVoiceEnvelopeText(text), isTrue);
+      expect(text.startsWith('VE2:'), isTrue);
+      expect(text.split(':')[1], equals('a'));
 
       final parsed = VoiceEnvelope.tryParseText(text);
       expect(parsed, isNotNull);
-      expect(parsed!.sessionId, equals('deadbeef'));
+      expect(parsed!.sessionId, equals('0000000a'));
       expect(parsed.mode, equals(VoicePacketMode.mode1200));
       expect(parsed.total, equals(4));
-      expect(parsed.durationMs, equals(3200));
+      expect(parsed.durationMs, equals(3000));
       expect(parsed.senderKey6, equals('aabbccddeeff'));
-      expect(parsed.version, equals(1));
+      expect(parsed.version, equals(2));
     });
 
     test('rejects invalid envelope payload', () {
-      final text = 'VE1:nothex:1:2:1000:aabbccddeeff:1700000000:1';
+      final text = 'VE2:bad_sid:1:2:1000:aabbccddeeff:s44we8';
       expect(VoiceEnvelope.tryParseText(text), isNull);
+    });
+
+    test('rejects legacy v1 envelope prefix', () {
+      const legacy = 'VE1:deadbeef:1:4:3200:aabbccddeeff:1700000000:1';
+      expect(VoiceEnvelope.tryParseText(legacy), isNull);
     });
   });
 
   group('VoiceFetchRequest', () {
     test('encodes and parses valid request', () {
       final req = VoiceFetchRequest(
-        sessionId: '00112233',
+        sessionId: '0000000a',
         requesterKey6: 'ffeeddccbbaa',
         timestampSec: 1700000001,
       );
       final text = req.encodeText();
       expect(VoiceFetchRequest.isVoiceFetchRequestText(text), isTrue);
+      expect(text.startsWith('VR2:'), isTrue);
+      expect(text.split(':')[1], equals('a'));
 
       final parsed = VoiceFetchRequest.tryParseText(text);
       expect(parsed, isNotNull);
-      expect(parsed!.sessionId, equals('00112233'));
+      expect(parsed!.sessionId, equals('0000000a'));
       expect(parsed.want, equals('all'));
       expect(parsed.requesterKey6, equals('ffeeddccbbaa'));
-      expect(parsed.version, equals(1));
+      expect(parsed.version, equals(2));
     });
 
     test('rejects invalid request payload', () {
       expect(
         VoiceFetchRequest.tryParseText(
-          'VR1:00112233:chunk:ffeeddccbbaa:1700000001:1',
+          'VR2:a:chunk:ffeeddccbbaa:s44we9',
         ),
         isNull,
       );
     });
 
+    test('rejects legacy v1 request prefix', () {
+      const legacy = 'VR1:00112233:a:ffeeddccbbaa:1700000001:1';
+      expect(VoiceFetchRequest.tryParseText(legacy), isNull);
+    });
+
     test('encodes and parses missing-packet request', () {
       final req = VoiceFetchRequest(
-        sessionId: '00112233',
+        sessionId: '0000000a',
         want: 'missing',
-        missingIndices: const [0, 3, 7],
+        missingIndices: const [0, 1, 2, 3, 7],
         requesterKey6: 'ffeeddccbbaa',
         timestampSec: 1700000001,
       );
       final text = req.encodeText();
+      expect(text, contains(':m0-3.7:'));
 
       final parsed = VoiceFetchRequest.tryParseText(text);
       expect(parsed, isNotNull);
       expect(parsed!.want, equals('missing'));
-      expect(parsed.missingIndices, equals([0, 3, 7]));
+      expect(parsed.missingIndices, equals([0, 1, 2, 3, 7]));
+    });
+
+    test('encodes and parses binary fetch request', () {
+      final req = VoiceFetchRequest(
+        sessionId: '01020304',
+        want: 'missing',
+        missingIndices: const [1, 4],
+        requesterKey6: 'ffeeddccbbaa',
+        timestampSec: 1700000001,
+      );
+
+      final payload = req.encodeBinary();
+      expect(VoiceFetchRequest.isVoiceFetchRequestBinary(payload), isTrue);
+
+      final parsed = VoiceFetchRequest.tryParseBinary(payload);
+      expect(parsed, isNotNull);
+      expect(parsed!.sessionId, equals('01020304'));
+      expect(parsed.want, equals('missing'));
+      expect(parsed.missingIndices, equals([1, 4]));
+      expect(parsed.requesterKey6, equals('ffeeddccbbaa'));
+      expect(parsed.version, equals(2));
+    });
+  });
+
+  group('VoiceFragmentAck', () {
+    test('encodes and parses binary ack', () {
+      final ack = VoiceFragmentAck(sessionId: '01020304', index: 7);
+      final payload = ack.encodeBinary();
+      expect(VoiceFragmentAck.isVoiceFragmentAckBinary(payload), isTrue);
+      final parsed = VoiceFragmentAck.tryParseBinary(payload);
+      expect(parsed, isNotNull);
+      expect(parsed!.sessionId, equals('01020304'));
+      expect(parsed.index, equals(7));
     });
   });
 

@@ -13,8 +13,8 @@ import 'transfer_timeout.dart';
 
 /// A message bubble that shows a received or sent image.
 ///
-/// On first render the image is not yet fetched (only the IE1 envelope is
-/// known).  The user taps the thumbnail placeholder → IR1 fetch request is
+/// On first render the image is not yet fetched (only the IE2 envelope is
+/// known).  The user taps the thumbnail placeholder → IR2 fetch request is
 /// sent → binary fragments stream in → bubble rebuilds with the full image.
 class ImageMessageBubble extends StatefulWidget {
   final Message message;
@@ -279,18 +279,23 @@ class _ImageMessageBubbleState extends State<ImageMessageBubble> {
       _errorText = null;
     });
 
-    final sent = await conn.sendTextMessage(
-      contactPublicKey: sender.publicKey,
-      text: request.encode(),
-      contact: sender,
-    );
-    if (!sent && mounted) {
-      setState(() {
-        _isRequesting = false;
-        _errorText = 'Image unavailable right now';
-      });
+    final payload = request.encodeBinary();
+    try {
+      await conn.sendRawVoicePacket(
+        contactPath: sender.outPath,
+        contactPathLen: sender.outPathLen,
+        payload: payload,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isRequesting = false;
+          _errorText = 'Image unavailable right now';
+        });
+      }
       return;
     }
+    if (!mounted) return;
 
     // Timeout = 2× estimated LoRa airtime (min 30s).
     final txEstimate = estimateImageTransmitDuration(

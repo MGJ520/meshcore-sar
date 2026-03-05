@@ -5,8 +5,9 @@
 Voice mode uses a **two-plane architecture**:
 
 - **Control plane (text messages):**
-  - `VE1:` voice envelope announces voice availability in chat.
-  - `VR1:` direct fetch request asks sender to stream voice payload.
+  - `VE2:` voice envelope announces voice availability in chat.
+- **Control plane (raw binary request):**
+  - Binary voice fetch request (same raw route as voice packets).
 - **Data plane (raw binary packets):**
   - `VoicePacket` payload streamed via `cmdSendRawData` and received through `pushRawData`.
 
@@ -16,73 +17,58 @@ This design avoids broadcasting full voice payloads to channels/rooms. Chat carr
 
 - `lib/utils/voice_message_parser.dart`
   - `VoicePacket` (legacy text + binary packet format)
-  - `VoiceEnvelope` (`VE1`)
-  - `VoiceFetchRequest` (`VR1`)
+  - `VoiceEnvelope` (`VE2`)
+  - `VoiceFetchRequest` (binary)
 - `lib/screens/messages_tab.dart`
   - Capture/encode voice, cache encoded packets, send envelope only
 - `lib/providers/voice_provider.dart`
   - Reassembly/playback sessions
   - Outgoing session cache + deferred serving
 - `lib/providers/app_provider.dart`
-  - Incoming routing for `VE1` and `VR1`
+  - Incoming routing for `VE2` and binary voice fetch requests
   - Handles raw packet ingestion
 - `lib/widgets/messages/voice_message_bubble.dart`
   - Play behavior (immediate play if complete, otherwise fetch + auto-play)
 - `lib/providers/messages_provider.dart`
-  - Message-level voice detection (`VE1` + legacy `V:`)
+  - Message-level voice detection (`VE2` + legacy `V:`)
 - `lib/services/message_storage_service.dart`
   - Persists `isVoice` and `voiceId`
 
 ## 3. Wire Formats
 
-### 3.1 Voice Envelope (`VE1`)
+### 3.1 Voice Envelope (`VE2`)
 
-Prefix: `VE1:` + colon-delimited compact payload
+Prefix: `VE2:` + colon-delimited compact payload (base36 numeric fields)
 
 Fields:
 
-- `sid` (string, 8 hex chars): session ID
-- `mode` (int): codec mode ID (`VoicePacketMode.id`)
-- `total` (int): packet count (1..255)
-- `durMs` (int): estimated duration in ms
+- `sid` (string): base36 token for 32-bit session ID
+- `mode` (base36): codec mode ID (`VoicePacketMode.id`)
+- `total` (base36): packet count (1..255)
+- `durS` (base36): estimated duration in seconds
 - `senderKey6` (string, 12 hex chars): sender public-key prefix (6 bytes)
-- `ts` (int): unix timestamp seconds
-- `ver` (int): protocol version (currently `1`)
+- `ts` (base36): unix timestamp seconds
+
+`sid` is base36 on wire and expands to 8-hex internally.
 
 Compact format:
 
 ```text
-VE1:{sid}:{mode}:{total}:{durMs}:{senderKey6}:{ts}:{ver}
+VE2:{sid}:{mode}:{total}:{durS}:{senderKey6}:{ts}
 ```
 
 Example:
 
 ```text
-VE1:deadbeef:1:4:3200:aabbccddeeff:1700000000:1
+VE2:a:1:4:4:aabbccddeeff:s44we8
 ```
 
-### 3.2 Voice Fetch Request (`VR1`)
+### 3.2 Voice Fetch Request (binary)
 
-Prefix: `VR1:` + colon-delimited compact payload
-
-Fields:
-
-- `sid` (string, 8 hex chars): requested session
-- `want` (string): currently `a` (compact token for `all`)
-- `requesterKey6` (string, 12 hex chars): requester key prefix
-- `ts` (int): unix timestamp seconds
-- `ver` (int): protocol version (`1`)
-
-Compact format:
+Binary payload format:
 
 ```text
-VR1:{sid}:{want}:{requesterKey6}:{ts}:{ver}
-```
-
-Example:
-
-```text
-VR1:deadbeef:a:112233445566:1700000010:1
+[magic=0x72][sid:4B][flags:1B][requesterKey6:6B][ts:4B][missingCount:1B][missingIndices...]
 ```
 
 ### 3.3 Raw Voice Packet (data plane)
@@ -102,18 +88,18 @@ Binary payload structure:
 2. Each chunk is codec2-encoded into `VoicePacket` objects.
 3. Packets are cached in `VoiceProvider` outgoing cache (TTL 15 min).
 4. Sender inserts local voice placeholder message (`isVoice=true`, `voiceId=sessionId`).
-5. Sender sends one envelope (`VE1`) through normal message path:
+5. Sender sends one envelope (`VE2`) through normal message path:
    - channel/room: `sendChannelMessage`
    - direct: `sendTextMessage`
 6. **No raw audio packets are sent during initial send.**
 
 ## 5. Incoming Routing
 
-### 5.1 `VE1` envelope received
+### 5.1 `VE2` envelope received
 
 `AppProvider` marks message as voice (`isVoice`, `voiceId`) and adds it to chat.
 
-### 5.2 `VR1` request received
+### 5.2 Binary voice fetch request received
 
 `AppProvider` treats it as control-plane only:
 
@@ -132,8 +118,8 @@ In `VoiceMessageBubble`:
 
 - If session already complete: play immediately.
 - If incomplete/missing:
-  1. Resolve sender contact (message sender prefix or `VE1.senderKey6` fallback)
-  2. Send direct `VR1` fetch request
+  1. Resolve sender contact (message sender prefix or `VE2.senderKey6` fallback)
+  2. Send direct binary fetch request
   3. Show requesting state in UI
   4. Auto-play when session becomes complete
 
@@ -170,10 +156,9 @@ Parser validation enforces:
 - strict hex lengths for IDs and key prefixes
 - valid mode range
 - valid packet counts and duration bounds
-- fixed protocol version (`ver == 1`)
-- `VR1.want` token `a` (internally normalized to `all`)
-
-`VR1` handling verifies sender prefix matches `requesterKey6` to reduce spoofing risk.
+- compact base36 numeric fields in envelope/request
+- Binary request flags specify `all` or `missing` indices.
+- Request payload includes `requesterKey6` to resolve return route.
 
 ## 10. Transmit Time Estimate (UI)
 
@@ -182,7 +167,8 @@ Voice bubbles and Message Technical Details show an **estimated transmit time** 
 The estimate is airtime-based (LoRa packet model), not file-duration-only:
 
 - Source inputs:
-  - `packetCount` and `durationMs` from `VE1` envelope, or
+  - `packetCount` and `durationMs` from `VE2` envelope, or
+  - numeric envelope values decoded from base36
   - actual received `VoicePacket.codec2Data.length` bytes when local session packets exist
   - `pathLen` from message metadata
   - current radio params from `deviceInfo`: `radioBw`, `radioSf`, `radioCr`
@@ -223,7 +209,7 @@ Fallback defaults are used when radio params are unavailable: `SF10`, `BW250kHz`
 ## 12. Backward Compatibility
 
 - Legacy `V:` text packet parsing is still supported.
-- Message voice detection accepts both new `VE1` and legacy `V:` formats.
+- Message voice detection accepts `VE2` and legacy `V:` formats.
 
 ## 13. High-Level Sequence
 
@@ -235,10 +221,10 @@ sequenceDiagram
 
   A->>A: Record + encode voice packets
   A->>A: Cache session packets (TTL 15m)
-  A->>M: Send VE1 envelope
-  M->>B: Deliver VE1
+  A->>M: Send VE2 envelope
+  M->>B: Deliver VE2
   B->>B: Render voice bubble (metadata only)
-  B->>A: Send VR1 request on Play
+  B->>A: Send binary fetch request on Play
   A->>B: Stream raw VoicePacket packets
   B->>B: Reassemble session
   B->>B: Auto-play when complete

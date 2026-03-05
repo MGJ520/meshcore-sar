@@ -1682,6 +1682,13 @@ class _MessageBubbleState extends State<MessageBubble> {
     }
 
     final message = widget.message;
+    final ticTacToeEvent = message.isContactMessage
+        ? TicTacToeMessageParser.tryParse(message.text)
+        : null;
+    if (ticTacToeEvent?.type == TicTacToeEventType.move) {
+      // Hide move control packets from chat; the game bubble updates itself.
+      return const SizedBox.shrink();
+    }
     final isSarMarker = message.isSarMarker;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -2183,8 +2190,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                 !widget.isCompact)
               ImageMessageBubble(message: message, isSentByMe: isOwnMessage)
             // Tic-Tac-Toe control message content
-            else if (message.isContactMessage &&
-                TicTacToeMessageParser.isTicTacToe(message.text) &&
+            else if (ticTacToeEvent?.type == TicTacToeEventType.start &&
                 !widget.isCompact)
               TicTacToeMessageBubble(message: message, isSentByMe: isOwnMessage)
             // Regular message content

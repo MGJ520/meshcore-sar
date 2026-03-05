@@ -243,11 +243,11 @@ int _resolveBandwidthHz(int? rawBw) {
 /// Envelope announcing image availability (control plane).
 ///
 /// Text format:
-///   IE1:{sid}:{fmt}:{total}:{w}:{h}:{bytes}:{senderKey6}:{ts}:{ver}
+///   IE2:{sid}:{fmt}:{total}:{w}:{h}:{bytes}:{senderKey6}:{ts}
 /// Example:
-///   IE1:deadbeef:0:7:128:128:1050:aabbccddeeff:1700000000:1
+///   IE2:deadbeef:0:7:3k:3k:t6:aabbccddeeff:s44we8
 class ImageEnvelope {
-  static const String prefix = 'IE1:';
+  static const String _prefix = 'IE2:';
 
   final String sessionId; // 8 hex chars
   final ImageFormat format;
@@ -268,38 +268,36 @@ class ImageEnvelope {
     required this.sizeBytes,
     required this.senderKey6,
     required this.timestampSec,
-    this.version = 1,
+    this.version = 2,
   });
 
-  static bool isEnvelope(String text) => text.startsWith(prefix);
+  static bool isEnvelope(String text) => text.startsWith(_prefix);
 
   static ImageEnvelope? tryParse(String text) {
     if (!isEnvelope(text)) return null;
-    final body = text.substring(prefix.length);
+    final body = text.substring(_prefix.length);
     final parts = body.split(':');
-    if (parts.length != 9) return null;
+    if (parts.length != 8) return null;
     try {
-      final sid = parts[0];
-      final fmtId = int.tryParse(parts[1]);
-      final total = int.tryParse(parts[2]);
-      final w = int.tryParse(parts[3]);
-      final h = int.tryParse(parts[4]);
-      final bytes = int.tryParse(parts[5]);
+      final sid = _decodeSessionId(parts[0]);
+      final fmtId = _parseInt(parts[1], base36: true);
+      final total = _parseInt(parts[2], base36: true);
+      final w = _parseInt(parts[3], base36: true);
+      final h = _parseInt(parts[4], base36: true);
+      final bytes = _parseInt(parts[5], base36: true);
       final senderKey6 = parts[6];
-      final ts = int.tryParse(parts[7]);
-      final ver = int.tryParse(parts[8]);
+      final ts = _parseInt(parts[7], base36: true);
 
-      if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sid)) return null;
+      if (sid == null) return null;
       if (fmtId == null) return null;
       if (total == null || total < 1 || total > 255) return null;
       if (w == null || h == null || w < 1 || h < 1) return null;
       if (bytes == null || bytes < 1) return null;
       if (!RegExp(r'^[0-9a-fA-F]{12}$').hasMatch(senderKey6)) return null;
       if (ts == null || ts <= 0) return null;
-      if (ver == null || ver != 1) return null;
 
       return ImageEnvelope(
-        sessionId: sid.toLowerCase(),
+        sessionId: sid,
         format: ImageFormat.fromId(fmtId),
         total: total,
         width: w,
@@ -307,7 +305,7 @@ class ImageEnvelope {
         sizeBytes: bytes,
         senderKey6: senderKey6.toLowerCase(),
         timestampSec: ts,
-        version: ver,
+        version: 2,
       );
     } catch (_) {
       return null;
@@ -315,17 +313,21 @@ class ImageEnvelope {
   }
 
   String encode() =>
-      '$prefix${sessionId.toLowerCase()}:${format.id}:$total:$width:$height:$sizeBytes:${senderKey6.toLowerCase()}:$timestampSec:$version';
+      '$_prefix${_encodeSessionId(sessionId)}:'
+      '${_toBase36(format.id)}:${_toBase36(total)}:${_toBase36(width)}:'
+      '${_toBase36(height)}:${_toBase36(sizeBytes)}:'
+      '${senderKey6.toLowerCase()}:${_toBase36(timestampSec)}';
 }
 
 /// Direct request to fetch image fragments (control plane).
 ///
 /// Text format:
-///   IR1:{sid}:{want}:{requesterKey6}:{ts}:{ver}
+///   IR2:{sid}:{want}:{requesterKey6}:{ts}
 /// Example:
-///   IR1:deadbeef:a:aabbccddeeff:1700000010:1
+///   IR2:deadbeef:a:aabbccddeeff:s44wea
 class ImageFetchRequest {
-  static const String prefix = 'IR1:';
+  static const String _prefix = 'IR2:';
+  static const int _binaryMagic = 0x69; // 'i'
 
   final String sessionId;
   final String want; // 'all' or 'missing'
@@ -340,51 +342,89 @@ class ImageFetchRequest {
     this.missingIndices = const [],
     required this.requesterKey6,
     required this.timestampSec,
-    this.version = 1,
+    this.version = 2,
   });
 
-  static bool isRequest(String text) => text.startsWith(prefix);
+  static bool isRequest(String text) => text.startsWith(_prefix);
+  static bool isRequestBinary(Uint8List payload) =>
+      payload.isNotEmpty && payload[0] == _binaryMagic;
 
   static ImageFetchRequest? tryParse(String text) {
     if (!isRequest(text)) return null;
-    final body = text.substring(prefix.length);
+    final body = text.substring(_prefix.length);
     final parts = body.split(':');
-    if (parts.length != 5) return null;
+    if (parts.length != 4) return null;
     try {
-      final sid = parts[0];
+      final sid = _decodeSessionId(parts[0]);
       final wantToken = parts[1];
       final requesterKey6 = parts[2];
-      final ts = int.tryParse(parts[3]);
-      final ver = int.tryParse(parts[4]);
+      final ts = _parseInt(parts[3], base36: true);
       final normalizedWant = wantToken == 'a'
           ? 'all'
-          : (wantToken.startsWith('m-') ? 'missing' : wantToken);
+          : ((wantToken.startsWith('m'))
+                ? 'missing'
+                : wantToken);
 
-      if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sid)) return null;
+      if (sid == null) return null;
       final missingIndices = <int>[];
       if (normalizedWant == 'missing') {
-        final encoded = wantToken.substring(2);
+        final encoded = wantToken.substring(1);
         if (encoded.isEmpty) return null;
-        for (final raw in encoded.split(',')) {
-          final idx = int.tryParse(raw);
-          if (idx == null || idx < 0 || idx > 254) return null;
-          missingIndices.add(idx);
-        }
+        missingIndices.addAll(_decodeMissingIndicesCompact(encoded));
         if (missingIndices.isEmpty) return null;
       } else if (normalizedWant != 'all') {
         return null;
       }
       if (!RegExp(r'^[0-9a-fA-F]{12}$').hasMatch(requesterKey6)) return null;
       if (ts == null || ts <= 0) return null;
-      if (ver == null || ver != 1) return null;
 
       return ImageFetchRequest(
-        sessionId: sid.toLowerCase(),
+        sessionId: sid,
         want: normalizedWant,
         missingIndices: missingIndices,
         requesterKey6: requesterKey6.toLowerCase(),
         timestampSec: ts,
-        version: ver,
+        version: 2,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static ImageFetchRequest? tryParseBinary(Uint8List payload) {
+    if (!isRequestBinary(payload)) return null;
+    if (payload.length < 17) return null; // magic+sid+flags+key6+ts+count
+    try {
+      final sid = payload
+          .sublist(1, 5)
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join()
+          .toLowerCase();
+      final flags = payload[5];
+      final requesterKey6 = payload
+          .sublist(6, 12)
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join()
+          .toLowerCase();
+      final ts =
+          (payload[12] << 24) |
+          (payload[13] << 16) |
+          (payload[14] << 8) |
+          payload[15];
+      final missingCount = payload[16];
+      if (payload.length != 17 + missingCount) return null;
+      final wantMissing = (flags & 0x01) == 0x01;
+      final missing = <int>[];
+      for (var i = 0; i < missingCount; i++) {
+        missing.add(payload[17 + i]);
+      }
+      return ImageFetchRequest(
+        sessionId: sid,
+        want: wantMissing ? 'missing' : 'all',
+        missingIndices: missing,
+        requesterKey6: requesterKey6,
+        timestampSec: ts,
+        version: 2,
       );
     } catch (_) {
       return null;
@@ -393,10 +433,168 @@ class ImageFetchRequest {
 
   String encode() {
     final wantToken = want == 'missing' && missingIndices.isNotEmpty
-        ? 'm-${missingIndices.join(',')}'
+        ? 'm${_encodeMissingIndicesCompact(missingIndices)}'
         : (want == 'all' ? 'a' : want);
-    return '$prefix${sessionId.toLowerCase()}:$wantToken:${requesterKey6.toLowerCase()}:$timestampSec:$version';
+    return '$_prefix${_encodeSessionId(sessionId)}:$wantToken:${requesterKey6.toLowerCase()}:${_toBase36(timestampSec)}';
   }
+
+  Uint8List encodeBinary() {
+    if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sessionId)) {
+      throw ArgumentError.value(sessionId, 'sessionId', 'Expected 8 hex chars');
+    }
+    if (!RegExp(r'^[0-9a-fA-F]{12}$').hasMatch(requesterKey6)) {
+      throw ArgumentError.value(
+        requesterKey6,
+        'requesterKey6',
+        'Expected 12 hex chars',
+      );
+    }
+    final useMissing = want == 'missing' && missingIndices.isNotEmpty;
+    final missing = useMissing
+        ? missingIndices.where((v) => v >= 0 && v <= 254).toList()
+        : <int>[];
+
+    final out = Uint8List(17 + missing.length);
+    out[0] = _binaryMagic;
+    for (var i = 0; i < 4; i++) {
+      out[1 + i] = int.parse(sessionId.substring(i * 2, i * 2 + 2), radix: 16);
+    }
+    out[5] = useMissing ? 0x01 : 0x00;
+    for (var i = 0; i < 6; i++) {
+      out[6 + i] = int.parse(
+        requesterKey6.substring(i * 2, i * 2 + 2),
+        radix: 16,
+      );
+    }
+    out[12] = (timestampSec >> 24) & 0xFF;
+    out[13] = (timestampSec >> 16) & 0xFF;
+    out[14] = (timestampSec >> 8) & 0xFF;
+    out[15] = timestampSec & 0xFF;
+    out[16] = missing.length;
+    for (var i = 0; i < missing.length; i++) {
+      out[17 + i] = missing[i];
+    }
+    return out;
+  }
+}
+
+/// Per-fragment ACK for raw image payload packets.
+///
+/// Binary format:
+///   [0x6a 'j'][sessionId:4B][index:1B]
+class ImageFragmentAck {
+  static const int _binaryMagic = 0x6a; // 'j'
+
+  final String sessionId; // 8 hex chars
+  final int index; // 0..254
+
+  const ImageFragmentAck({required this.sessionId, required this.index});
+
+  static bool isImageFragmentAckBinary(Uint8List payload) =>
+      payload.length == 6 && payload[0] == _binaryMagic;
+
+  static ImageFragmentAck? tryParseBinary(Uint8List payload) {
+    if (!isImageFragmentAckBinary(payload)) return null;
+    try {
+      final sid = payload
+          .sublist(1, 5)
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join()
+          .toLowerCase();
+      final idx = payload[5];
+      return ImageFragmentAck(sessionId: sid, index: idx);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Uint8List encodeBinary() {
+    if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sessionId)) {
+      throw ArgumentError.value(sessionId, 'sessionId', 'Expected 8 hex chars');
+    }
+    if (index < 0 || index > 254) {
+      throw ArgumentError.value(index, 'index', 'Expected 0..254');
+    }
+    final out = Uint8List(6);
+    out[0] = _binaryMagic;
+    for (var i = 0; i < 4; i++) {
+      out[1 + i] = int.parse(sessionId.substring(i * 2, i * 2 + 2), radix: 16);
+    }
+    out[5] = index;
+    return out;
+  }
+}
+
+int? _parseInt(String token, {required bool base36}) =>
+    int.tryParse(token, radix: base36 ? 36 : 10);
+
+String _toBase36(int value) => value.toRadixString(36);
+
+String _encodeSessionId(String sessionIdHex) {
+  if (!RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(sessionIdHex)) {
+    throw ArgumentError.value(sessionIdHex, 'sessionIdHex', 'Expected 8 hex chars');
+  }
+  final value = int.parse(sessionIdHex, radix: 16);
+  return value.toRadixString(36);
+}
+
+String? _decodeSessionId(String token) {
+  if (!RegExp(r'^[0-9a-z]{1,7}$').hasMatch(token)) return null;
+  final value = int.tryParse(token, radix: 36);
+  if (value == null || value < 0 || value > 0xFFFFFFFF) return null;
+  return value.toRadixString(16).padLeft(8, '0');
+}
+
+String _encodeMissingIndicesCompact(List<int> indices) {
+  final sorted = indices
+      .where((v) => v >= 0 && v <= 254)
+      .toSet()
+      .toList()
+    ..sort();
+  if (sorted.isEmpty) return '';
+  final chunks = <String>[];
+  var start = sorted.first;
+  var prev = sorted.first;
+  for (var i = 1; i < sorted.length; i++) {
+    final curr = sorted[i];
+    if (curr == prev + 1) {
+      prev = curr;
+      continue;
+    }
+    chunks.add(
+      start == prev ? _toBase36(start) : '${_toBase36(start)}-${_toBase36(prev)}',
+    );
+    start = curr;
+    prev = curr;
+  }
+  chunks.add(
+    start == prev ? _toBase36(start) : '${_toBase36(start)}-${_toBase36(prev)}',
+  );
+  return chunks.join('.');
+}
+
+List<int> _decodeMissingIndicesCompact(String encoded) {
+  final out = <int>[];
+  for (final token in encoded.split('.')) {
+    if (token.isEmpty) continue;
+    if (!token.contains('-')) {
+      final value = int.tryParse(token, radix: 36);
+      if (value == null || value < 0 || value > 254) return const [];
+      out.add(value);
+      continue;
+    }
+    final parts = token.split('-');
+    if (parts.length != 2) return const [];
+    final start = int.tryParse(parts[0], radix: 36);
+    final end = int.tryParse(parts[1], radix: 36);
+    if (start == null || end == null || start < 0 || end > 254 || start > end) {
+      return const [];
+    }
+    for (var i = start; i <= end; i++) {
+      out.add(i);
+    }
+  }
+  return out;
 }
 
 /// Fragment the compressed image bytes into [ImagePacket] list.

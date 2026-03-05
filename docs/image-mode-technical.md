@@ -5,8 +5,9 @@
 Image mode mirrors the voice on-demand architecture exactly:
 
 - **Control plane (text messages):**
-  - `IE1:` image envelope announces image availability in chat.
-  - `IR1:` direct fetch request asks sender to stream image fragments.
+  - `IE2:` image envelope announces image availability in chat.
+- **Control plane (raw binary request):**
+  - Binary image fetch request (same raw route as image fragments).
 - **Data plane (raw binary packets):**
   - `ImagePacket` binary payload streamed via `cmdSendRawData` / `pushRawData`.
 
@@ -17,8 +18,8 @@ pixels are fetched on demand when the user taps the image bubble.
 
 - `lib/utils/image_message_parser.dart`
   - `ImagePacket` (binary fragment format)
-  - `ImageEnvelope` (`IE1`)
-  - `ImageFetchRequest` (`IR1`)
+  - `ImageEnvelope` (`IE2`)
+  - `ImageFetchRequest` (binary)
   - `fragmentImage()` — split compressed bytes into packets
   - `reassembleImage()` — join received fragments into bytes
 - `lib/screens/messages_tab.dart`
@@ -27,7 +28,7 @@ pixels are fetched on demand when the user taps the image bubble.
   - Reassembly sessions, outgoing cache, deferred serving
   - Outgoing sessions also registered as complete incoming sessions for immediate local display
 - `lib/providers/app_provider.dart`
-  - Incoming routing for `IE1`, `IR1`, binary `0x49` packets
+  - Incoming routing for `IE2`, binary image fetch requests, binary `0x49` packets
 - `lib/widgets/messages/image_message_bubble.dart`
   - Square cover thumbnail (up to 256 px); tap-to-load for received images;
     progress ring during fetch; full-screen `InteractiveViewer` on tap
@@ -39,52 +40,52 @@ pixels are fetched on demand when the user taps the image bubble.
 
 ## 3. Wire Formats
 
-### 3.1 Image Envelope (`IE1`)
+### 3.1 Image Envelope (`IE2`)
 
-Prefix: `IE1:` + colon-delimited payload
+Prefix: `IE2:` + colon-delimited compact payload (base36 numeric fields)
 
 Fields:
 
 | Field        | Type   | Description                                    |
 |--------------|--------|------------------------------------------------|
-| `sid`        | string | 8 hex chars (4 bytes), session ID              |
-| `fmt`        | int    | `ImageFormat.id` (0 = AVIF, 1 = JPEG)         |
-| `total`      | int    | Fragment count (1..255)                        |
-| `w`          | int    | Actual image width after compression (pixels)  |
-| `h`          | int    | Actual image height after compression (pixels) |
-| `bytes`      | int    | Total compressed size in bytes                 |
+| `sid`        | string | base36 token for 32-bit session ID             |
+| `fmt`        | base36 | `ImageFormat.id` (0 = AVIF, 1 = JPEG)         |
+| `total`      | base36 | Fragment count (1..255)                        |
+| `w`          | base36 | Actual image width after compression (pixels)  |
+| `h`          | base36 | Actual image height after compression (pixels) |
+| `bytes`      | base36 | Total compressed size in bytes                 |
 | `senderKey6` | string | 12 hex chars (6 bytes sender prefix)           |
-| `ts`         | int    | Unix timestamp (seconds)                       |
-| `ver`        | int    | Protocol version (currently `1`)               |
+| `ts`         | base36 | Unix timestamp (seconds)                       |
 
 Compact format:
 
 ```text
-IE1:{sid}:{fmt}:{total}:{w}:{h}:{bytes}:{senderKey6}:{ts}:{ver}
+IE2:{sid}:{fmt}:{total}:{w}:{h}:{bytes}:{senderKey6}:{ts}
 ```
 
 Example (256×171 landscape image, 14 fragments):
 
 ```text
-IE1:deadbeef:0:14:256:171:2100:aabbccddeeff:1700000000:1
+IE2:a:0:e:74:4r:1mc:aabbccddeeff:s44we8
 ```
 
-Note: `w` and `h` reflect the actual post-compression dimensions, which preserve
+Note: `sid` is base36 on wire and expands to 8-hex internally.
+`w` and `h` reflect the actual post-compression dimensions, which preserve
 the source aspect ratio (contain within the configured max size).
 
-### 3.2 Image Fetch Request (`IR1`)
+### 3.2 Image Fetch Request (binary)
 
-Same structure as `VR1`:
+Binary payload format:
 
 ```text
-IR1:{sid}:{want}:{requesterKey6}:{ts}:{ver}
+[magic=0x69][sid:4B][flags:1B][requesterKey6:6B][ts:4B][missingCount:1B][missingIndices...]
 ```
 
 | Field            | Value                    |
 |------------------|--------------------------|
-| `want`           | `a` (= "all fragments")  |
-| `requesterKey6`  | 12 hex chars             |
-| `ver`            | `1`                      |
+| `flags`          | bit0=1 => request missing indices, else all |
+| `requesterKey6`  | 6-byte requester key prefix |
+| `ts`             | unix timestamp seconds (u32) |
 
 ### 3.3 Raw Image Packet (data plane)
 
@@ -151,16 +152,16 @@ only the shorter axis is padded — no cropping occurs.
 7. Envelope sent via normal message path:
    - Channel: `sendChannelMessage`
    - Direct: `sendTextMessage`
-8. Local placeholder message added (`IE1:` text, `deliveryStatus.sending`).
+8. Local placeholder message added (`IE2:` text, `deliveryStatus.sending`).
 
 ## 6. Incoming Flow (Receive)
 
-### 6.1 `IE1` envelope received
+### 6.1 `IE2` envelope received
 
 `AppProvider` calls `imageProvider.registerEnvelope()` and adds the message to
 chat.  The bubble shows a grey square placeholder with a download icon.
 
-### 6.2 `IR1` request received
+### 6.2 Binary image fetch request received
 
 `AppProvider` treats it as control-plane only (not added to chat):
 
@@ -194,7 +195,7 @@ When `cacheOutgoingSession()` is called it also writes all fragments into
 - **Complete session**: `AspectRatio(1.0)` → `AvifImage.memory(fit: cover)`
   square thumbnail; tap → full-screen `InteractiveViewer` with fade transition.
 - **Incomplete/missing**: grey square placeholder with download icon;
-  tap → sends `IR1` fetch request.
+  tap → sends binary fetch request.
 - **Loading**: circular progress indicator showing `received/total` count.
 - **Error**: broken-image icon.
 
@@ -212,7 +213,8 @@ Image bubbles and Message Technical Details show an **estimated transmit time** 
 The estimate is airtime-based (LoRa packet model), not just compressed image size:
 
 - Source inputs:
-  - `total` fragments and `bytes` from `IE1` envelope
+  - `total` fragments and `bytes` from `IE2` envelope
+  - all numeric envelope values are decoded from base36
   - `pathLen` from message metadata
   - current radio params from `deviceInfo`: `radioBw`, `radioSf`, `radioCr`
 - Per-fragment payload model:
@@ -270,10 +272,10 @@ sequenceDiagram
   A->>A: Compress: contain resize → grayscale → PNG → AVIF
   A->>A: Fragment into ≤152B packets
   A->>A: Cache outgoing + populate local session (immediate display)
-  A->>M: Send IE1 envelope (actual w×h, fragment count)
-  M->>B: Deliver IE1
+  A->>M: Send IE2 envelope (actual w×h, fragment count)
+  M->>B: Deliver IE2
   B->>B: Render grey placeholder bubble
-  B->>A: Tap → send IR1 fetch request
+  B->>A: Tap → send binary fetch request
   A->>B: Stream binary ImagePackets
   B->>B: Reassemble fragments
   B->>B: Display AVIF image (cover thumbnail)

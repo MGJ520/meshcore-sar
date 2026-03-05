@@ -57,8 +57,11 @@ class AppProvider with ChangeNotifier {
   static const Duration _packetRetryDelay = Duration(milliseconds: 1200);
   static const int _maxPacketRetryAttempts = 4;
   final Map<String, String> _voiceSessionSenderKey6 = {};
+  final Map<String, String> _imageSessionSenderKey6 = {};
   final Map<String, Timer> _voiceMissingRetryTimers = {};
   final Map<String, int> _voiceMissingRetryAttempts = {};
+  final Map<String, Completer<void>> _voiceFragmentAckWaiters = {};
+  final Map<String, Completer<void>> _imageFragmentAckWaiters = {};
   Timer? _packetCaptureFlushTimer;
   String? _lastPersistedPacketSignature;
   bool _isPersistingPacketCapture = false;
@@ -404,6 +407,24 @@ class AppProvider with ChangeNotifier {
             payload: payload,
           );
         };
+    voiceProvider.waitForFragmentAckCallback = ({
+      required sessionId,
+      required index,
+      timeout = const Duration(seconds: 8),
+    }) => _waitForVoiceFragmentAck(
+      sessionId: sessionId,
+      index: index,
+      timeout: timeout,
+    );
+    imageProvider.waitForFragmentAckCallback = ({
+      required sessionId,
+      required index,
+      timeout = const Duration(seconds: 8),
+    }) => _waitForImageFragmentAck(
+      sessionId: sessionId,
+      index: index,
+      timeout: timeout,
+    );
 
     // When a contact is received from BLE
     connectionProvider.onContactReceived = (contact) {
@@ -540,62 +561,6 @@ class AppProvider with ChangeNotifier {
         }
       }
 
-      // Voice control plane: request sender to stream raw voice packets.
-      final voiceFetchRequest = VoiceFetchRequest.tryParseText(
-        enrichedMessage.text,
-      );
-      if (voiceFetchRequest != null) {
-        final senderPrefix = enrichedMessage.senderPublicKeyPrefix;
-        if (senderPrefix == null) {
-          debugPrint(
-            '⚠️ [AppProvider] Voice fetch request without sender prefix',
-          );
-          return;
-        }
-        final senderPrefixHex = senderPrefix
-            .take(6)
-            .map((b) => b.toRadixString(16).padLeft(2, '0'))
-            .join('');
-        if (senderPrefixHex.toLowerCase() !=
-            voiceFetchRequest.requesterKey6.toLowerCase()) {
-          debugPrint('⚠️ [AppProvider] Voice fetch requester key mismatch');
-          return;
-        }
-        final requester = contactsProvider.findContactByPrefix(senderPrefix);
-        if (requester == null) {
-          debugPrint(
-            '⚠️ [AppProvider] Voice fetch requester contact not found',
-          );
-          messagesProvider.logSystemMessage(
-            text:
-                'Cannot fetch voice: requester contact is unknown. Add/sync contacts first.',
-            level: 'warning',
-          );
-          return;
-        }
-        if (requester.outPathLen > _maxDirectPayloadHops) {
-          debugPrint(
-            '⚠️ [AppProvider] Voice fetch requester too far: ${requester.outPathLen} hops',
-          );
-          messagesProvider.logSystemMessage(
-            text:
-                'Cannot fetch voice for ${requester.advName}: message is too far (${requester.outPathLen} hops, max $_maxDirectPayloadHops).',
-            level: 'warning',
-          );
-          return;
-        }
-        unawaited(
-          voiceProvider.serveSessionTo(
-            sessionId: voiceFetchRequest.sessionId,
-            requester: requester,
-            requestedIndices: voiceFetchRequest.want == 'missing'
-                ? voiceFetchRequest.missingIndices.toSet()
-                : null,
-          ),
-        );
-        return;
-      }
-
       // Check if message is a drawing broadcast
       if (DrawingMessageParser.isDrawingMessage(enrichedMessage.text)) {
         debugPrint('🎨 [AppProvider] Drawing message received, parsing...');
@@ -665,61 +630,12 @@ class AppProvider with ChangeNotifier {
         return;
       }
 
-      // Image fetch request (IR1): requester asks us to stream image fragments.
-      final imageFetchRequest = ImageFetchRequest.tryParse(
-        enrichedMessage.text,
-      );
-      if (imageFetchRequest != null) {
-        final senderPrefix = enrichedMessage.senderPublicKeyPrefix;
-        if (senderPrefix != null) {
-          final senderPrefixHex = senderPrefix
-              .take(6)
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join('');
-          if (senderPrefixHex.toLowerCase() ==
-              imageFetchRequest.requesterKey6.toLowerCase()) {
-            final requester = contactsProvider.findContactByPrefix(
-              senderPrefix,
-            );
-            if (requester != null) {
-              if (requester.outPathLen > _maxDirectPayloadHops) {
-                debugPrint(
-                  '⚠️ [AppProvider] Image fetch requester too far: ${requester.outPathLen} hops',
-                );
-                messagesProvider.logSystemMessage(
-                  text:
-                      'Cannot fetch image for ${requester.advName}: message is too far (${requester.outPathLen} hops, max $_maxDirectPayloadHops).',
-                  level: 'warning',
-                );
-                return;
-              }
-              unawaited(
-                imageProvider.serveSessionTo(
-                  sessionId: imageFetchRequest.sessionId,
-                  requester: requester,
-                  requestedIndices: imageFetchRequest.want == 'missing'
-                      ? imageFetchRequest.missingIndices.toSet()
-                      : null,
-                ),
-              );
-            } else {
-              debugPrint(
-                '⚠️ [AppProvider] Image fetch requester contact not found',
-              );
-              messagesProvider.logSystemMessage(
-                text:
-                    'Cannot fetch image: requester contact is unknown. Add/sync contacts first.',
-                level: 'warning',
-              );
-            }
-          }
-        }
-        return; // IR1 is control-plane only; not displayed in chat
-      }
-
       // Image envelope (IE1): announce image availability.
       final imageEnvelope = ImageEnvelope.tryParse(enrichedMessage.text);
       if (imageEnvelope != null) {
+        _imageSessionSenderKey6[imageEnvelope.sessionId] = imageEnvelope
+            .senderKey6
+            .toLowerCase();
         imageProvider.registerEnvelope(imageEnvelope);
         messagesProvider.addMessage(
           enrichedMessage,
@@ -800,8 +716,99 @@ class AppProvider with ChangeNotifier {
     };
 
     // When raw binary data is received (PUSH_CODE_RAW_DATA 0x84)
+    // Magic 0x72 'r' = voice fetch request; 0x69 'i' = image fetch request.
     // Magic 0x56 'V' = voice packet; magic 0x49 'I' = image packet.
     connectionProvider.onRawDataReceived = (payload, snrRaw, rssiDbm) {
+      final voiceFetchRequest = VoiceFetchRequest.tryParseBinary(payload);
+      if (voiceFetchRequest != null) {
+        final requester = contactsProvider.findContactByPrefixHex(
+          voiceFetchRequest.requesterKey6,
+        );
+        if (requester == null) {
+          debugPrint(
+            '⚠️ [AppProvider] Voice fetch requester contact not found (binary)',
+          );
+          messagesProvider.logSystemMessage(
+            text:
+                'Cannot fetch voice: requester contact is unknown. Add/sync contacts first.',
+            level: 'warning',
+          );
+          return;
+        }
+        if (requester.outPathLen > _maxDirectPayloadHops) {
+          debugPrint(
+            '⚠️ [AppProvider] Voice fetch requester too far: ${requester.outPathLen} hops',
+          );
+          messagesProvider.logSystemMessage(
+            text:
+                'Cannot fetch voice for ${requester.advName}: message is too far (${requester.outPathLen} hops, max $_maxDirectPayloadHops).',
+            level: 'warning',
+          );
+          return;
+        }
+        unawaited(
+          voiceProvider.serveSessionTo(
+            sessionId: voiceFetchRequest.sessionId,
+            requester: requester,
+            requestedIndices: voiceFetchRequest.want == 'missing'
+                ? voiceFetchRequest.missingIndices.toSet()
+                : null,
+          ),
+        );
+        return;
+      }
+
+      final imageFetchRequest = ImageFetchRequest.tryParseBinary(payload);
+      if (imageFetchRequest != null) {
+        final requester = contactsProvider.findContactByPrefixHex(
+          imageFetchRequest.requesterKey6,
+        );
+        if (requester == null) {
+          debugPrint(
+            '⚠️ [AppProvider] Image fetch requester contact not found (binary)',
+          );
+          messagesProvider.logSystemMessage(
+            text:
+                'Cannot fetch image: requester contact is unknown. Add/sync contacts first.',
+            level: 'warning',
+          );
+          return;
+        }
+        if (requester.outPathLen > _maxDirectPayloadHops) {
+          debugPrint(
+            '⚠️ [AppProvider] Image fetch requester too far: ${requester.outPathLen} hops',
+          );
+          messagesProvider.logSystemMessage(
+            text:
+                'Cannot fetch image for ${requester.advName}: message is too far (${requester.outPathLen} hops, max $_maxDirectPayloadHops).',
+            level: 'warning',
+          );
+          return;
+        }
+        unawaited(
+          imageProvider.serveSessionTo(
+            sessionId: imageFetchRequest.sessionId,
+            requester: requester,
+            requestedIndices: imageFetchRequest.want == 'missing'
+                ? imageFetchRequest.missingIndices.toSet()
+                : null,
+          ),
+        );
+        return;
+      }
+
+      final voiceAck = VoiceFragmentAck.tryParseBinary(payload);
+      if (voiceAck != null) {
+        _completeVoiceFragmentAck(voiceAck.sessionId, voiceAck.index);
+        return;
+      }
+
+      final imageAck = ImageFragmentAck.tryParseBinary(payload);
+      if (imageAck != null) {
+        _completeImageFragmentAck(imageAck.sessionId, imageAck.index);
+        return;
+      }
+
       if (ImagePacket.isImageBinary(payload)) {
         final frag = ImagePacket.tryParseBinary(payload);
         if (frag == null) return;
@@ -812,6 +819,7 @@ class AppProvider with ChangeNotifier {
           width: session?.width ?? 0,
           height: session?.height ?? 0,
         );
+        _sendImageFragmentAck(frag);
         return;
       }
 
@@ -820,6 +828,7 @@ class AppProvider with ChangeNotifier {
       if (pkt == null) return;
       debugPrint('🎙️ [AppProvider] Binary voice packet received: $pkt');
       final justComplete = voiceProvider.addPacket(pkt);
+      _sendVoiceFragmentAck(pkt);
       _scheduleVoiceMissingRetry(pkt.sessionId, justComplete: justComplete);
       // Insert or update the placeholder message in the chat list
       _handleIncomingVoicePacket(pkt, justComplete: justComplete);
@@ -1209,15 +1218,18 @@ class AppProvider with ChangeNotifier {
       missingIndices: missing,
       requesterKey6: requesterKey6,
       timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      version: 1,
+      version: 2,
     );
 
-    final sent = await connectionProvider.sendTextMessage(
-      contactPublicKey: sender.publicKey,
-      text: request.encodeText(),
-      contact: sender,
-    );
-    if (!sent) return;
+    try {
+      await connectionProvider.sendRawVoicePacket(
+        contactPath: sender.outPath,
+        contactPathLen: sender.outPathLen,
+        payload: request.encodeBinary(),
+      );
+    } catch (_) {
+      return;
+    }
 
     _voiceMissingRetryAttempts[sessionId] = attempt + 1;
     _voiceMissingRetryTimers[sessionId]?.cancel();
@@ -1264,6 +1276,102 @@ class AppProvider with ChangeNotifier {
       voiceId: sessionId,
     );
     messagesProvider.addMessage(placeholder, contactLookup: (_) => '');
+  }
+
+  String _fragmentAckKey(String sessionId, int index) => '$sessionId:$index';
+
+  Future<bool> _waitForVoiceFragmentAck({
+    required String sessionId,
+    required int index,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final key = _fragmentAckKey(sessionId, index);
+    final completer = Completer<void>();
+    _voiceFragmentAckWaiters[key] = completer;
+    try {
+      await completer.future.timeout(timeout);
+      return true;
+    } catch (_) {
+      if (_voiceFragmentAckWaiters[key] == completer) {
+        _voiceFragmentAckWaiters.remove(key);
+      }
+      return false;
+    }
+  }
+
+  void _completeVoiceFragmentAck(String sessionId, int index) {
+    final key = _fragmentAckKey(sessionId, index);
+    final completer = _voiceFragmentAckWaiters.remove(key);
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
+  Future<bool> _waitForImageFragmentAck({
+    required String sessionId,
+    required int index,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final key = _fragmentAckKey(sessionId, index);
+    final completer = Completer<void>();
+    _imageFragmentAckWaiters[key] = completer;
+    try {
+      await completer.future.timeout(timeout);
+      return true;
+    } catch (_) {
+      if (_imageFragmentAckWaiters[key] == completer) {
+        _imageFragmentAckWaiters.remove(key);
+      }
+      return false;
+    }
+  }
+
+  void _completeImageFragmentAck(String sessionId, int index) {
+    final key = _fragmentAckKey(sessionId, index);
+    final completer = _imageFragmentAckWaiters.remove(key);
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
+  void _sendVoiceFragmentAck(VoicePacket packet) {
+    final senderKey6 = _voiceSessionSenderKey6[packet.sessionId];
+    if (senderKey6 == null) return;
+    final sender = _resolveContactByPrefixHex(senderKey6);
+    if (sender == null) return;
+    if (sender.outPathLen < 0 || sender.outPathLen > _maxDirectPayloadHops) {
+      return;
+    }
+    unawaited(
+      connectionProvider.sendRawVoicePacket(
+        contactPath: sender.outPath,
+        contactPathLen: sender.outPathLen,
+        payload: VoiceFragmentAck(
+          sessionId: packet.sessionId,
+          index: packet.index,
+        ).encodeBinary(),
+      ),
+    );
+  }
+
+  void _sendImageFragmentAck(ImagePacket fragment) {
+    final senderKey6 = _imageSessionSenderKey6[fragment.sessionId];
+    if (senderKey6 == null) return;
+    final sender = _resolveContactByPrefixHex(senderKey6);
+    if (sender == null) return;
+    if (sender.outPathLen < 0 || sender.outPathLen > _maxDirectPayloadHops) {
+      return;
+    }
+    unawaited(
+      connectionProvider.sendRawVoicePacket(
+        contactPath: sender.outPath,
+        contactPathLen: sender.outPathLen,
+        payload: ImageFragmentAck(
+          sessionId: fragment.sessionId,
+          index: fragment.index,
+        ).encodeBinary(),
+      ),
+    );
   }
 
   // Removed _syncMessages() - messages are automatically synced via PUSH_CODE_MSG_WAITING events

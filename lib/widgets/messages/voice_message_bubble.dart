@@ -259,7 +259,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       sessionId: sessionId,
       requesterKey6: requesterKey6,
       timestampSec: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      version: 1,
+      version: 2,
     );
 
     setState(() {
@@ -268,12 +268,13 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       _errorText = null;
     });
 
-    final sent = await connectionProvider.sendTextMessage(
-      contactPublicKey: sender.publicKey,
-      text: request.encodeText(),
-      contact: sender,
-    );
-    if (!sent) {
+    try {
+      await connectionProvider.sendRawVoicePacket(
+        contactPath: sender.outPath,
+        contactPathLen: sender.outPathLen,
+        payload: request.encodeBinary(),
+      );
+    } catch (_) {
       _setUnavailable();
       return;
     }

@@ -69,6 +69,12 @@ class VoiceProvider with ChangeNotifier {
     required Uint8List payload,
   })?
   sendRawPacketCallback;
+  Future<bool> Function({
+    required String sessionId,
+    required int index,
+    Duration timeout,
+  })?
+  waitForFragmentAckCallback;
 
   final Map<String, _OutgoingVoiceSession> _outgoingSessions = {};
 
@@ -198,11 +204,25 @@ class VoiceProvider with ChangeNotifier {
         continue;
       }
       try {
+        final ackFuture = waitForFragmentAckCallback?.call(
+          sessionId: sessionId,
+          index: packet.index,
+          timeout: const Duration(seconds: 8),
+        );
         await sendRawPacketCallback!(
           contactPath: requester.outPath,
           contactPathLen: requester.outPathLen,
           payload: packet.encodeBinary(),
         );
+        if (ackFuture != null) {
+          final acked = await ackFuture;
+          if (!acked) {
+            debugPrint(
+              '⚠️ [VoiceProvider] ACK timeout for $sessionId#${packet.index}',
+            );
+            return false;
+          }
+        }
       } catch (e, st) {
         debugPrint(
           '❌ [VoiceProvider] Failed serving packet for $sessionId: $e\n$st',

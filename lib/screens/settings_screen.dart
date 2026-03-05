@@ -621,6 +621,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _clearMessages() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Messages'),
+        content: const Text(
+          'This will permanently delete all stored messages. Are you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLocalizations.of(context)!.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(AppLocalizations.of(context)!.clear),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final messagesProvider = Provider.of<MessagesProvider>(
+      context,
+      listen: false,
+    );
+    messagesProvider.clearMessages();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All messages cleared'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -693,6 +733,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(LocalePreferences.getDisplayName(_selectedLocale)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLanguageDialog(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_sweep, color: Colors.red),
+            title: const Text(
+              'Clear Messages',
+              style: TextStyle(color: Colors.red),
+            ),
+            subtitle: const Text('Delete all stored message history'),
+            onTap: _clearMessages,
           ),
           const Divider(),
 

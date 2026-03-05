@@ -8,7 +8,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('MessagesProvider voice detection', () {
-    test('marks VE1 envelope messages as voice', () {
+    test('marks VE2 envelope messages as voice', () {
       final provider = MessagesProvider();
       final envelope = VoiceEnvelope(
         sessionId: 'deafbead',

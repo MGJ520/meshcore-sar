@@ -28,6 +28,9 @@ class MessagesProvider with ChangeNotifier {
   // Key: message ID (not ACK tag, since multiple messages can share same ACK)
   final Map<String, Timer> _timeoutTimers = {};
 
+  // Recently completed ACKs are kept briefly to ignore duplicate confirms.
+  final Map<int, DateTime> _completedAckHistory = {};
+
   // Retry management
   final MessageRetryManager _retryManager = MessageRetryManager();
 
@@ -906,11 +909,13 @@ class MessagesProvider with ChangeNotifier {
       final (groupId, recipientPublicKey) = groupMapping;
       debugPrint('  ✅ This is part of a grouped message: $groupId');
 
-      // Update the recipient status to "sent" in the grouped message
+      // ACK-tracked recipients stay pending until the delivery confirm arrives.
       updateGroupedMessageRecipientStatus(
         groupId,
         recipientPublicKey,
-        MessageDeliveryStatus.sent,
+        expectedAckTag > 0
+            ? MessageDeliveryStatus.sending
+            : MessageDeliveryStatus.sent,
       );
 
       // Track the ACK for this specific recipient
@@ -1022,7 +1027,9 @@ class MessagesProvider with ChangeNotifier {
       );
 
       final updatedMessage = message.copyWith(
-        deliveryStatus: MessageDeliveryStatus.sent,
+        deliveryStatus: expectedAckTag > 0
+            ? MessageDeliveryStatus.sending
+            : MessageDeliveryStatus.sent,
         expectedAckTag: expectedAckTag > 0 ? expectedAckTag : null,
         suggestedTimeoutMs: suggestedTimeoutMs > 0 ? suggestedTimeoutMs : null,
       );
@@ -1245,6 +1252,7 @@ class MessagesProvider with ChangeNotifier {
 
   /// Update message status to delivered with RTT
   void markMessageDelivered(int ackCode, int roundTripTimeMs) {
+    _cleanupCompletedAckHistory();
     debugPrint(
       '🔍 [MessagesProvider] markMessageDelivered called with ACK: $ackCode, RTT: ${roundTripTimeMs}ms',
     );
@@ -1296,6 +1304,7 @@ class MessagesProvider with ChangeNotifier {
         );
         _ackTagToRecipients.remove(ackCode);
         _pendingSentMessages.remove(ackCode);
+        _rememberCompletedAck(ackCode);
       }
 
       debugPrint(
@@ -1339,6 +1348,7 @@ class MessagesProvider with ChangeNotifier {
 
         // Remove from pending
         _pendingSentMessages.remove(ackCode);
+        _rememberCompletedAck(ackCode);
 
         // Clear retry tracking on successful delivery
         _retryManager.clearRetry(message.id);
@@ -1362,6 +1372,12 @@ class MessagesProvider with ChangeNotifier {
         );
       }
     } else {
+      if (_completedAckHistory.containsKey(ackCode)) {
+        debugPrint(
+          'ℹ️ [MessagesProvider] Duplicate/late ACK $ackCode ignored (already completed)',
+        );
+        return;
+      }
       debugPrint(
         '⚠️ [MessagesProvider] No pending message found for ACK code: $ackCode',
       );
@@ -1482,18 +1498,31 @@ class MessagesProvider with ChangeNotifier {
         debugPrint(
           '⏰ [MessagesProvider] Executing retry $nextAttempt for message $messageId',
         );
+        final currentIndex = _messages.indexWhere((m) => m.id == messageId);
+        if (currentIndex == -1) {
+          return;
+        }
+        final currentMessage = _messages[currentIndex];
+        if (currentMessage.deliveryStatus == MessageDeliveryStatus.delivered) {
+          return;
+        }
+
         if (sendMessageCallback != null) {
-          await sendMessageCallback!(
+          final queued = await sendMessageCallback!(
             contactPublicKey: contact.publicKey,
             text: message.text,
             messageId: messageId,
             contact: contact,
             retryAttempt: nextAttempt,
           );
+          if (!queued) {
+            _markAsPermanentlyFailed(messageId, currentMessage);
+          }
         } else {
           debugPrint(
             '⚠️ [MessagesProvider] sendMessageCallback not set, cannot retry',
           );
+          _markAsPermanentlyFailed(messageId, currentMessage);
         }
       });
 
@@ -1529,17 +1558,21 @@ class MessagesProvider with ChangeNotifier {
 
       // Send with flood mode (no retry after this)
       if (sendMessageCallback != null) {
-        await sendMessageCallback!(
+        final queued = await sendMessageCallback!(
           contactPublicKey: contact.publicKey,
           text: message.text,
           messageId: messageId,
           contact: contact,
           retryAttempt: 0, // Reset attempt for flood
         );
+        if (!queued) {
+          _markAsPermanentlyFailed(messageId, _messages[index]);
+        }
       } else {
         debugPrint(
           '⚠️ [MessagesProvider] sendMessageCallback not set, cannot send flood',
         );
+        _markAsPermanentlyFailed(messageId, _messages[index]);
       }
 
       _persistMessages();
@@ -1608,17 +1641,21 @@ class MessagesProvider with ChangeNotifier {
 
     // Send again
     if (sendMessageCallback != null) {
-      await sendMessageCallback!(
+      final queued = await sendMessageCallback!(
         contactPublicKey: contact.publicKey,
         text: message.text,
         messageId: messageId,
         contact: contact,
         retryAttempt: 0,
       );
+      if (!queued) {
+        _markAsPermanentlyFailed(messageId, _messages[index]);
+      }
     } else {
       debugPrint(
         '⚠️ [MessagesProvider] sendMessageCallback not set, cannot resend',
       );
+      _markAsPermanentlyFailed(messageId, _messages[index]);
     }
 
     _persistMessages();
@@ -1631,10 +1668,29 @@ class MessagesProvider with ChangeNotifier {
       timer.cancel();
     }
     _timeoutTimers.clear();
+    _completedAckHistory.clear();
 
     // Clear retry manager
     _retryManager.clearAll();
 
     super.dispose();
+  }
+
+  void _rememberCompletedAck(int ackCode) {
+    _completedAckHistory[ackCode] = DateTime.now();
+    _cleanupCompletedAckHistory();
+  }
+
+  void _cleanupCompletedAckHistory({
+    Duration maxAge = const Duration(minutes: 15),
+  }) {
+    final cutoff = DateTime.now().subtract(maxAge);
+    final staleAcks = _completedAckHistory.entries
+        .where((entry) => entry.value.isBefore(cutoff))
+        .map((entry) => entry.key)
+        .toList();
+    for (final ack in staleAcks) {
+      _completedAckHistory.remove(ack);
+    }
   }
 }

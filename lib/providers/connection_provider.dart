@@ -249,7 +249,10 @@ class ConnectionProvider with ChangeNotifier {
         await Future.delayed(const Duration(milliseconds: 300));
 
         if (pendingOp.messageId != null) {
-          _messageDeliveryTracker.trackPendingMessage(pendingOp.messageId!);
+          _messageDeliveryTracker.trackPendingDirectMessage(
+            pendingOp.messageId!,
+            pendingOp.contactPublicKey,
+          );
         }
 
         await _activeService.sendTextMessage(
@@ -352,7 +355,11 @@ class ConnectionProvider with ChangeNotifier {
 
     service.onMessageSent =
         (expectedAckTag, suggestedTimeoutMs, isFloodMode, contactPublicKey) {
-          final messageId = _messageDeliveryTracker.popPendingMessageId();
+          final messageId = contactPublicKey != null
+              ? _messageDeliveryTracker.popPendingDirectMessageId(
+                  contactPublicKey,
+                )
+              : _messageDeliveryTracker.popPendingMessageId();
           if (messageId != null) {
             _messageDeliveryTracker.mapAckTagToMessageId(
               expectedAckTag,
@@ -1148,7 +1155,10 @@ class ConnectionProvider with ChangeNotifier {
       // The MessagesProvider now uses simple ACK tag → recipientPublicKey mapping.
       // We still track here for the SENT response callback to work.
       if (messageId != null) {
-        _messageDeliveryTracker.trackPendingMessage(messageId);
+        _messageDeliveryTracker.trackPendingDirectMessage(
+          messageId,
+          contactPublicKey,
+        );
         debugPrint('  📝 Tracked pending message: $messageId');
       }
 

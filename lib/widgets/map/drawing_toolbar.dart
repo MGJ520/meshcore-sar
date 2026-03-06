@@ -849,6 +849,7 @@ class DrawingToolbar extends StatelessWidget {
           contactPublicKey: room.publicKey,
           text: message,
           messageId: messageId,
+          contact: room,
         );
         debugPrint('  ✅ Sent successfully');
 

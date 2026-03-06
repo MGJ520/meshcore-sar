@@ -118,7 +118,26 @@ class _MessageBubbleState extends State<MessageBubble> {
       );
 
       // Add retry message to provider
-      messagesProvider.addSentMessage(retryMessage);
+      Contact? roomContact;
+      if (failedMessage.messageType == MessageType.contact) {
+        if (failedMessage.recipientPublicKey == null) {
+          messagesProvider.markMessageFailed(retryMessageId);
+          ToastLogger.error(
+            context,
+            AppLocalizations.of(context)!.cannotRetryMissingRecipient,
+          );
+          return;
+        }
+
+        final contactsProvider = context.read<ContactsProvider>();
+        roomContact = contactsProvider.contacts.where((c) {
+          return c.publicKey.length >=
+                  failedMessage.recipientPublicKey!.length &&
+              c.publicKey.matches(failedMessage.recipientPublicKey!);
+        }).firstOrNull;
+      }
+
+      messagesProvider.addSentMessage(retryMessage, contact: roomContact);
 
       // Resend the message
       if (failedMessage.messageType == MessageType.contact) {
@@ -131,14 +150,6 @@ class _MessageBubbleState extends State<MessageBubble> {
           );
           return;
         }
-
-        // Look up the room contact for path logging
-        final contactsProvider = context.read<ContactsProvider>();
-        final roomContact = contactsProvider.contacts.where((c) {
-          return c.publicKey.length >=
-                  failedMessage.recipientPublicKey!.length &&
-              c.publicKey.matches(failedMessage.recipientPublicKey!);
-        }).firstOrNull;
 
         // Resend to the same room
         final sentSuccessfully = await connectionProvider.sendTextMessage(
@@ -1805,7 +1816,7 @@ class _MessageBubbleState extends State<MessageBubble> {
         ? '${l10n.channel}: $channelDisplayName'
         : null;
 
-    final shouldFloatBubble = message.isChannelMessage || widget.isCompact;
+    final shouldFloatBubble = widget.isCompact;
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: shouldFloatBubble
@@ -1813,692 +1824,713 @@ class _MessageBubbleState extends State<MessageBubble> {
             : double.infinity,
       ),
       child: GestureDetector(
-          onTap: () => _handleBubbleTap(
-            isSarMarker: isSarMarker,
-            isDrawing: message.isDrawing,
-          ),
-          onLongPress: widget.isCompact
-              ? null
-              : () => _showMessageOptions(context),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: widget.isHighlighted
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : isSarMarker
-                  ? _getSarMarkerColor(context, isDarkMode)
-                  : message.isDrawing
-                  ? (isDarkMode
-                        ? Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.15)
-                        : Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.08))
-                  : _getMessageBubbleColor(context, isOwnMessage, isDarkMode),
-              borderRadius: BorderRadius.circular(12),
-              border: widget.isHighlighted
-                  ? Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 3,
-                    )
-                  : isSarMarker
-                  ? Border.all(
-                      color: _getSarMarkerBorderColor(context, isDarkMode),
-                      width: 2,
-                    )
-                  : message.isDrawing
-                  ? Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.4),
-                      width: 2,
-                    )
-                  : isOwnMessage
-                  ? Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.3),
-                      width: 1.5,
-                    )
-                  : !message.isRead &&
-                        !message.isSentMessage &&
-                        !message.isSystemMessage
-                  ? Border.all(color: Colors.blue, width: 1.5)
-                  : null,
-              boxShadow: widget.isHighlighted
-                  ? [
-                      BoxShadow(
-                        color: Theme.of(
+        onTap: () => _handleBubbleTap(
+          isSarMarker: isSarMarker,
+          isDrawing: message.isDrawing,
+        ),
+        onLongPress: widget.isCompact
+            ? null
+            : () => _showMessageOptions(context),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: widget.isHighlighted
+                ? Theme.of(context).colorScheme.primaryContainer
+                : isSarMarker
+                ? _getSarMarkerColor(context, isDarkMode)
+                : message.isDrawing
+                ? (isDarkMode
+                      ? Theme.of(
                           context,
-                        ).colorScheme.primary.withValues(alpha: 0.5),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : isSarMarker || message.isDrawing
-                  ? [
-                      BoxShadow(
-                        color:
-                            (isSarMarker
-                                    ? _getSarMarkerBorderColor(
-                                        context,
-                                        isDarkMode,
-                                      )
-                                    : Theme.of(context).colorScheme.primary)
-                                .withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Badge (if SAR or drawing) and time
-            if (isSarMarker || message.isDrawing)
-              Row(
-                children: [
-                  if (isSarMarker)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getSarMarkerBorderColor(context, isDarkMode),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context)!.sarAlert,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else if (message.isDrawing)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.draw, size: 16, color: Colors.white),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context)!.mapDrawing,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const Spacer(),
-                  Text(
-                    message.getLocalizedTimeAgo(context),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: isSarMarker
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-
-            // Sender info row (shown for all messages)
-            Row(
-              children: [
-                // Unread indicator badge (only for regular messages, not SAR/drawing)
-                if (!message.isRead &&
-                    !message.isSentMessage &&
-                    !message.isSystemMessage &&
-                    !isSarMarker &&
-                    !message.isDrawing)
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: const BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                if (isOwnMessage)
-                  Icon(
-                    Icons.account_circle,
-                    size: 16,
+                        ).colorScheme.primary.withValues(alpha: 0.15)
+                      : Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.08))
+                : _getMessageBubbleColor(context, isOwnMessage, isDarkMode),
+            borderRadius: BorderRadius.circular(12),
+            border: widget.isHighlighted
+                ? Border.all(
                     color: Theme.of(context).colorScheme.primary,
+                    width: 3,
                   )
-                else if (message.isChannelMessage)
-                  const Icon(Icons.tag, size: 16)
-                else
-                  const Icon(Icons.person, size: 16),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isOwnMessage
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      // Show destination/source context on a separate line.
-                      if (!widget.isCompact &&
-                          (recipientSubtitle != null ||
-                              receivedChannelSubtitle != null)) ...[
-                        const SizedBox(height: 2),
-                        Row(
+                : isSarMarker
+                ? Border.all(
+                    color: _getSarMarkerBorderColor(context, isDarkMode),
+                    width: 2,
+                  )
+                : message.isDrawing
+                ? Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.4),
+                    width: 2,
+                  )
+                : isOwnMessage
+                ? Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.3),
+                    width: 1.5,
+                  )
+                : !message.isRead &&
+                      !message.isSentMessage &&
+                      !message.isSystemMessage
+                ? Border.all(color: Colors.blue, width: 1.5)
+                : null,
+            boxShadow: widget.isHighlighted
+                ? [
+                    BoxShadow(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.5),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : isSarMarker || message.isDrawing
+                ? [
+                    BoxShadow(
+                      color:
+                          (isSarMarker
+                                  ? _getSarMarkerBorderColor(
+                                      context,
+                                      isDarkMode,
+                                    )
+                                  : Theme.of(context).colorScheme.primary)
+                              .withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header: Badge (if SAR or drawing) and time
+              if (isSarMarker || message.isDrawing)
+                Row(
+                  children: [
+                    if (isSarMarker)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getSarMarkerBorderColor(context, isDarkMode),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              isOwnMessage
-                                  ? Icons.arrow_forward
-                                  : Icons.arrow_back,
-                              size: 12,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.color
-                                  ?.withValues(alpha: 0.7),
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              size: 16,
+                              color: Colors.white,
                             ),
                             const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                isOwnMessage
-                                    ? recipientSubtitle!
-                                    : receivedChannelSubtitle!,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.color
-                                          ?.withValues(alpha: 0.75),
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            Text(
+                              AppLocalizations.of(context)!.sarAlert,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
                             ),
                           ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                // Time for regular messages (not shown for SAR/drawing as it's already above)
-                if (!isSarMarker && !message.isDrawing) ...[
-                  const SizedBox(width: 8),
-                  // Hop count indicator for received messages
-                  if (!isOwnMessage && message.pathLen < 255) ...[
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.alt_route,
-                      size: 11,
-                      color: Theme.of(
-                        context,
-                      ).textTheme.labelSmall?.color?.withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(width: 2),
+                      )
+                    else if (message.isDrawing)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.draw,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppLocalizations.of(context)!.mapDrawing,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const Spacer(),
                     Text(
-                      message.pathLen == 0 ? 'direct' : '${message.pathLen}hop',
+                      message.getLocalizedTimeAgo(context),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: isSarMarker
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+
+              // Sender info row (shown for all messages)
+              Row(
+                children: [
+                  // Unread indicator badge (only for regular messages, not SAR/drawing)
+                  if (!message.isRead &&
+                      !message.isSentMessage &&
+                      !message.isSystemMessage &&
+                      !isSarMarker &&
+                      !message.isDrawing)
+                    Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: const BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  if (isOwnMessage)
+                    Icon(
+                      Icons.account_circle,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  else if (message.isChannelMessage)
+                    const Icon(Icons.tag, size: 16)
+                  else
+                    const Icon(Icons.person, size: 16),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayName,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isOwnMessage
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Show destination/source context on a separate line.
+                        if (!widget.isCompact &&
+                            (recipientSubtitle != null ||
+                                receivedChannelSubtitle != null)) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                isOwnMessage
+                                    ? Icons.arrow_forward
+                                    : Icons.arrow_back,
+                                size: 12,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.color
+                                    ?.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  isOwnMessage
+                                      ? recipientSubtitle!
+                                      : receivedChannelSubtitle!,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.color
+                                            ?.withValues(alpha: 0.75),
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // Time for regular messages (not shown for SAR/drawing as it's already above)
+                  if (!isSarMarker && !message.isDrawing) ...[
+                    const SizedBox(width: 8),
+                    // Hop count indicator for received messages
+                    if (!isOwnMessage && message.pathLen < 255) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.alt_route,
+                        size: 11,
                         color: Theme.of(
                           context,
                         ).textTheme.labelSmall?.color?.withValues(alpha: 0.6),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  Text(
-                    message.getLocalizedTimeAgo(context),
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // SAR marker content
-            if (isSarMarker && message.sarMarkerType != null) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
+                      const SizedBox(width: 2),
                       Text(
-                        message.sarCustomEmoji ?? message.sarMarkerType!.emoji,
-                        style: const TextStyle(fontSize: 32),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          message.sarNotes != null &&
-                                  message.sarNotes!.isNotEmpty
-                              ? message.sarNotes!
-                              : message.sarMarkerType!.getLocalizedName(
-                                  context,
-                                ),
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                        message.pathLen == 0
+                            ? 'direct'
+                            : '${message.pathLen}hop',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.color?.withValues(alpha: 0.6),
                         ),
                       ),
-                      if (!widget.isCompact)
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      message.getLocalizedTimeAgo(context),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // SAR marker content
+              if (isSarMarker && message.sarMarkerType != null) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          message.sarCustomEmoji ??
+                              message.sarMarkerType!.emoji,
+                          style: const TextStyle(fontSize: 32),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            message.sarNotes != null &&
+                                    message.sarNotes!.isNotEmpty
+                                ? message.sarNotes!
+                                : message.sarMarkerType!.getLocalizedName(
+                                    context,
+                                  ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        if (!widget.isCompact)
+                          Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                      ],
+                    ),
+                    if (message.sarGpsCoordinates != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '${message.sarGpsCoordinates!.latitude.toStringAsFixed(5)}, ${message.sarGpsCoordinates!.longitude.toStringAsFixed(5)}',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ],
+                ),
+              ]
+              // Drawing message content (skip in compact mode - drawings hidden)
+              else if (message.isDrawing &&
+                  message.drawingId != null &&
+                  !widget.isCompact)
+                Consumer<DrawingProvider>(
+                  builder: (context, drawingProvider, child) {
+                    final drawing = drawingProvider.getDrawingById(
+                      message.drawingId!,
+                    );
+
+                    if (drawing == null) {
+                      return Text(
+                        message.text,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      );
+                    }
+
+                    final String drawingTypeLabel;
+                    if (drawing is LineDrawing) {
+                      drawingTypeLabel = AppLocalizations.of(
+                        context,
+                      )!.lineDrawing;
+                    } else if (drawing is RectangleDrawing) {
+                      drawingTypeLabel = AppLocalizations.of(
+                        context,
+                      )!.rectangleDrawing;
+                    } else {
+                      drawingTypeLabel = AppLocalizations.of(context)!.drawing;
+                    }
+
+                    final colorName = DrawingColors.colorToName(drawing.color);
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DrawingMinimapPreview(drawing: drawing),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                drawingTypeLabel,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: drawing.color,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.black26,
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    colorName,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelSmall,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                         Icon(
                           Icons.chevron_right,
                           size: 18,
                           color: Theme.of(context).colorScheme.primary,
                         ),
-                    ],
-                  ),
-                  if (message.sarGpsCoordinates != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '${message.sarGpsCoordinates!.latitude.toStringAsFixed(5)}, ${message.sarGpsCoordinates!.longitude.toStringAsFixed(5)}',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ]
-            // Drawing message content (skip in compact mode - drawings hidden)
-            else if (message.isDrawing &&
-                message.drawingId != null &&
-                !widget.isCompact)
-              Consumer<DrawingProvider>(
-                builder: (context, drawingProvider, child) {
-                  final drawing = drawingProvider.getDrawingById(
-                    message.drawingId!,
-                  );
-
-                  if (drawing == null) {
-                    return Text(
-                      message.text,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      ],
                     );
-                  }
+                  },
+                )
+              // Voice message content
+              else if (message.isVoice &&
+                  message.voiceId != null &&
+                  !widget.isCompact)
+                VoiceMessageBubble(message: message, isSentByMe: isOwnMessage)
+              // Image message content (IE1 envelope)
+              else if (ImageEnvelope.isEnvelope(message.text) &&
+                  !widget.isCompact)
+                ImageMessageBubble(message: message, isSentByMe: isOwnMessage)
+              // Tic-Tac-Toe control message content
+              else if (ticTacToeEvent?.type == TicTacToeEventType.start &&
+                  !widget.isCompact)
+                TicTacToeMessageBubble(
+                  message: message,
+                  isSentByMe: isOwnMessage,
+                )
+              // Regular message content
+              else if (!message.isDrawing || widget.isCompact)
+                Text(
+                  message.text,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
 
-                  final String drawingTypeLabel;
-                  if (drawing is LineDrawing) {
-                    drawingTypeLabel = AppLocalizations.of(
-                      context,
-                    )!.lineDrawing;
-                  } else if (drawing is RectangleDrawing) {
-                    drawingTypeLabel = AppLocalizations.of(
-                      context,
-                    )!.rectangleDrawing;
-                  } else {
-                    drawingTypeLabel = AppLocalizations.of(context)!.drawing;
-                  }
+              if (!widget.isCompact &&
+                  !isSarMarker &&
+                  !message.isDrawing &&
+                  _showReceivedStats) ...[
+                const SizedBox(height: 6),
+                _buildReceivedSignalStatus(
+                  context,
+                  message,
+                  rssiDbm: rssiDbm,
+                  snrDb: snrDb,
+                ),
+              ],
 
-                  final colorName = DrawingColors.colorToName(drawing.color);
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DrawingMinimapPreview(drawing: drawing),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              // Delivery status for sent messages (skip in compact mode)
+              if (message.isSentMessage && !widget.isCompact) ...[
+                const SizedBox(height: 6),
+                // Debug: Log grouped message detection
+                Builder(
+                  builder: (context) {
+                    if (message.isGroupedMessage) {
+                      debugPrint(
+                        '🎯 [MessageBubble] Rendering grouped message: ${message.id}',
+                      );
+                      debugPrint(
+                        '  Recipients: ${message.recipients?.length ?? 0}',
+                      );
+                      debugPrint(
+                        '  Delivered: ${message.deliveredRecipientsCount}',
+                      );
+                      debugPrint('  Failed: ${message.failedRecipientsCount}');
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                // Show grouped message delivery count
+                if (message.isGroupedMessage) ...[
+                  GestureDetector(
+                    onTap: _toggleExpanded,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              drawingTypeLabel,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            Icon(
+                              message.deliveredRecipientsCount ==
+                                      message.recipients!.length
+                                  ? Icons.done_all
+                                  : message.failedRecipientsCount > 0
+                                  ? Icons.error_outline
+                                  : Icons.schedule,
+                              size: 12,
+                              color:
+                                  message.deliveredRecipientsCount ==
+                                      message.recipients!.length
+                                  ? Colors.green
+                                  : message.failedRecipientsCount > 0
+                                  ? Colors.red
+                                  : Colors.orange,
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: drawing.color,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.black26,
-                                      width: 1,
+                            const SizedBox(width: 3),
+                            Text(
+                              message.deliveredRecipientsCount ==
+                                      message.recipients!.length
+                                  ? AppLocalizations.of(context)!.allDelivered
+                                  : AppLocalizations.of(
+                                      context,
+                                    )!.deliveredToContacts(
+                                      message.deliveredRecipientsCount,
+                                      message.recipients!.length,
                                     ),
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color:
+                                        message.deliveredRecipientsCount ==
+                                            message.recipients!.length
+                                        ? Colors.green
+                                        : message.failedRecipientsCount > 0
+                                        ? Colors.red
+                                        : Colors.orange,
+                                    fontStyle: FontStyle.italic,
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  colorName,
-                                  style: Theme.of(context).textTheme.labelSmall,
-                                ),
-                              ],
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              _isExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              size: 14,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.labelSmall?.color,
                             ),
                           ],
                         ),
-                      ),
-                      Icon(
-                        Icons.chevron_right,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ],
-                  );
-                },
-              )
-            // Voice message content
-            else if (message.isVoice &&
-                message.voiceId != null &&
-                !widget.isCompact)
-              VoiceMessageBubble(message: message, isSentByMe: isOwnMessage)
-            // Image message content (IE1 envelope)
-            else if (ImageEnvelope.isEnvelope(message.text) &&
-                !widget.isCompact)
-              ImageMessageBubble(message: message, isSentByMe: isOwnMessage)
-            // Tic-Tac-Toe control message content
-            else if (ticTacToeEvent?.type == TicTacToeEventType.start &&
-                !widget.isCompact)
-              TicTacToeMessageBubble(message: message, isSentByMe: isOwnMessage)
-            // Regular message content
-            else if (!message.isDrawing || widget.isCompact)
-              Text(message.text, style: Theme.of(context).textTheme.bodyMedium),
-
-            if (!widget.isCompact &&
-                !isSarMarker &&
-                !message.isDrawing &&
-                _showReceivedStats) ...[
-              const SizedBox(height: 6),
-              _buildReceivedSignalStatus(
-                context,
-                message,
-                rssiDbm: rssiDbm,
-                snrDb: snrDb,
-              ),
-            ],
-
-            // Delivery status for sent messages (skip in compact mode)
-            if (message.isSentMessage && !widget.isCompact) ...[
-              const SizedBox(height: 6),
-              // Debug: Log grouped message detection
-              Builder(
-                builder: (context) {
-                  if (message.isGroupedMessage) {
-                    debugPrint(
-                      '🎯 [MessageBubble] Rendering grouped message: ${message.id}',
-                    );
-                    debugPrint(
-                      '  Recipients: ${message.recipients?.length ?? 0}',
-                    );
-                    debugPrint(
-                      '  Delivered: ${message.deliveredRecipientsCount}',
-                    );
-                    debugPrint('  Failed: ${message.failedRecipientsCount}');
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              // Show grouped message delivery count
-              if (message.isGroupedMessage) ...[
-                GestureDetector(
-                  onTap: _toggleExpanded,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            message.deliveredRecipientsCount ==
-                                    message.recipients!.length
-                                ? Icons.done_all
-                                : message.failedRecipientsCount > 0
-                                ? Icons.error_outline
-                                : Icons.schedule,
-                            size: 12,
-                            color:
-                                message.deliveredRecipientsCount ==
-                                    message.recipients!.length
-                                ? Colors.green
-                                : message.failedRecipientsCount > 0
-                                ? Colors.red
-                                : Colors.orange,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            message.deliveredRecipientsCount ==
-                                    message.recipients!.length
-                                ? AppLocalizations.of(context)!.allDelivered
-                                : AppLocalizations.of(
+                        // Expandable recipient details
+                        if (_isExpanded) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  AppLocalizations.of(
                                     context,
-                                  )!.deliveredToContacts(
-                                    message.deliveredRecipientsCount,
-                                    message.recipients!.length,
-                                  ),
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color:
-                                      message.deliveredRecipientsCount ==
-                                          message.recipients!.length
-                                      ? Colors.green
-                                      : message.failedRecipientsCount > 0
-                                      ? Colors.red
-                                      : Colors.orange,
-                                  fontStyle: FontStyle.italic,
+                                  )!.recipientDetails,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            _isExpanded ? Icons.expand_less : Icons.expand_more,
-                            size: 14,
-                            color: Theme.of(
-                              context,
-                            ).textTheme.labelSmall?.color,
+                                const SizedBox(height: 4),
+                                ...message.recipients!.map((recipient) {
+                                  final Color statusColor;
+                                  final IconData statusIcon;
+                                  final String statusText;
+
+                                  switch (recipient.deliveryStatus) {
+                                    case MessageDeliveryStatus.delivered:
+                                      statusColor = Colors.green;
+                                      statusIcon = Icons.check_circle;
+                                      statusText =
+                                          recipient.roundTripTimeMs != null
+                                          ? '${recipient.roundTripTimeMs}ms'
+                                          : AppLocalizations.of(
+                                              context,
+                                            )!.delivered;
+                                      break;
+                                    case MessageDeliveryStatus.failed:
+                                      statusColor = Colors.red;
+                                      statusIcon = Icons.cancel;
+                                      statusText = AppLocalizations.of(
+                                        context,
+                                      )!.failed;
+                                      break;
+                                    case MessageDeliveryStatus.sending:
+                                    case MessageDeliveryStatus.sent:
+                                    default:
+                                      statusColor = Colors.orange;
+                                      statusIcon = Icons.schedule;
+                                      statusText = AppLocalizations.of(
+                                        context,
+                                      )!.pending;
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          statusIcon,
+                                          size: 14,
+                                          color: statusColor,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            recipient.displayName,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.labelSmall,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          statusText,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: statusColor,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                ]
+                // Show single message delivery status
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Icon(
+                        _getDeliveryStatusIcon(message.deliveryStatus),
+                        size: 12,
+                        color: _getDeliveryStatusColor(message.deliveryStatus),
                       ),
-                      // Expandable recipient details
-                      if (_isExpanded) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                AppLocalizations.of(context)!.recipientDetails,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              ...message.recipients!.map((recipient) {
-                                final Color statusColor;
-                                final IconData statusIcon;
-                                final String statusText;
-
-                                switch (recipient.deliveryStatus) {
-                                  case MessageDeliveryStatus.delivered:
-                                    statusColor = Colors.green;
-                                    statusIcon = Icons.check_circle;
-                                    statusText =
-                                        recipient.roundTripTimeMs != null
-                                        ? '${recipient.roundTripTimeMs}ms'
-                                        : AppLocalizations.of(
-                                            context,
-                                          )!.delivered;
-                                    break;
-                                  case MessageDeliveryStatus.failed:
-                                    statusColor = Colors.red;
-                                    statusIcon = Icons.cancel;
-                                    statusText = AppLocalizations.of(
-                                      context,
-                                    )!.failed;
-                                    break;
-                                  case MessageDeliveryStatus.sending:
-                                  case MessageDeliveryStatus.sent:
-                                  default:
-                                    statusColor = Colors.orange;
-                                    statusIcon = Icons.schedule;
-                                    statusText = AppLocalizations.of(
-                                      context,
-                                    )!.pending;
-                                }
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        statusIcon,
-                                        size: 14,
-                                        color: statusColor,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          recipient.displayName,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.labelSmall,
-                                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child:
+                              message.isChannelMessage &&
+                                  message.deliveryStatus ==
+                                      MessageDeliveryStatus.sent
+                              ? _buildChannelEchoStatus(context, message)
+                              : Text(
+                                  message.getLocalizedDeliveryStatus(context),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: _getDeliveryStatusColor(
+                                          message.deliveryStatus,
                                         ),
+                                        fontStyle: FontStyle.italic,
                                       ),
-                                      Text(
-                                        statusText,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                              color: statusColor,
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                ),
+                        ),
+                      ),
+                      // Show retry button for failed messages
+                      if (message.deliveryStatus ==
+                          MessageDeliveryStatus.failed) ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => _retryFailedMessage(context, message),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Colors.orange,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.refresh,
+                                  size: 12,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Retry',
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                            ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ],
                   ),
-                ),
-              ]
-              // Show single message delivery status
-              else
-                Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Icon(
-                      _getDeliveryStatusIcon(message.deliveryStatus),
-                      size: 12,
-                      color: _getDeliveryStatusColor(message.deliveryStatus),
-                    ),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child:
-                            message.isChannelMessage &&
-                                message.deliveryStatus ==
-                                    MessageDeliveryStatus.sent
-                            ? _buildChannelEchoStatus(context, message)
-                            : Text(
-                                message.getLocalizedDeliveryStatus(context),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: _getDeliveryStatusColor(
-                                        message.deliveryStatus,
-                                      ),
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                              ),
-                      ),
-                    ),
-                    // Show retry button for failed messages
-                    if (message.deliveryStatus ==
-                        MessageDeliveryStatus.failed) ...[
-                      const SizedBox(width: 6),
-                      GestureDetector(
-                        onTap: () => _retryFailedMessage(context, message),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.orange, width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.refresh,
-                                size: 12,
-                                color: Colors.orange,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Retry',
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+              ],
             ],
-          ],
-            ),
           ),
+        ),
       ),
     );
 

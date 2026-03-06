@@ -97,9 +97,7 @@ class TicTacToeMessageBubble extends StatelessWidget {
         children: [
           Text(
             'Tic-Tac-Toe · Game ${state.gameId}',
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: titleColor,
             ),
@@ -167,7 +165,7 @@ class TicTacToeMessageBubble extends StatelessWidget {
       deliveryStatus: MessageDeliveryStatus.sending,
       recipientPublicKey: opponent.publicKey,
     );
-    messagesProvider.addSentMessage(sentMessage);
+    messagesProvider.addSentMessage(sentMessage, contact: opponent);
 
     final sent = await connectionProvider.sendTextMessage(
       contactPublicKey: opponent.publicKey,

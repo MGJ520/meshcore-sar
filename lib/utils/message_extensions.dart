@@ -24,6 +24,9 @@ extension MessageLocalization on Message {
 
     switch (deliveryStatus) {
       case MessageDeliveryStatus.sending:
+        if (isContactMessage) {
+          return l10n.pending;
+        }
         return l10n.sending;
       case MessageDeliveryStatus.sent:
         return l10n.sent;

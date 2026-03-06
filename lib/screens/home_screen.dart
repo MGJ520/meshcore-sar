@@ -46,9 +46,9 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late TabController _tabController;
+  late final AppProvider _appProvider;
   int _currentIndex = 0;
   bool _isMapFullscreen = false;
   bool _showRxTxIndicators = true;
@@ -74,9 +74,13 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _appProvider = context.read<AppProvider>();
+    _isMapEnabled = _appProvider.isMapEnabled;
+    _isContactsEnabled = _appProvider.isContactsEnabled;
+    _appProvider.addListener(_handleAppProviderChanged);
+
     // Initialize synchronously so first build always has a valid controller.
     _initTabController();
-    _loadTabVisibilityAndInitTabs();
     _loadRxTxPreference();
 
     // Show permission dialog after the first frame if needed
@@ -84,19 +88,6 @@ class _HomeScreenState extends State<HomeScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showPermissionDialog();
       });
-    }
-  }
-
-  Future<void> _loadTabVisibilityAndInitTabs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final mapEnabled = prefs.getBool('map_enabled') ?? true;
-    final contactsEnabled = prefs.getBool('contacts_enabled') ?? true;
-    if (!mounted) return;
-    if (_isMapEnabled != mapEnabled || _isContactsEnabled != contactsEnabled) {
-      _updateTabController(
-        mapEnabled: mapEnabled,
-        contactsEnabled: contactsEnabled,
-      );
     }
   }
 
@@ -108,6 +99,14 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
       _handleTabActivated(_currentTab);
     });
+  }
+
+  void _handleAppProviderChanged() {
+    if (!mounted) return;
+    _updateTabController(
+      mapEnabled: _appProvider.isMapEnabled,
+      contactsEnabled: _appProvider.isContactsEnabled,
+    );
   }
 
   void _onTabChanged() {
@@ -136,15 +135,21 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final oldTabs = _enabledTabs;
-    final oldIndex = _tabController.index;
+    final oldIndex = oldTabs.isEmpty
+        ? 0
+        : _tabController.index.clamp(0, oldTabs.length - 1);
     final oldTab = oldTabs[oldIndex];
 
     final oldController = _tabController;
     oldController.removeListener(_onTabChanged);
+    oldController.dispose();
 
     // Update state
     _isMapEnabled = mapEnabled;
     _isContactsEnabled = contactsEnabled;
+    if (!_isMapEnabled) {
+      _isMapFullscreen = false;
+    }
 
     final newTabs = _enabledTabs;
     final newIndex = newTabs.indexOf(oldTab);
@@ -157,11 +162,7 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController.index = _currentIndex;
 
     setState(() {});
-
-    // Dispose old controller after widgets have rebound to the new controller.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      oldController.dispose();
-    });
+    _handleTabActivated(_currentTab);
   }
 
   void _navigateToTab(_HomeTab tab) {
@@ -199,6 +200,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _appProvider.removeListener(_handleAppProviderChanged);
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
@@ -343,18 +345,7 @@ class _HomeScreenState extends State<HomeScreen>
       messagesProvider.setLocalizations(localizations);
     }
 
-    // Check if tab visibility settings changed and update tab controller
-    final appProvider = context.watch<AppProvider>();
-    if (_isMapEnabled != appProvider.isMapEnabled ||
-        _isContactsEnabled != appProvider.isContactsEnabled) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _updateTabController(
-          mapEnabled: appProvider.isMapEnabled,
-          contactsEnabled: appProvider.isContactsEnabled,
-        );
-      });
-    }
+    context.watch<AppProvider>();
 
     final enabledTabs = _enabledTabs;
     final isMapTabActive = _currentTab == _HomeTab.map;

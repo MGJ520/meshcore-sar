@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' as math;
@@ -44,11 +45,13 @@ class MessagesTab extends StatefulWidget {
 }
 
 class _MessagesTabState extends State<MessagesTab> {
+  static const int _maxContactMessageBytes = 156;
+  static const int _maxChannelMessageBytes = 127;
+
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
-  int _characterCount = 0;
-  static const int _maxCharacters = 160;
+  int _messageByteCount = 0;
   String? _highlightedMessageId;
   Timer? _highlightTimer; // Timer for clearing message highlight
 
@@ -166,8 +169,42 @@ class _MessagesTabState extends State<MessagesTab> {
 
   void _updateCharacterCount() {
     setState(() {
-      _characterCount = _textController.text.length;
+      _messageByteCount = utf8.encode(_textController.text).length;
     });
+  }
+
+  int get _maxMessageBytes =>
+      _destinationType == MessageDestinationPreferences.destinationTypeChannel
+      ? _maxChannelMessageBytes
+      : _maxContactMessageBytes;
+
+  TextInputFormatter get _messageByteLimiter =>
+      TextInputFormatter.withFunction((oldValue, newValue) {
+        if (utf8.encode(newValue.text).length <= _maxMessageBytes) {
+          return newValue;
+        }
+        return oldValue;
+      });
+
+  void _enforceMessageByteLimit() {
+    final currentText = _textController.text;
+    if (utf8.encode(currentText).length <= _maxMessageBytes) {
+      _updateCharacterCount();
+      return;
+    }
+
+    var truncated = currentText;
+    while (truncated.isNotEmpty &&
+        utf8.encode(truncated).length > _maxMessageBytes) {
+      truncated = truncated.substring(0, truncated.length - 1);
+    }
+
+    _textController.value = _textController.value.copyWith(
+      text: truncated,
+      selection: TextSelection.collapsed(offset: truncated.length),
+      composing: TextRange.empty,
+    );
+    _updateCharacterCount();
   }
 
   /// Load saved message destination from preferences
@@ -211,6 +248,8 @@ class _MessagesTabState extends State<MessagesTab> {
         await MessageDestinationPreferences.clearDestination();
       }
     }
+
+    _enforceMessageByteLimit();
   }
 
   /// Show recipient selector bottom sheet
@@ -249,6 +288,8 @@ class _MessagesTabState extends State<MessagesTab> {
       _destinationType = type;
       _selectedRecipient = recipient;
     });
+
+    _enforceMessageByteLimit();
 
     // Save to preferences
     await MessageDestinationPreferences.setDestination(
@@ -383,7 +424,7 @@ class _MessagesTabState extends State<MessagesTab> {
     );
 
     // Add to messages list with "sending" status
-    messagesProvider.addSentMessage(sentMessage);
+    messagesProvider.addSentMessage(sentMessage, contact: _selectedRecipient);
 
     // Send to selected channel
     await connectionProvider.sendChannelMessage(
@@ -616,7 +657,7 @@ class _MessagesTabState extends State<MessagesTab> {
         deliveryStatus: MessageDeliveryStatus.sending,
         recipientPublicKey: isChannel ? null : recipient?.publicKey,
       );
-      messagesProvider.addSentMessage(placeholder);
+      messagesProvider.addSentMessage(placeholder, contact: recipient);
 
       // Send IE1 envelope via normal message path.
       final envelopeText = envelope.encode();
@@ -921,7 +962,7 @@ class _MessagesTabState extends State<MessagesTab> {
       channelIdx: channelIdx,
       recipientPublicKey: isChannel ? null : recipient?.publicKey,
     );
-    messagesProvider.addSentMessage(sentMsg);
+    messagesProvider.addSentMessage(sentMsg, contact: recipient);
 
     try {
       if (isChannel) {
@@ -1327,15 +1368,15 @@ class _MessagesTabState extends State<MessagesTab> {
           // SAR marker data is automatically added by SarMessageParser.enhanceMessage in MessagesProvider
         );
 
-        // Add to messages list with "sending" status
-        messagesProvider.addSentMessage(sentMessage);
-
         // Look up the room contact for path logging
         final contactsProvider = context.read<ContactsProvider>();
         final roomContact = contactsProvider.contacts.where((c) {
           return c.publicKey.length >= roomPublicKey!.length &&
               c.publicKey.matches(roomPublicKey);
         }).firstOrNull;
+
+        // Add to messages list with "sending" status
+        messagesProvider.addSentMessage(sentMessage, contact: roomContact);
 
         // Send SAR message to selected room (persisted and immutable)
         final sentSuccessfully = await connectionProvider.sendTextMessage(
@@ -1563,12 +1604,6 @@ class _MessagesTabState extends State<MessagesTab> {
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                    width: 1,
-                  ),
-                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1576,270 +1611,329 @@ class _MessagesTabState extends State<MessagesTab> {
                   SafeArea(
                     top: false,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).dividerColor.withValues(alpha: 0.35),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Container(
-                                width: 46,
-                                height: 46,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer
-                                      .withValues(alpha: 0.95),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    _isRecording ? Icons.stop : Icons.add,
-                                  ),
-                                  tooltip: _isRecording
-                                      ? 'Stop recording'
-                                      : 'More actions',
-                                  onPressed: _isRecording
-                                      ? _stopAndSendVoice
-                                      : _showComposerActions,
-                                  color: _isRecording
-                                      ? Colors.red
-                                      : Theme.of(
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surface,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Theme.of(
                                           context,
-                                        ).colorScheme.onPrimaryContainer,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(22),
-                                    onTap: _showRecipientSelector,
-                                    child: Ink(
-                                      height: 46,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            _destinationType ==
-                                                MessageDestinationPreferences
-                                                    .destinationTypeChannel
-                                            ? Theme.of(context)
-                                                  .colorScheme
-                                                  .surfaceContainerHighest
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.secondaryContainer,
-                                        borderRadius: BorderRadius.circular(22),
-                                        border: Border.all(
-                                          color: Theme.of(
-                                            context,
-                                          ).dividerColor.withValues(alpha: 0.7),
+                                        ).dividerColor.withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(
+                                        _isRecording ? Icons.stop : Icons.add,
+                                        size: 22,
+                                      ),
+                                      tooltip: _isRecording
+                                          ? 'Stop recording'
+                                          : 'More actions',
+                                      onPressed: _isRecording
+                                          ? _stopAndSendVoice
+                                          : _showComposerActions,
+                                      color: _isRecording
+                                          ? Colors.red
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(20),
+                                        onTap: _showRecipientSelector,
+                                        child: Ink(
+                                          height: 42,
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.surface,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: Theme.of(context)
+                                                  .dividerColor
+                                                  .withValues(alpha: 0.35),
+                                            ),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  _getDestinationIcon(),
+                                                  size: 17,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Text(
+                                                    _getDestinationLabel(),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Icon(
+                                                  Icons.expand_more_rounded,
+                                                  size: 20,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minHeight: 46,
+                                        maxHeight: 132,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(24),
+                                        border: Border.all(
+                                          color: _focusNode.hasFocus
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                              : Theme.of(context).dividerColor
+                                                    .withValues(alpha: 0.35),
+                                          width: _focusNode.hasFocus ? 1.4 : 1,
+                                        ),
+                                        boxShadow: _focusNode.hasFocus
+                                            ? [
+                                                BoxShadow(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withValues(alpha: 0.10),
+                                                  blurRadius: 12,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ]
+                                            : null,
                                       ),
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
+                                          horizontal: 16,
+                                          vertical: 12,
                                         ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              _getDestinationIcon(),
-                                              size: 18,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                _getDestinationLabel(),
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600,
-                                                  color:
-                                                      _destinationType ==
-                                                          MessageDestinationPreferences
-                                                              .destinationTypeChannel
-                                                      ? Theme.of(
-                                                          context,
-                                                        ).colorScheme.onSurface
-                                                      : Theme.of(context)
-                                                            .colorScheme
-                                                            .onSecondaryContainer,
-                                                ),
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.expand_more_rounded,
-                                              size: 20,
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.onSurfaceVariant,
-                                            ),
+                                        child: TextField(
+                                          controller: _textController,
+                                          focusNode: _focusNode,
+                                          minLines: 1,
+                                          maxLines: 4,
+                                          keyboardType: TextInputType.multiline,
+                                          inputFormatters: [
+                                            _messageByteLimiter,
                                           ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 180),
-                                  constraints: const BoxConstraints(
-                                    minHeight: 48,
-                                    maxHeight: 140,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHigh,
-                                    borderRadius: BorderRadius.circular(28),
-                                    border: Border.all(
-                                      color: _focusNode.hasFocus
-                                          ? Theme.of(
+                                          style: const TextStyle(fontSize: 15),
+                                          textAlignVertical:
+                                              TextAlignVertical.center,
+                                          decoration: InputDecoration(
+                                            hintText: AppLocalizations.of(
                                               context,
-                                            ).colorScheme.primary
-                                          : Theme.of(context).dividerColor
-                                                .withValues(alpha: 0.6),
-                                      width: _focusNode.hasFocus ? 1.5 : 1,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 12,
-                                    ),
-                                    child: TextField(
-                                      controller: _textController,
-                                      focusNode: _focusNode,
-                                      minLines: 1,
-                                      maxLines: 4,
-                                      keyboardType: TextInputType.multiline,
-                                      inputFormatters: [
-                                        LengthLimitingTextInputFormatter(
-                                          _maxCharacters,
+                                            )!.typeYourMessage,
+                                            hintStyle: TextStyle(
+                                              fontSize: 15,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant
+                                                  .withValues(alpha: 0.9),
+                                            ),
+                                            filled: false,
+                                            fillColor: Colors.transparent,
+                                            border: InputBorder.none,
+                                            isCollapsed: true,
+                                          ),
+                                          textInputAction:
+                                              TextInputAction.newline,
                                         ),
-                                      ],
-                                      style: const TextStyle(fontSize: 15),
-                                      textAlignVertical:
-                                          TextAlignVertical.center,
-                                      decoration: InputDecoration(
-                                        hintText: AppLocalizations.of(
-                                          context,
-                                        )!.typeYourMessage,
-                                        hintStyle: TextStyle(
-                                          fontSize: 15,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurfaceVariant,
-                                        ),
-                                        border: InputBorder.none,
-                                        isCollapsed: true,
                                       ),
-                                      textInputAction: TextInputAction.newline,
                                     ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Builder(
-                                builder: (context) {
-                                  final canSendText =
-                                      !_isRecording &&
-                                      !_isSendingVoice &&
-                                      _textController.text.trim().isNotEmpty;
-                                  final semanticsLabel = _isRecording
-                                      ? 'Recording... release to send voice'
-                                      : (_isSendingVoice
-                                            ? 'Sending voice...'
-                                            : _voiceSupported
-                                            ? 'Send (long press to record voice)'
-                                            : 'Send');
+                                  const SizedBox(width: 8),
+                                  Builder(
+                                    builder: (context) {
+                                      final canSendText =
+                                          !_isRecording &&
+                                          !_isSendingVoice &&
+                                          _textController.text
+                                              .trim()
+                                              .isNotEmpty;
+                                      final semanticsLabel = _isRecording
+                                          ? 'Recording... release to send voice'
+                                          : (_isSendingVoice
+                                                ? 'Sending voice...'
+                                                : _voiceSupported
+                                                ? 'Send (long press to record voice)'
+                                                : 'Send');
 
-                                  return Semantics(
-                                    button: true,
-                                    enabled:
-                                        canSendText ||
-                                        (_voiceSupported && !_isSendingVoice),
-                                    label: semanticsLabel,
-                                    onTap: canSendText ? _sendMessage : null,
-                                    onLongPress:
-                                        (_voiceSupported && !_isSendingVoice)
-                                        ? () {
-                                            if (_isRecording) {
-                                              _stopAndSendVoice();
-                                              return;
-                                            }
-                                            _startVoiceRecording();
-                                          }
-                                        : null,
-                                    child: Tooltip(
-                                      message: semanticsLabel,
-                                      excludeFromSemantics: true,
-                                      child: GestureDetector(
-                                        excludeFromSemantics: true,
-                                        onLongPressStart:
+                                      return Semantics(
+                                        button: true,
+                                        enabled:
+                                            canSendText ||
+                                            (_voiceSupported &&
+                                                !_isSendingVoice),
+                                        label: semanticsLabel,
+                                        onTap: canSendText
+                                            ? _sendMessage
+                                            : null,
+                                        onLongPress:
                                             (_voiceSupported &&
                                                 !_isSendingVoice)
-                                            ? (_) => _startVoiceRecording()
+                                            ? () {
+                                                if (_isRecording) {
+                                                  _stopAndSendVoice();
+                                                  return;
+                                                }
+                                                _startVoiceRecording();
+                                              }
                                             : null,
-                                        onLongPressEnd:
-                                            (_voiceSupported && _isRecording)
-                                            ? (_) => _stopAndSendVoice()
-                                            : null,
-                                        onLongPressCancel:
-                                            (_voiceSupported && _isRecording)
-                                            ? () => _stopAndSendVoice()
-                                            : null,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            AnimatedContainer(
-                                              duration: const Duration(
-                                                milliseconds: 180,
-                                              ),
-                                              width: 48,
-                                              height: 48,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    canSendText || _isRecording
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                    : Theme.of(context)
-                                                          .colorScheme
-                                                          .surfaceContainerHighest,
-                                                shape: BoxShape.circle,
-                                                boxShadow:
-                                                    canSendText || _isRecording
-                                                    ? [
-                                                        BoxShadow(
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .primary
-                                                                  .withValues(
-                                                                    alpha: 0.28,
+                                        child: Tooltip(
+                                          message: semanticsLabel,
+                                          excludeFromSemantics: true,
+                                          child: GestureDetector(
+                                            excludeFromSemantics: true,
+                                            onLongPressStart:
+                                                (_voiceSupported &&
+                                                    !_isSendingVoice)
+                                                ? (_) => _startVoiceRecording()
+                                                : null,
+                                            onLongPressEnd:
+                                                (_voiceSupported &&
+                                                    _isRecording)
+                                                ? (_) => _stopAndSendVoice()
+                                                : null,
+                                            onLongPressCancel:
+                                                (_voiceSupported &&
+                                                    _isRecording)
+                                                ? () => _stopAndSendVoice()
+                                                : null,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                AnimatedContainer(
+                                                  duration: const Duration(
+                                                    milliseconds: 180,
+                                                  ),
+                                                  width: 46,
+                                                  height: 46,
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        canSendText ||
+                                                            _isRecording
+                                                        ? Theme.of(
+                                                            context,
+                                                          ).colorScheme.primary
+                                                        : Theme.of(
+                                                            context,
+                                                          ).colorScheme.surface,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color:
+                                                          canSendText ||
+                                                              _isRecording
+                                                          ? Colors.transparent
+                                                          : Theme.of(context)
+                                                                .dividerColor
+                                                                .withValues(
+                                                                  alpha: 0.35,
+                                                                ),
+                                                    ),
+                                                    boxShadow:
+                                                        canSendText ||
+                                                            _isRecording
+                                                        ? [
+                                                            BoxShadow(
+                                                              color:
+                                                                  Theme.of(
+                                                                        context,
+                                                                      )
+                                                                      .colorScheme
+                                                                      .primary
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.22,
+                                                                      ),
+                                                              blurRadius: 14,
+                                                              offset:
+                                                                  const Offset(
+                                                                    0,
+                                                                    6,
                                                                   ),
-                                                          blurRadius: 16,
-                                                          offset: const Offset(
-                                                            0,
-                                                            6,
-                                                          ),
-                                                        ),
-                                                      ]
-                                                    : null,
-                                              ),
-                                              child: _isSendingVoice
-                                                  ? Center(
-                                                      child:
-                                                          CircularProgressIndicator(
+                                                            ),
+                                                          ]
+                                                        : null,
+                                                  ),
+                                                  child: _isSendingVoice
+                                                      ? Center(
+                                                          child: CircularProgressIndicator(
                                                             strokeWidth: 2,
                                                             color:
                                                                 Theme.of(
@@ -1848,47 +1942,60 @@ class _MessagesTabState extends State<MessagesTab> {
                                                                     .colorScheme
                                                                     .onPrimary,
                                                           ),
-                                                    )
-                                                  : Icon(
-                                                      _isRecording
-                                                          ? Icons.mic_rounded
-                                                          : Icons.send_rounded,
-                                                      color:
-                                                          canSendText ||
-                                                              _isRecording
-                                                          ? Theme.of(context)
-                                                                .colorScheme
-                                                                .onPrimary
-                                                          : Theme.of(context)
-                                                                .colorScheme
-                                                                .onSurfaceVariant,
-                                                    ),
+                                                        )
+                                                      : Icon(
+                                                          _isRecording
+                                                              ? Icons
+                                                                    .mic_rounded
+                                                              : Icons
+                                                                    .send_rounded,
+                                                          size: 22,
+                                                          color:
+                                                              canSendText ||
+                                                                  _isRecording
+                                                              ? Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .onPrimary
+                                                              : Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .onSurfaceVariant,
+                                                        ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '$_messageByteCount/$_maxMessageBytes',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w500,
+                                                    color:
+                                                        _messageByteCount >
+                                                            _maxMessageBytes *
+                                                                0.9
+                                                        ? Colors.orange.shade800
+                                                        : Theme.of(context)
+                                                              .colorScheme
+                                                              .onSurfaceVariant
+                                                              .withValues(
+                                                                alpha: 0.9,
+                                                              ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              '$_characterCount/$_maxCharacters',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color:
-                                                    _characterCount >
-                                                        _maxCharacters * 0.9
-                                                    ? Colors.orange.shade800
-                                                    : Theme.of(context)
-                                                          .colorScheme
-                                                          .onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

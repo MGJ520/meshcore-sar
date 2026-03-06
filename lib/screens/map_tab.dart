@@ -1349,15 +1349,15 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
           // SAR marker data is automatically added by SarMessageParser.enhanceMessage in MessagesProvider
         );
 
-        // Add to messages list with "sending" status
-        messagesProvider.addSentMessage(sentMessage);
-
         // Look up the room contact for path logging
         final contactsProvider = context.read<ContactsProvider>();
         final roomContact = contactsProvider.contacts.where((c) {
           return c.publicKey.length >= roomPublicKey!.length &&
               c.publicKey.matches(roomPublicKey);
         }).firstOrNull;
+
+        // Add to messages list with "sending" status
+        messagesProvider.addSentMessage(sentMessage, contact: roomContact);
 
         // Send SAR message to selected room (persisted and immutable)
         final sentSuccessfully = await connectionProvider.sendTextMessage(

@@ -1,0 +1,131 @@
+import 'dart:typed_data';
+
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:meshcore_sar_app/models/contact.dart';
+import 'package:meshcore_sar_app/models/message.dart';
+import 'package:meshcore_sar_app/providers/messages_provider.dart';
+
+Contact _buildContact() {
+  return Contact(
+    publicKey: Uint8List.fromList(List<int>.generate(32, (i) => i)),
+    type: ContactType.chat,
+    flags: 0,
+    outPathLen: 1,
+    outPath: Uint8List.fromList([1, 2, 3, 4]),
+    advName: 'Teammate',
+    lastAdvert: 1700000000,
+    advLat: 0,
+    advLon: 0,
+    lastMod: 1700000000,
+  );
+}
+
+Message _buildDirectMessage(String id) {
+  return Message(
+    id: id,
+    messageType: MessageType.contact,
+    senderPublicKeyPrefix: Uint8List.fromList([0, 1, 2, 3, 4, 5]),
+    pathLen: 0,
+    textType: MessageTextType.plain,
+    senderTimestamp: 1700000000,
+    text: 'hello',
+    receivedAt: DateTime.now(),
+    deliveryStatus: MessageDeliveryStatus.sending,
+    recipientPublicKey: Uint8List.fromList(List<int>.generate(32, (i) => i)),
+  );
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('MessagesProvider retransmission', () {
+    test('direct messages stay pending until delivery ACK arrives', () {
+      final provider = MessagesProvider();
+      provider.addSentMessage(
+        _buildDirectMessage('m1'),
+        contact: _buildContact(),
+      );
+
+      provider.markMessageSent('m1', 77, 250);
+
+      expect(
+        provider.messages.single.deliveryStatus,
+        MessageDeliveryStatus.sending,
+      );
+      expect(provider.messages.single.expectedAckTag, 77);
+
+      provider.markMessageDelivered(77, 180);
+
+      expect(
+        provider.messages.single.deliveryStatus,
+        MessageDeliveryStatus.delivered,
+      );
+      expect(provider.messages.single.roundTripTimeMs, 180);
+    });
+
+    test('channel messages are marked sent immediately', () {
+      final provider = MessagesProvider();
+      provider.addSentMessage(
+        Message(
+          id: 'c1',
+          messageType: MessageType.channel,
+          senderPublicKeyPrefix: Uint8List.fromList([0, 1, 2, 3, 4, 5]),
+          channelIdx: 0,
+          pathLen: 0,
+          textType: MessageTextType.plain,
+          senderTimestamp: 1700000000,
+          text: 'broadcast',
+          receivedAt: DateTime.now(),
+          deliveryStatus: MessageDeliveryStatus.sending,
+        ),
+      );
+
+      provider.markMessageSent('c1', 0, 0);
+
+      expect(
+        provider.messages.single.deliveryStatus,
+        MessageDeliveryStatus.sent,
+      );
+    });
+
+    test('missing ACK schedules a delayed retransmission', () {
+      fakeAsync((async) {
+        final provider = MessagesProvider();
+        var retryCalls = 0;
+        provider.sendMessageCallback =
+            ({
+              required contactPublicKey,
+              required text,
+              required messageId,
+              required contact,
+              retryAttempt = 0,
+            }) async {
+              retryCalls += 1;
+              return true;
+            };
+
+        provider.addSentMessage(
+          _buildDirectMessage('m2'),
+          contact: _buildContact(),
+        );
+        provider.markMessageSent('m2', 88, 10);
+
+        async.elapse(const Duration(milliseconds: 11));
+        async.flushMicrotasks();
+
+        expect(provider.messages.single.retryAttempt, 1);
+        expect(
+          provider.messages.single.deliveryStatus,
+          MessageDeliveryStatus.sending,
+        );
+        expect(retryCalls, 0);
+
+        async.elapse(const Duration(seconds: 4));
+        async.flushMicrotasks();
+
+        expect(retryCalls, 1);
+      });
+    });
+  });
+}

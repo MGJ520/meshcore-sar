@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// Message delivery tracking helper
 ///
 /// Manages message delivery tracking for sent messages, including:
@@ -16,6 +18,9 @@ class MessageDeliveryTracker {
   /// Messages tracked here before sending, popped when RESP_CODE_SENT arrives
   final List<String> _pendingMessageIds = [];
 
+  /// Contact-scoped FIFOs for matching direct-message SENT responses.
+  final Map<String, List<String>> _pendingMessageIdsByContact = {};
+
   /// Map of ACK tag to message ID for delivery confirmation
   final Map<int, String> _ackTagToMessageId = {};
 
@@ -33,6 +38,15 @@ class MessageDeliveryTracker {
     _pendingMessageIds.add(messageId);
   }
 
+  /// Track a pending direct message ID for a specific contact.
+  void trackPendingDirectMessage(String messageId, Uint8List contactPublicKey) {
+    trackPendingMessage(messageId);
+    final contactKey = _contactKey(contactPublicKey);
+    _pendingMessageIdsByContact
+        .putIfAbsent(contactKey, () => [])
+        .add(messageId);
+  }
+
   /// Pop the next pending message ID from FIFO queue
   ///
   /// Called when RESP_CODE_SENT arrives. Returns null if queue empty.
@@ -41,6 +55,24 @@ class MessageDeliveryTracker {
       return null;
     }
     return _pendingMessageIds.removeAt(0);
+  }
+
+  /// Pop the next pending direct message ID for a specific contact.
+  ///
+  /// Falls back to the legacy global FIFO if the contact queue is empty.
+  String? popPendingDirectMessageId(Uint8List contactPublicKey) {
+    final contactKey = _contactKey(contactPublicKey);
+    final queue = _pendingMessageIdsByContact[contactKey];
+    if (queue == null || queue.isEmpty) {
+      return popPendingMessageId();
+    }
+
+    final messageId = queue.removeAt(0);
+    if (queue.isEmpty) {
+      _pendingMessageIdsByContact.remove(contactKey);
+    }
+    _pendingMessageIds.remove(messageId);
+    return messageId;
   }
 
   /// Map ACK tag to message ID after RESP_CODE_SENT received
@@ -86,6 +118,17 @@ class MessageDeliveryTracker {
       _ackTagToMessageId.remove(ackTag);
       _ackTagTimestamps.remove(ackTag);
     }
+    _pendingMessageIds.remove(messageId);
+    final emptyKeys = <String>[];
+    for (final entry in _pendingMessageIdsByContact.entries) {
+      entry.value.remove(messageId);
+      if (entry.value.isEmpty) {
+        emptyKeys.add(entry.key);
+      }
+    }
+    for (final key in emptyKeys) {
+      _pendingMessageIdsByContact.remove(key);
+    }
   }
 
   /// Clean up stale ACK mappings
@@ -114,6 +157,7 @@ class MessageDeliveryTracker {
   /// Clear all tracking state
   void clearTracking() {
     _pendingMessageIds.clear();
+    _pendingMessageIdsByContact.clear();
     _ackTagToMessageId.clear();
     _messageIdToAckTag.clear();
     _ackTagTimestamps.clear();
@@ -133,9 +177,7 @@ class MessageDeliveryTracker {
   /// Get oldest pending ACK timestamp (for debugging)
   DateTime? get oldestPendingTimestamp {
     if (_ackTagTimestamps.isEmpty) return null;
-    return _ackTagTimestamps.values.reduce(
-      (a, b) => a.isBefore(b) ? a : b,
-    );
+    return _ackTagTimestamps.values.reduce((a, b) => a.isBefore(b) ? a : b);
   }
 
   /// Get diagnostic info for debugging
@@ -145,6 +187,15 @@ class MessageDeliveryTracker {
       'shouldRateLimit': shouldRateLimit,
       'oldestPending': oldestPendingTimestamp?.toIso8601String(),
       'ackTags': _ackTagToMessageId.keys.toList(),
+      'pendingByContact': _pendingMessageIdsByContact.map(
+        (key, value) => MapEntry(key, value.length),
+      ),
     };
+  }
+
+  String _contactKey(Uint8List contactPublicKey) {
+    return contactPublicKey
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
   }
 }

@@ -76,6 +76,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
   final BackgroundLocationService _backgroundLocationService =
       BackgroundLocationService();
   bool _isDisposing = false; // Flag to prevent updates during disposal
+  MapProvider? _mapProvider;
 
   // MBTiles layers
   List<MapLayer> _mbtilesLayers = [];
@@ -129,6 +130,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return; // Check if widget is still mounted
       final mapProvider = context.read<MapProvider>();
+      _mapProvider = mapProvider;
       mapProvider.addListener(_handleMapNavigation);
       // Load WMS overlay state
       mapProvider.loadOverlayState();
@@ -438,8 +440,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     // Save map position before disposing
     _saveMapPosition();
 
-    final mapProvider = context.read<MapProvider>();
-    mapProvider.removeListener(_handleMapNavigation);
+    _mapProvider?.removeListener(_handleMapNavigation);
 
     // DO NOT stop location tracking - it's managed by AppProvider
     // Restore the original callback instead of setting to null

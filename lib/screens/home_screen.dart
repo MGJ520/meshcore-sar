@@ -12,6 +12,7 @@ import '../providers/contacts_provider.dart';
 import '../theme/app_theme.dart';
 import 'messages_tab.dart';
 import 'contacts_tab.dart';
+import 'sensors_tab.dart';
 import 'map_tab.dart';
 import 'map_management_screen.dart';
 import 'settings_screen.dart';
@@ -24,7 +25,7 @@ import '../widgets/permission_request_dialog.dart';
 import '../widgets/connection_dialog.dart';
 import '../utils/battery_display_helper.dart';
 
-enum _HomeTab { messages, contacts, map }
+enum _HomeTab { messages, contacts, sensors, map }
 
 class HomeScreen extends StatefulWidget {
   final Function(AppThemeMode) onThemeChanged;
@@ -54,11 +55,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _showRxTxIndicators = true;
   bool _isMapEnabled = true;
   bool _isContactsEnabled = true;
+  bool _isSensorsEnabled = false;
 
   List<_HomeTab> get _enabledTabs {
     return [
       _HomeTab.messages,
       if (_isContactsEnabled) _HomeTab.contacts,
+      if (_isSensorsEnabled) _HomeTab.sensors,
       if (_isMapEnabled) _HomeTab.map,
     ];
   }
@@ -77,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _appProvider = context.read<AppProvider>();
     _isMapEnabled = _appProvider.isMapEnabled;
     _isContactsEnabled = _appProvider.isContactsEnabled;
+    _isSensorsEnabled = _appProvider.isSensorsEnabled;
     _appProvider.addListener(_handleAppProviderChanged);
 
     // Initialize synchronously so first build always has a valid controller.
@@ -106,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _updateTabController(
       mapEnabled: _appProvider.isMapEnabled,
       contactsEnabled: _appProvider.isContactsEnabled,
+      sensorsEnabled: _appProvider.isSensorsEnabled,
     );
   }
 
@@ -129,8 +134,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _updateTabController({
     required bool mapEnabled,
     required bool contactsEnabled,
+    required bool sensorsEnabled,
   }) {
-    if (_isMapEnabled == mapEnabled && _isContactsEnabled == contactsEnabled) {
+    if (_isMapEnabled == mapEnabled &&
+        _isContactsEnabled == contactsEnabled &&
+        _isSensorsEnabled == sensorsEnabled) {
       return;
     }
 
@@ -147,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Update state
     _isMapEnabled = mapEnabled;
     _isContactsEnabled = contactsEnabled;
+    _isSensorsEnabled = sensorsEnabled;
     if (!_isMapEnabled) {
       _isMapFullscreen = false;
     }
@@ -182,6 +191,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           break;
         case _HomeTab.contacts:
           context.read<ContactsProvider>().markAllAsViewed();
+          break;
+        case _HomeTab.sensors:
           break;
         case _HomeTab.map:
           break;
@@ -471,6 +482,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ? () => _navigateToTab(_HomeTab.map)
                     : null,
               );
+            case _HomeTab.sensors:
+              return const SensorsTab();
             case _HomeTab.map:
               return MapTab(
                 onFullscreenChanged: (isFullscreen) {
@@ -531,6 +544,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           return Tab(
                             icon: const Icon(Icons.map),
                             text: AppLocalizations.of(context)!.map,
+                          );
+                        case _HomeTab.sensors:
+                          return const Tab(
+                            icon: Icon(Icons.sensors),
+                            text: 'Sensors',
                           );
                       }
                     }).toList(),

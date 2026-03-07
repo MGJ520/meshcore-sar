@@ -51,6 +51,8 @@ class AppProvider with ChangeNotifier {
   bool get isMapEnabled => _isMapEnabled;
   bool _isContactsEnabled = true;
   bool get isContactsEnabled => _isContactsEnabled;
+  bool _isSensorsEnabled = true;
+  bool get isSensorsEnabled => _isSensorsEnabled;
 
   bool _isVoiceSilenceTrimmingEnabled = true;
   bool get isVoiceSilenceTrimmingEnabled => _isVoiceSilenceTrimmingEnabled;
@@ -97,6 +99,7 @@ class AppProvider with ChangeNotifier {
     _loadSimpleMode();
     _loadMapEnabled();
     _loadContactsEnabled();
+    _loadSensorsEnabled();
     _loadVoiceSilenceTrimmingEnabled();
     _loadVoiceBandPassFilterEnabled();
     _loadVoiceCompressorEnabled();
@@ -288,6 +291,29 @@ class AppProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error saving contacts enabled setting: $e');
+    }
+  }
+
+  /// Load sensors enabled setting from shared preferences
+  Future<void> _loadSensorsEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isSensorsEnabled = prefs.getBool('sensors_enabled') ?? true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading sensors enabled setting: $e');
+    }
+  }
+
+  /// Toggle sensors tab on/off
+  Future<void> toggleSensorsEnabled(bool enabled) async {
+    try {
+      _isSensorsEnabled = enabled;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('sensors_enabled', enabled);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving sensors enabled setting: $e');
     }
   }
 

@@ -737,6 +737,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
+          Consumer<AppProvider>(
+            builder: (context, appProvider, child) => SwitchListTile(
+              secondary: const Icon(Icons.sensors),
+              title: const Text('Enable Sensors tab'),
+              subtitle: const Text(
+                'Show a dedicated tab for watched relay and node telemetry',
+              ),
+              value: appProvider.isSensorsEnabled,
+              onChanged: (value) async {
+                await appProvider.toggleSensorsEnabled(value);
+              },
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.language),
             title: Text(AppLocalizations.of(context)!.language),

@@ -49,6 +49,7 @@ class MessagesTab extends StatefulWidget {
 class _MessagesTabState extends State<MessagesTab> {
   static const int _maxContactMessageBytes = 156;
   static const int _maxChannelMessageBytes = 127;
+  static const double _composerOverlayHeight = 148;
 
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -1546,35 +1547,42 @@ class _MessagesTabState extends State<MessagesTab> {
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),
-          child: Column(
+          child: Stack(
             children: [
-              Expanded(
+              Positioned.fill(
                 child: MessagesContent(
                   messages: messages,
                   scrollController: _scrollController,
                   highlightedMessageId: _highlightedMessageId,
+                  bottomContentPadding:
+                      _composerOverlayHeight + composerBottomPadding,
                   onRefresh: _handleRefresh,
                   onNavigateToMap: widget.onNavigateToMap,
                   onMessageTap: _handleMessageTap,
                 ),
               ),
-              MessagesComposer(
-                textController: _textController,
-                focusNode: _focusNode,
-                messageByteLimiter: _messageByteLimiter,
-                messageByteCount: _messageByteCount,
-                maxMessageBytes: _maxMessageBytes,
-                isRecording: _isRecording,
-                isSendingVoice: _isSendingVoice,
-                voiceSupported: _voiceSupported,
-                bottomPadding: composerBottomPadding,
-                destinationLabel: _getDestinationLabel(),
-                destinationAvatar: _buildDestinationAvatar(context),
-                onShowComposerActions: _showComposerActions,
-                onShowRecipientSelector: _showRecipientSelector,
-                onStartVoiceRecording: _startVoiceRecording,
-                onStopAndSendVoice: _stopAndSendVoice,
-                onSendMessage: _sendMessage,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: MessagesComposer(
+                  textController: _textController,
+                  focusNode: _focusNode,
+                  messageByteLimiter: _messageByteLimiter,
+                  messageByteCount: _messageByteCount,
+                  maxMessageBytes: _maxMessageBytes,
+                  isRecording: _isRecording,
+                  isSendingVoice: _isSendingVoice,
+                  voiceSupported: _voiceSupported,
+                  bottomPadding: composerBottomPadding,
+                  destinationLabel: _getDestinationLabel(),
+                  destinationAvatar: _buildDestinationAvatar(context),
+                  onShowComposerActions: _showComposerActions,
+                  onShowRecipientSelector: _showRecipientSelector,
+                  onStartVoiceRecording: _startVoiceRecording,
+                  onStopAndSendVoice: _stopAndSendVoice,
+                  onSendMessage: _sendMessage,
+                ),
               ),
             ],
           ),

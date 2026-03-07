@@ -5,9 +5,12 @@ import '../../models/message.dart';
 import '../../widgets/messages/message_bubble.dart';
 
 class MessagesContent extends StatelessWidget {
+  static const double defaultPadding = 8;
+
   final List<Message> messages;
   final ScrollController scrollController;
   final String? highlightedMessageId;
+  final double bottomContentPadding;
   final Future<void> Function() onRefresh;
   final VoidCallback? onNavigateToMap;
   final ValueChanged<Message>? onMessageTap;
@@ -17,6 +20,7 @@ class MessagesContent extends StatelessWidget {
     required this.messages,
     required this.scrollController,
     required this.highlightedMessageId,
+    this.bottomContentPadding = 0,
     required this.onRefresh,
     this.onNavigateToMap,
     this.onMessageTap,
@@ -64,7 +68,12 @@ class MessagesContent extends StatelessWidget {
               controller: scrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               reverse: true,
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.fromLTRB(
+                defaultPadding,
+                defaultPadding,
+                defaultPadding,
+                defaultPadding + bottomContentPadding,
+              ),
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final message = messages[index];
